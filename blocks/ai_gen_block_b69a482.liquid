@@ -1,0 +1,1210 @@
+{% doc %}
+  @prompt
+    Create a luxury footer section with comprehensive features including company information, navigation links, social media icons, contact details, newsletter signup with call-to-action, and a preview section showcasing recent blog articles. The design should be elegant and premium with proper spacing, typography, and visual hierarchy suitable for a luxury brand., Match site theme, add image scroll of different blog articles with an overlay on hover of article image that says Read more, have the latest articles about the About Us, Quick Links, contact Us, we the articles on the left and the sing cta on the right, articles and sign up should horizontal atthe top
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-luxury-footer-{{ ai_gen_id }} {
+    background-color: {{ block.settings.background_color }};
+    color: {{ block.settings.text_color }};
+    padding: {{ block.settings.padding_top }}px 0 {{ block.settings.padding_bottom }}px;
+    border-top: {{ block.settings.border_thickness }}px solid {{ block.settings.border_color }};
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: calc({{ settings.body_scale }}% * 1rem);
+  }
+
+  .ai-luxury-footer__container-{{ ai_gen_id }} {
+    max-width: {{ settings.page_width }}px;
+    margin: 0 auto;
+    padding: 0 calc({{ settings.spacing_grid_horizontal }}px / 2);
+  }
+
+  .ai-luxury-footer__top-section-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: {{ settings.spacing_grid_horizontal | times: 2 }}px;
+    margin-bottom: {{ settings.spacing_grid_vertical | times: 2 }}px;
+  }
+
+  .ai-luxury-footer__main-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: {{ settings.spacing_grid_horizontal }}px;
+  }
+
+  .ai-luxury-footer__section-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    gap: {{ settings.spacing_grid_vertical }}px;
+  }
+
+  .ai-luxury-footer__heading-{{ ai_gen_id }} {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-size: calc({{ settings.heading_scale }}% * {{ block.settings.heading_size }}px / 100);
+    font-weight: {{ settings.type_header_font.weight }};
+    color: {{ block.settings.heading_color }};
+    margin: 0 0 {{ settings.spacing_grid_vertical }}px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .ai-luxury-footer__text-{{ ai_gen_id }} {
+    font-size: {{ block.settings.text_size }}px;
+    line-height: 1.6;
+    color: {{ block.settings.text_color }};
+    margin: 0;
+  }
+
+  .ai-luxury-footer__nav-list-{{ ai_gen_id }} {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: {{ settings.spacing_grid_vertical | divided_by: 2 }}px;
+  }
+
+  .ai-luxury-footer__nav-link-{{ ai_gen_id }} {
+    color: {{ block.settings.link_color }};
+    text-decoration: none;
+    font-size: {{ block.settings.text_size }}px;
+    transition: color 0.3s ease;
+    display: inline-block;
+  }
+
+  .ai-luxury-footer__nav-link-{{ ai_gen_id }}:hover {
+    color: {{ block.settings.link_hover_color }};
+  }
+
+  .ai-luxury-footer__contact-item-{{ ai_gen_id }} {
+    display: flex;
+    align-items: flex-start;
+    gap: {{ settings.spacing_grid_horizontal | divided_by: 2 }}px;
+    margin-bottom: {{ settings.spacing_grid_vertical }}px;
+  }
+
+  .ai-luxury-footer__contact-icon-{{ ai_gen_id }} {
+    width: 20px;
+    height: 20px;
+    color: {{ block.settings.accent_color }};
+    flex-shrink: 0;margin-top: 2px;
+  }
+
+  .ai-luxury-footer__social-links-{{ ai_gen_id }} {
+    display: flex;
+    gap: {{ settings.spacing_grid_horizontal | divided_by: 2 }}px;
+    margin-top: {{ settings.spacing_grid_vertical }}px;
+  }
+
+  .ai-luxury-footer__social-link-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background-color: {{ block.settings.social_bg_color }};
+    color: {{ block.settings.social_icon_color }};
+    border-radius: 50%;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    border: {{ settings.buttons_border_thickness }}px solid rgba({{ block.settings.social_icon_color | color_extract: 'red' }}, {{ block.settings.social_icon_color | color_extract: 'green' }}, {{ block.settings.social_icon_color | color_extract: 'blue' }}, {{ settings.buttons_border_opacity | divided_by: 100.0 }});
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});}
+
+  .ai-luxury-footer__social-link-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.social_hover_bg_color }};
+    color: {{ block.settings.social_hover_icon_color }};
+    {% if settings.animations_hover_elements == 'vertical-lift' %}
+      transform: translateY(-2px);
+    {% elsif settings.animations_hover_elements == '3d-lift' %}
+      transform: translateY(-2px) scale(1.05);
+    {% endif %}
+  }
+
+  .ai-luxury-footer__social-icon-{{ ai_gen_id }} {
+    width: 20px;
+    height: 20px;
+  }
+
+  .ai-luxury-footer__newsletter-section-{{ ai_gen_id }} {
+    background-color: {{ block.settings.newsletter_bg_color }};
+    padding: {{ settings.spacing_grid_vertical | times: 1.5 }}px;
+    border-radius: {{ settings.text_boxes_radius }}px;
+    border: {{ settings.text_boxes_border_thickness }}px solid rgba({{ block.settings.newsletter_border_color | color_extract: 'red' }}, {{ block.settings.newsletter_border_color | color_extract: 'green' }}, {{ block.settings.newsletter_border_color | color_extract: 'blue' }}, {{ settings.text_boxes_border_opacity | divided_by: 100.0 }});
+    box-shadow: {{ settings.text_boxes_shadow_horizontal_offset }}px {{ settings.text_boxes_shadow_vertical_offset }}px {{ settings.text_boxes_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.text_boxes_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-luxury-footer__newsletter-form-{{ ai_gen_id }} {
+    margin-top: {{ settings.spacing_grid_vertical }}px;
+  }
+
+  .ai-luxury-footer__newsletter-input-wrapper-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    gap: {{ settings.spacing_grid_horizontal | divided_by: 2 }}px;
+    margin-top: {{ settings.spacing_grid_vertical | divided_by: 2 }}px;
+  }
+
+  .ai-luxury-footer__newsletter-input-{{ ai_gen_id }} {
+    padding: 14px 16px;
+    border: {{ settings.inputs_border_thickness }}px solid rgba({{ block.settings.input_border_color | color_extract: 'red' }}, {{ block.settings.input_border_color | color_extract: 'green' }}, {{ block.settings.input_border_color | color_extract: 'blue' }}, {{ settings.inputs_border_opacity | divided_by: 100.0 }});
+    background-color: {{ block.settings.input_bg_color }};
+    color: {{ block.settings.newsletter_text_color }};
+    border-radius: {{ settings.inputs_radius }}px;
+    font-size: 14px;
+    box-shadow: {{ settings.inputs_shadow_horizontal_offset }}px {{ settings.inputs_shadow_vertical_offset }}px {{ settings.inputs_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.inputs_shadow_opacity | divided_by: 100.0 }});
+    width: 100%;
+  }
+
+  .ai-luxury-footer__newsletter-input-{{ ai_gen_id }}::placeholder {
+    color: {{ block.settings.placeholder_color }};
+  }
+
+  .ai-luxury-footer__newsletter-button-{{ ai_gen_id }} {
+    padding: 14px 24px;
+    background-color: {{ block.settings.button_bg_color }};
+    color: {{ block.settings.button_text_color }};
+    border: {{ settings.buttons_border_thickness }}px solid rgba({{ block.settings.button_bg_color | color_extract: 'red' }}, {{ block.settings.button_bg_color | color_extract: 'green' }}, {{ block.settings.button_bg_color | color_extract: 'blue' }}, {{ settings.buttons_border_opacity | divided_by: 100.0 }});
+    border-radius: {{ settings.buttons_radius }}px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+    width: 100%;
+  }
+
+  .ai-luxury-footer__newsletter-button-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.button_hover_bg_color }};
+    {% if settings.animations_hover_elements == 'vertical-lift' %}
+      transform: translateY(-1px);
+    {% elsif settings.animations_hover_elements == '3d-lift' %}
+      transform: translateY(-1px) scale(1.02);
+    {% endif %}
+  }
+
+  .ai-luxury-footer__blog-section-{{ ai_gen_id }} {
+    background-color: {{ block.settings.blog_section_bg_color }};
+    padding: {{ settings.spacing_grid_vertical | times: 1.5 }}px;
+    border-radius: {{ settings.text_boxes_radius }}px;
+    border: {{ settings.text_boxes_border_thickness }}px solid rgba({{ block.settings.blog_section_border_color | color_extract: 'red' }}, {{ block.settings.blog_section_border_color | color_extract: 'green' }}, {{ block.settings.blog_section_border_color | color_extract: 'blue' }}, {{ settings.text_boxes_border_opacity | divided_by: 100.0 }});
+    box-shadow: {{ settings.text_boxes_shadow_horizontal_offset }}px {{ settings.text_boxes_shadow_vertical_offset }}px {{ settings.text_boxes_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.text_boxes_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-luxury-footer__blog-scroll-container-{{ ai_gen_id }} {
+    margin-top: {{ settings.spacing_grid_vertical }}px;
+    overflow: hidden;
+  }
+
+  .ai-luxury-footer__blog-scroll-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    gap: {{ settings.spacing_grid_vertical }}px;
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: {{ block.settings.accent_color }} transparent;
+  }
+
+  .ai-luxury-footer__blog-scroll-{{ ai_gen_id }}::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .ai-luxury-footer__blog-scroll-{{ ai_gen_id }}::-webkit-scrollbar-track {
+    background: rgba({{ block.settings.blog_text_color | color_extract: 'red' }}, {{ block.settings.blog_text_color | color_extract: 'green' }}, {{ block.settings.blog_text_color | color_extract: 'blue' }}, 0.1);
+    border-radius: 3px;
+  }
+
+  .ai-luxury-footer__blog-scroll-{{ ai_gen_id }}::-webkit-scrollbar-thumb {
+    background: {{ block.settings.accent_color }};
+    border-radius: 3px;
+  }
+
+  .ai-luxury-footer__blog-card-{{ ai_gen_id }} {
+    background-color: {{ block.settings.card_bg_color }};
+    border-radius: {{ settings.card_corner_radius }}px;
+    overflow: hidden;
+    transition: transform 0.3s ease;
+    border: {{ settings.card_border_thickness }}px solid rgba({{ block.settings.card_bg_color | color_extract: 'red' }}, {{ block.settings.card_bg_color | color_extract: 'green' }}, {{ block.settings.card_bg_color | color_extract: 'blue' }}, {{ settings.card_border_opacity | divided_by: 100.0 }});
+    box-shadow: {{ settings.card_shadow_horizontal_offset }}px {{ settings.card_shadow_vertical_offset }}px {{ settings.card_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.card_shadow_opacity | divided_by: 100.0 }});
+    display: flex;
+    align-items: center;
+    gap: {{ settings.spacing_grid_horizontal | divided_by: 2 }}px;
+  }
+
+  .ai-luxury-footer__blog-card-{{ ai_gen_id }}:hover {
+    {% if settings.animations_hover_elements == 'vertical-lift' %}
+      transform: translateY(-2px);
+    {% elsif settings.animations_hover_elements == '3d-lift' %}
+      transform: translateY(-2px) scale(1.02);
+    {% endif %}
+  }
+
+  .ai-luxury-footer__blog-image-container-{{ ai_gen_id }} {
+    position: relative;
+    width: {{ block.settings.blog_image_width }}px;
+    height: {{ block.settings.blog_image_height }}px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .ai-luxury-footer__blog-image-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .ai-luxury-footer__blog-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    background-color: #f4f4f4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ai-luxury-footer__blog-placeholder-{{ ai_gen_id }} svg {
+    width: 30px;
+    height: 30px;
+    color: #999;
+  }
+
+  .ai-luxury-footer__blog-overlay-{{ ai_gen_id }} {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, {{ block.settings.overlay_color_1 }}, {{ block.settings.overlay_color_2 }});
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .ai-luxury-footer__blog-card-{{ ai_gen_id }}:hover .ai-luxury-footer__blog-overlay-{{ ai_gen_id }} {
+    opacity: {{ block.settings.overlay_opacity | divided_by: 100.0 }};
+  }
+
+  .ai-luxury-footer__blog-card-{{ ai_gen_id }}:hover .ai-luxury-footer__blog-image-{{ ai_gen_id }} {
+    transform: scale(1.05);
+  }
+
+  .ai-luxury-footer__blog-overlay-text-{{ ai_gen_id }} {
+    color: {{ block.settings.overlay_text_color }};
+    font-size: {{ block.settings.overlay_text_size }}px;
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 6px 12px;
+    border: 2px solid {{ block.settings.overlay_text_color }};
+    border-radius: {{ settings.buttons_radius }}px;
+    background: rgba({{ block.settings.overlay_text_color | color_extract: 'red' }}, {{ block.settings.overlay_text_color | color_extract: 'green' }}, {{ block.settings.overlay_text_color | color_extract: 'blue' }},0.1);
+    backdrop-filter: blur(4px);
+    transform: translateY(10px);
+    transition: transform 0.3s ease;
+  }
+
+  .ai-luxury-footer__blog-card-{{ ai_gen_id }}:hover .ai-luxury-footer__blog-overlay-text-{{ ai_gen_id }} {
+    transform: translateY(0);
+  }
+
+  .ai-luxury-footer__blog-content-{{ ai_gen_id }} {
+    padding: {{ settings.spacing_grid_vertical | divided_by: 2 }}px;
+    flex-grow: 1;
+  }
+
+  .ai-luxury-footer__blog-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.blog_title_size }}px;
+    font-weight:600;
+    color: {{ block.settings.blog_text_color }};
+    margin: 0 0 4px;line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .ai-luxury-footer__blog-excerpt-{{ ai_gen_id }} {
+    font-size: {{ block.settings.blog_excerpt_size }}px;
+    color: {{ block.settings.blog_meta_color }};
+    margin: 0 0 4px;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .ai-luxury-footer__blog-date-{{ ai_gen_id }} {
+    font-size: 11px;
+    color: {{ block.settings.blog_meta_color }};
+    margin: 0;text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .ai-luxury-footer__blog-link-{{ ai_gen_id }} {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+
+  .ai-luxury-footer__newsletter-heading-{{ ai_gen_id }} {
+    color: {{ block.settings.newsletter_heading_color }};
+  }
+
+  .ai-luxury-footer__newsletter-text-{{ ai_gen_id }} {
+    color: {{ block.settings.newsletter_text_color }};
+  }
+
+  .ai-luxury-footer__blog-heading-{{ ai_gen_id }} {
+    color: {{ block.settings.blog_heading_color }};
+  }
+
+  .ai-luxury-footer__bottom-{{ ai_gen_id }} {
+    border-top: 1px solid {{ block.settings.divider_color }};
+    padding-top: {{ settings.spacing_grid_vertical | times: 1.5 }}px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: {{ settings.spacing_grid_horizontal }}px;
+  }
+
+  .ai-luxury-footer__copyright-{{ ai_gen_id }} {
+    font-size: 14px;
+    color: {{ block.settings.meta_color }};
+  }
+
+  .ai-luxury-footer__payment-icons-{{ ai_gen_id }} {
+    display: flex;
+    gap: {{ settings.spacing_grid_horizontal | divided_by: 4 }}px;
+    align-items: center;
+  }
+
+  .ai-luxury-footer__payment-icon-{{ ai_gen_id }} {
+    width: 32px;
+    height: 20px;
+    background-color: #f4f4f4;
+    border-radius: {{ settings.buttons_radius | divided_by: 2 }}px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #666;
+  }
+
+  .ai-luxury-footer__success-message-{{ ai_gen_id }} {
+    color: {{ block.settings.success_color }};
+    font-size:14px;
+    margin-top: {{ settings.spacing_grid_vertical | divided_by: 2 }}px;
+  }
+
+  .ai-luxury-footer__error-message-{{ ai_gen_id }} {
+    color: {{ block.settings.error_color }};
+    font-size: 14px;
+    margin-top: {{ settings.spacing_grid_vertical | divided_by: 2 }}px;
+  }
+
+  @media screen and (max-width: 768px) {
+    .ai-luxury-footer__top-section-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: {{ settings.spacing_grid_vertical | times: 2 }}px;
+    }
+
+    .ai-luxury-footer__main-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: {{ settings.spacing_grid_vertical | times: 1.5 }}px;
+    }
+
+    .ai-luxury-footer__bottom-{{ ai_gen_id }} {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .ai-luxury-footer__container-{{ ai_gen_id }} {
+      padding: 0 {{ settings.spacing_grid_horizontal | divided_by: 2 }}px;
+    }
+
+    .ai-luxury-footer__blog-image-container-{{ ai_gen_id }} {
+      width: {{ block.settings.blog_image_width | times: 0.8 }}px;
+      height: {{ block.settings.blog_image_height | times: 0.8 }}px;
+    }
+  }
+
+  {% if settings.animations_reveal_on_scroll %}
+    @media (prefers-reduced-motion: no-preference) {
+      .ai-luxury-footer__section-{{ ai_gen_id }} {
+        opacity: 0;
+        transform: translateY(20px);
+        animation: ai-luxury-footer-reveal-{{ ai_gen_id }} 0.6s ease-out forwards;
+      }
+
+      .ai-luxury-footer__section-{{ ai_gen_id }}:nth-child(1) { animation-delay: 0.1s; }
+      .ai-luxury-footer__section-{{ ai_gen_id }}:nth-child(2) { animation-delay: 0.2s; }
+      .ai-luxury-footer__section-{{ ai_gen_id }}:nth-child(3) { animation-delay: 0.3s; }
+
+      .ai-luxury-footer__newsletter-section-{{ ai_gen_id }} {
+        opacity: 0;
+        transform: translateY(20px);
+        animation: ai-luxury-footer-reveal-{{ ai_gen_id }} 0.6s ease-out forwards;animation-delay: 0.4s;
+      }
+
+      .ai-luxury-footer__blog-section-{{ ai_gen_id }} {
+        opacity: 0;
+        transform: translateY(20px);
+        animation: ai-luxury-footer-reveal-{{ ai_gen_id }} 0.6s ease-out forwards;
+        animation-delay: 0.5s;
+      }
+
+      @keyframes ai-luxury-footer-reveal-{{ ai_gen_id }} {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    }
+  {% endif %}
+{% endstyle %}<footer class="ai-luxury-footer-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-luxury-footer__container-{{ ai_gen_id }}">
+    <div class="ai-luxury-footer__top-section-{{ ai_gen_id }}">
+      {% if block.settings.show_blog_preview and block.settings.blog != blank %}
+        <div class="ai-luxury-footer__blog-section-{{ ai_gen_id }}">
+          <h3 class="ai-luxury-footer__heading-{{ ai_gen_id }} ai-luxury-footer__blog-heading-{{ ai_gen_id }}">{{ block.settings.blog_heading }}</h3>
+          <div class="ai-luxury-footer__blog-scroll-container-{{ ai_gen_id }}">
+            <div class="ai-luxury-footer__blog-scroll-{{ ai_gen_id }}">
+              {% for article in block.settings.blog.articles limit: block.settings.blog_articles_count %}
+                <a href="{{ article.url }}" class="ai-luxury-footer__blog-link-{{ ai_gen_id }}">
+                  <div class="ai-luxury-footer__blog-card-{{ ai_gen_id }}">
+                    <div class="ai-luxury-footer__blog-image-container-{{ ai_gen_id }}">
+                      {% if article.image %}
+                        <img
+                          src="{{ article.image | image_url: width: 200}}"
+                          alt="{{ article.image.alt | escape }}"
+                          width="200"
+                          height="{{ block.settings.blog_image_height }}"
+                          loading="lazy"
+                          class="ai-luxury-footer__blog-image-{{ ai_gen_id }}"
+                        >
+                      {% else %}
+                        <div class="ai-luxury-footer__blog-placeholder-{{ ai_gen_id }}">
+                          {{'image' | placeholder_svg_tag }}
+                        </div>
+                      {% endif %}
+                      <div class="ai-luxury-footer__blog-overlay-{{ ai_gen_id }}">
+                        <div class="ai-luxury-footer__blog-overlay-text-{{ ai_gen_id }}">
+                          {{ block.settings.overlay_text }}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="ai-luxury-footer__blog-content-{{ ai_gen_id }}">
+                      <h4 class="ai-luxury-footer__blog-title-{{ ai_gen_id }}">{{ article.title }}</h4>
+                      {% if block.settings.show_blog_excerpt and article.excerpt != blank %}
+                        <p class="ai-luxury-footer__blog-excerpt-{{ ai_gen_id }}">{{ article.excerpt | strip_html | truncate: 60 }}</p>
+                      {% endif %}
+                      <p class="ai-luxury-footer__blog-date-{{ ai_gen_id }}">{{ article.published_at | date: '%b %d, %Y' }}</p>
+                    </div>
+                  </div>
+                </a>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+
+      {% if block.settings.show_newsletter %}
+        <div class="ai-luxury-footer__newsletter-section-{{ ai_gen_id }}">
+          <h3 class="ai-luxury-footer__heading-{{ ai_gen_id }} ai-luxury-footer__newsletter-heading-{{ ai_gen_id }}">{{ block.settings.newsletter_heading }}</h3>
+          {% if block.settings.newsletter_description != blank %}
+            <div class="ai-luxury-footer__text-{{ ai_gen_id }} ai-luxury-footer__newsletter-text-{{ ai_gen_id }}">{{ block.settings.newsletter_description }}</div>
+          {% endif %}
+          {%- form 'customer' -%}
+            <input type="hidden" name="contact[tags]" value="newsletter">
+            <div class="ai-luxury-footer__newsletter-form-{{ ai_gen_id }}">
+              <div class="ai-luxury-footer__newsletter-input-wrapper-{{ ai_gen_id }}">
+                <input
+                  type="email"
+                  name="contact[email]"
+                  class="ai-luxury-footer__newsletter-input-{{ ai_gen_id }}"
+                  value="{{ form.email }}"
+                  placeholder="{{ block.settings.newsletter_placeholder }}"
+                  aria-required="true"
+                  autocorrect="off"
+                  autocapitalize="off"
+                  autocomplete="email"
+                  {% if form.errors %}
+                    aria-invalid="true"
+                    aria-describedby="ai-luxury-footer-newsletter-error-{{ ai_gen_id }}"
+                  {% endif %}
+                  {% if form.posted_successfully? %}
+                    aria-describedby="ai-luxury-footer-newsletter-success-{{ ai_gen_id }}"
+                  {% endif %}
+                  required
+                >
+                <button
+                  type="submit"
+                  class="ai-luxury-footer__newsletter-button-{{ ai_gen_id }}"
+                >
+                  {{ block.settings.newsletter_button_text }}
+                </button>
+              </div>
+              {%- if form.errors -%}
+                <div
+                  id="ai-luxury-footer-newsletter-error-{{ ai_gen_id }}"
+                  class="ai-luxury-footer__error-message-{{ ai_gen_id }}"
+                >
+                  {{ form.errors.messages.email }}
+                </div>
+              {%- endif -%}{%- if form.posted_successfully? -%}
+                <div
+                  id="ai-luxury-footer-newsletter-success-{{ ai_gen_id }}"
+                  class="ai-luxury-footer__success-message-{{ ai_gen_id }}"
+                >
+                  {{ block.settings.newsletter_success_message }}
+                </div>
+              {%- endif -%}
+            </div>
+          {%- endform -%}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="ai-luxury-footer__main-{{ ai_gen_id }}">
+      <div class="ai-luxury-footer__section-{{ ai_gen_id }}">
+        <h3 class="ai-luxury-footer__heading-{{ ai_gen_id }}">{{ block.settings.company_heading }}</h3>
+        {% if block.settings.company_description != blank %}
+          <div class="ai-luxury-footer__text-{{ ai_gen_id }}">{{ block.settings.company_description }}</div>
+        {% endif %}
+        {% if block.settings.show_social_links %}
+          <div class="ai-luxury-footer__social-links-{{ ai_gen_id }}">
+            {% if settings.social_facebook_link != blank %}
+              <a href="{{ settings.social_facebook_link }}" class="ai-luxury-footer__social-link-{{ ai_gen_id }}" target="_blank" rel="noopener" aria-label="Facebook">
+                <svg class="ai-luxury-footer__social-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                </svg>
+              </a>
+            {% endif %}
+            {% if settings.social_instagram_link != blank %}
+              <a href="{{ settings.social_instagram_link }}" class="ai-luxury-footer__social-link-{{ ai_gen_id }}" target="_blank" rel="noopener" aria-label="Instagram">
+                <svg class="ai-luxury-footer__social-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                </svg>
+              </a>
+            {% endif %}
+            {% if settings.social_twitter_link != blank %}
+              <a href="{{ settings.social_twitter_link }}" class="ai-luxury-footer__social-link-{{ ai_gen_id }}" target="_blank" rel="noopener" aria-label="Twitter">
+                <svg class="ai-luxury-footer__social-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+                </svg>
+              </a>
+            {% endif %}
+            {% if settings.social_youtube_link != blank %}
+              <a href="{{ settings.social_youtube_link }}" class="ai-luxury-footer__social-link-{{ ai_gen_id }}" target="_blank" rel="noopener" aria-label="YouTube">
+                <svg class="ai-luxury-footer__social-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+              </a>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+      {% if block.settings.show_navigation %}
+        <div class="ai-luxury-footer__section-{{ ai_gen_id }}">
+          <h3 class="ai-luxury-footer__heading-{{ ai_gen_id }}">{{ block.settings.navigation_heading }}</h3>
+          {% if linklists[block.settings.footer_menu].links.size > 0 %}
+            <ul class="ai-luxury-footer__nav-list-{{ ai_gen_id }}">
+              {% for link in linklists[block.settings.footer_menu].links %}
+                <li>
+                  <a href="{{ link.url }}" class="ai-luxury-footer__nav-link-{{ ai_gen_id }}">{{ link.title }}</a>
+                </li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if block.settings.show_contact %}
+        <div class="ai-luxury-footer__section-{{ ai_gen_id }}">
+          <h3 class="ai-luxury-footer__heading-{{ ai_gen_id }}">{{ block.settings.contact_heading }}</h3>
+          {% if block.settings.contact_address != blank %}
+            <div class="ai-luxury-footer__contact-item-{{ ai_gen_id }}">
+              <svg class="ai-luxury-footer__contact-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+              </svg>
+              <div class="ai-luxury-footer__text-{{ ai_gen_id }}">{{ block.settings.contact_address }}</div>
+            </div>
+          {% endif %}
+
+          {% if block.settings.contact_phone != blank %}
+            <div class="ai-luxury-footer__contact-item-{{ ai_gen_id }}">
+              <svg class="ai-luxury-footer__contact-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+              </svg>
+              <div class="ai-luxury-footer__text-{{ ai_gen_id }}">{{ block.settings.contact_phone }}</div>
+            </div>
+          {% endif %}
+
+          {% if block.settings.contact_email != blank %}
+            <div class="ai-luxury-footer__contact-item-{{ ai_gen_id }}">
+              <svg class="ai-luxury-footer__contact-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+              </svg>
+              <div class="ai-luxury-footer__text-{{ ai_gen_id }}">{{ block.settings.contact_email }}</div>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="ai-luxury-footer__bottom-{{ ai_gen_id }}">
+      <div class="ai-luxury-footer__copyright-{{ ai_gen_id }}">
+        {{ block.settings.copyright_text }}
+      </div>
+      {% if block.settings.show_payment_icons %}
+        <div class="ai-luxury-footer__payment-icons-{{ ai_gen_id }}">
+          <div class="ai-luxury-footer__payment-icon-{{ ai_gen_id }}">VISA</div>
+          <div class="ai-luxury-footer__payment-icon-{{ ai_gen_id }}">MC</div>
+          <div class="ai-luxury-footer__payment-icon-{{ ai_gen_id }}">AMEX</div>
+          <div class="ai-luxury-footer__payment-icon-{{ ai_gen_id }}">PP</div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</footer>
+
+{% schema %}
+{
+  "name": "Luxury footer",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Company information"
+    },
+    {
+      "type": "text",
+      "id": "company_heading",
+      "label": "Company heading",
+      "default": "About us"
+    },
+    {
+      "type": "richtext",
+      "id": "company_description",
+      "label": "Company description",
+      "default": "<p>Crafting exceptional experiences with uncompromising quality and timeless elegance.</p>"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_social_links",
+      "label": "Show social media links",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Navigation"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_navigation",
+      "label": "Show navigation links",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "navigation_heading",
+      "label": "Navigation heading",
+      "default": "Quick links"
+    },
+    {
+      "type": "link_list",
+      "id": "footer_menu",
+      "label": "Footer menu"
+    },
+    {
+      "type": "header",
+      "content": "Contact information"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_contact",
+      "label": "Show contact information",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "contact_heading",
+      "label": "Contact heading",
+      "default": "Contact us"
+    },
+    {
+      "type": "textarea",
+      "id": "contact_address",
+      "label": "Address",
+      "default": "123Luxury Avenue\nNew York, NY 10001"
+    },
+    {
+      "type": "text",
+      "id": "contact_phone",
+      "label": "Phone number",
+      "default": "+1 (555) 123-4567"
+    },
+    {
+      "type": "text",
+      "id": "contact_email",
+      "label": "Email address",
+      "default": "hello@luxurybrand.com"
+    },
+    {
+      "type": "header",
+      "content": "Newsletter signup"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_newsletter",
+      "label": "Show newsletter signup",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "newsletter_heading",
+      "label": "Newsletter heading",
+      "default": "Stay informed"
+    },
+    {
+      "type": "richtext",
+      "id": "newsletter_description",
+      "label": "Newsletter description",
+      "default": "<p>Subscribe to receive exclusive updates and special offers.</p>"
+    },
+    {
+      "type": "text",
+      "id": "newsletter_placeholder",
+      "label": "Email placeholder text",
+      "default": "Enter your email address"
+    },
+    {
+      "type": "text",
+      "id": "newsletter_button_text",
+      "label": "Button text",
+      "default": "Subscribe"
+    },
+    {
+      "type": "text",
+      "id": "newsletter_success_message",
+      "label": "Success message",
+      "default": "Thank you for subscribing!"
+    },
+    {
+      "type": "header",
+      "content": "Blog preview"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_blog_preview",
+      "label": "Show blog preview",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "blog_heading",
+      "label": "Blog heading",
+      "default": "Latest articles"
+    },
+    {
+      "type": "blog",
+      "id": "blog",
+      "label": "Blog"
+    },
+    {
+      "type": "range",
+      "id": "blog_articles_count",
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "label": "Number of articles",
+      "default": 4
+    },
+    {
+      "type": "checkbox",
+      "id": "show_blog_excerpt",
+      "label": "Show article excerpt",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "blog_image_width",
+      "min": 60,
+      "max": 120,
+      "step": 10,
+      "unit": "px",
+      "label": "Image width",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "blog_image_height",
+      "min": 60,
+      "max": 120,
+      "step": 10,
+      "unit": "px",
+      "label": "Image height",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "blog_title_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Title size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "blog_excerpt_size",
+      "min": 10,
+      "max": 14,
+      "step": 1,
+      "unit": "px",
+      "label": "Excerpt size",
+      "default": 12
+    },
+    {
+      "type": "header",
+      "content": "Overlay settings"
+    },
+    {
+      "type": "text",
+      "id": "overlay_text",
+      "label": "Overlay text",
+      "default": "Read more"
+    },
+    {
+      "type": "range",
+      "id": "overlay_text_size",
+      "min": 8,
+      "max": 14,
+      "step": 1,
+      "unit": "px",
+      "label": "Overlay text size",
+      "default": 10
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "min": 60,
+      "max": 95,
+      "step": 5,
+      "unit": "%",
+      "label": "Overlay opacity",
+      "default": 85
+    },
+    {
+      "type": "color",
+      "id": "overlay_color_1",
+      "label": "Overlay color 1",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "overlay_color_2",
+      "label": "Overlay color 2",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "overlay_text_color",
+      "label": "Overlay text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Bottom section"
+    },
+    {
+      "type": "text",
+      "id": "copyright_text",
+      "label": "Copyright text",
+      "default": "© 2024 Luxury Brand. All rights reserved."
+    },
+    {
+      "type": "checkbox",
+      "id": "show_payment_icons",
+      "label": "Show payment icons",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 20,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Top padding",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 20,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Bottom padding",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Heading size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Text size",
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "Main colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#fdf2f6"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "link_color",
+      "label": "Link color",
+      "default": "#fdf2f6"
+    },
+    {
+      "type": "color",
+      "id": "link_hover_color",
+      "label": "Link hover color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "meta_color",
+      "label": "Meta text color",
+      "default": "#cccccc"
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "Border color",
+      "default": "#6b5b95"
+    },
+    {
+      "type": "color",
+      "id": "divider_color",
+      "label": "Divider color",
+      "default": "#6b5b95"
+    },
+    {
+      "type": "range",
+      "id": "border_thickness",
+      "min": 0,
+      "max": 5,
+      "step": 1,
+      "unit": "px",
+      "label": "Border thickness",
+      "default": 1
+    },
+    {
+      "type": "header",
+      "content": "Social media colors"
+    },
+    {
+      "type": "color",
+      "id": "social_bg_color",
+      "label": "Social background color",
+      "default": "#6b5b95"
+    },
+    {
+      "type": "color",
+      "id": "social_icon_color",
+      "label": "Social icon color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "social_hover_bg_color",
+      "label": "Social hover background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "social_hover_icon_color",
+      "label": "Social hover icon color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "header",
+      "content": "Newsletter section colors"
+    },
+    {
+      "type": "color",
+      "id": "newsletter_bg_color",
+      "label": "Newsletter background color",
+      "default": "#6b5b95"
+    },
+    {
+      "type": "color",
+      "id": "newsletter_border_color",
+      "label": "Newsletter border color",
+      "default": "#8a7ca8"
+    },
+    {
+      "type": "color",
+      "id": "newsletter_heading_color",
+      "label": "Newsletter heading color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "newsletter_text_color",
+      "label": "Newsletter text color",
+      "default": "#fdf2f6"
+    },
+    {
+      "type": "color",
+      "id": "input_bg_color",
+      "label": "Input background color",
+      "default": "#8a7ca8"
+    },
+    {
+      "type": "color",
+      "id": "input_border_color",
+      "label": "Input border color",
+      "default": "#a394c7"
+    },
+    {
+      "type": "color",
+      "id": "placeholder_color",
+      "label": "Placeholder color",
+      "default": "#cccccc"
+    },
+    {
+      "type": "color",
+      "id": "button_bg_color",
+      "label": "Button background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_bg_color",
+      "label": "Button hover background color",
+      "default": "#f0f0f0"
+    },
+    {
+      "type": "color",
+      "id": "success_color",
+      "label": "Success message color",
+      "default": "#4caf50"
+    },
+    {
+      "type": "color",
+      "id": "error_color",
+      "label": "Error message color",
+      "default": "#f44336"
+    },
+    {
+      "type": "header",
+      "content": "Blog section colors"
+    },
+    {
+      "type": "color",
+      "id": "blog_section_bg_color",
+      "label": "Blog section background color",
+      "default": "#6b5b95"
+    },
+    {
+      "type": "color",
+      "id": "blog_section_border_color",
+      "label": "Blog section border color",
+      "default": "#8a7ca8"
+    },
+    {
+      "type": "color",
+      "id": "blog_heading_color",
+      "label": "Blog heading color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "blog_text_color",
+      "label": "Blog text color",
+      "default": "#fdf2f6"
+    },
+    {
+      "type": "color",
+      "id": "blog_meta_color",
+      "label": "Blog meta color",
+      "default": "#cccccc"
+    },
+    {
+      "type": "color",
+      "id": "card_bg_color",
+      "label": "Card background color",
+      "default": "#8a7ca8"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Luxury footer"
+    }
+  ]
+}
+{% endschema %}

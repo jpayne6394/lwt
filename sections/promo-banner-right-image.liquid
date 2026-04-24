@@ -1,0 +1,126 @@
+{% schema %}
+{
+  "name": "Promo Banner Background",
+  "tag": "section",
+  "class": "promo-banner-bg",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "background_image",
+      "label": "Background Image"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Just browsing for wellness products?"
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Discover curated supplements, clean ingredients, and expert-backed selections."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button Label",
+      "default": "Visit Wellness Shop"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button Link",
+      "default": "/collections/all"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Promo Banner Background",
+      "category": "Custom"
+    }
+  ]
+}
+{% endschema %}
+
+<section class="promo-banner-bg">
+  <div
+    class="promo-banner-card"
+    {% if section.settings.background_image %}
+      style="background-image: url('{{ section.settings.background_image | image_url: width:1800 }}');"
+    {% endif %}
+  >
+    {% if section.settings.heading %}
+      <h2>{{ section.settings.heading }}</h2>
+    {% endif %}
+    {% if section.settings.subheading %}
+      <p>{{ section.settings.subheading }}</p>
+    {% endif %}
+    {% if section.settings.button_label and section.settings.button_link %}
+      <a href="{{ section.settings.button_link }}" class="promo-banner-btn">
+        {{ section.settings.button_label }}
+      </a>
+    {% endif %}
+  </div>
+</section>
+
+<style>
+  /* Full‐bleed wrapper for spacing */
+  .promo-banner-bg {
+    width: 100vw;
+    margin: 6rem 0;
+    position: relative;
+    left: 50%; margin-left: -50vw;
+    overflow: visible;
+    padding: 0;
+    background: transparent;
+  }
+
+  /* Inner card */
+  .promo-banner-card {
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 6rem 4rem;
+    background-size: cover;
+    background-position: center;
+    background-color: #fff;   /* fallback color */
+    border-radius: 20px;
+    box-shadow:
+      0 12px 30px rgba(74,60,132,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.2);
+    text-align: center;
+  }
+
+  /* Heading & text */
+  .promo-banner-card h2 {
+    font-size: 2.8rem;
+    margin-bottom: 1rem;
+    color: #382a5f;
+  }
+  .promo-banner-card p {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+    color: #362f3a;
+  }
+
+  /* Button */
+
+.promo-banner-btn {
+  display: inline-block;
+  background-color: #382a60;      /* your theme purple */
+  color: #fff;
+  padding: 1rem 2rem;
+  border-radius: 999px;           /* full pill shape */
+  font-weight: 600;
+  font-size: 1.1rem;
+  text-decoration: none;
+  box-shadow: 0 8px 20px rgba(74,60,132,0.3);
+  transition: background-color .2s, transform .2s, box-shadow .2s;
+}
+
+.promo-banner-btn:hover {
+  background-color: #4a3c84;      /* slightly lighter on hover */
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(74,60,132,0.4);
+}
+</style>

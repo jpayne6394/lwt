@@ -1,0 +1,958 @@
+{% doc %}
+  @prompt
+    Create a magazine editorial newsletter layout with multi-column text formatting, editorial-style typography, featured image sections, pull quotes, bylines, and magazine-inspired design elements. Include sections for headlines, subheadings, body text in columns, sidebar content, and editorial callout boxes. Make it look like a professional magazine spread with sophisticated typography and layout., add in line product link capability, add more background color for the header, and a greyish tint background for the columns
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-magazine-layout-{{ ai_gen_id }} {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    background-color: {{ block.settings.background_color }};
+    font-family: {{ block.settings.body_font.family }}, serif;
+    line-height: 1.6;
+    color: {{ block.settings.text_color }};
+  }
+
+  .ai-magazine-header-{{ ai_gen_id }} {
+    text-align: center;
+    margin-bottom: 60px;
+    border-bottom: 3px solid {{ block.settings.accent_color }};
+    padding: 40px 30px 30px;background-color: {{ block.settings.header_background_color }};
+    border-radius: 8px 8px 0 0;
+    position: relative;
+  }
+
+  .ai-magazine-category-{{ ai_gen_id }} {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: {{ block.settings.accent_color }};
+    margin-bottom: 15px;
+  }
+
+  .ai-magazine-headline-{{ ai_gen_id }} {
+    font-family: {{ block.settings.heading_font.family }}, serif;
+    font-size: {{ block.settings.headline_size }}px;
+    font-weight: 700;
+    line-height: 1.1;
+    margin: 0 0 20px;
+    color: {{ block.settings.heading_color }};
+  }
+
+  .ai-magazine-subtitle-{{ ai_gen_id }} {
+    font-size: {{ block.settings.subtitle_size }}px;
+    font-style: italic;
+    color: {{ block.settings.subtitle_color }};
+    margin-bottom: 25px;
+    font-weight: 400;
+  }
+
+  .ai-magazine-byline-{{ ai_gen_id }} {
+    font-size: 14px;
+    color: {{ block.settings.byline_color }};
+    margin-bottom: 10px;
+  }
+
+  .ai-magazine-date-{{ ai_gen_id }} {
+    font-size: 12px;
+    color: {{ block.settings.byline_color }};
+    opacity: 0.8;
+  }
+
+  .ai-magazine-featured-image-{{ ai_gen_id }} {
+    margin: 40px 0 60px;
+    position: relative;
+  }
+
+  .ai-magazine-featured-image-{{ ai_gen_id }} img {
+    width: 100%;
+    height: 400px;
+    object-fit: cover;
+    border-radius: 4px;
+  }
+
+  .ai-magazine-image-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 400px;
+    background-color: #f4f4f4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+  }
+
+  .ai-magazine-image-placeholder-{{ ai_gen_id }} svg {
+    width: 100%;
+    height: 100%;
+    max-width: 200px;
+    max-height: 200px;
+    opacity: 0.3;
+  }
+
+  .ai-magazine-image-caption-{{ ai_gen_id }} {
+    font-size: 12px;
+    font-style: italic;
+    color: {{ block.settings.caption_color }};
+    margin-top: 10px;text-align: center;
+  }
+
+  .ai-magazine-content-grid-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 60px;
+    margin-bottom: 60px;
+  }
+
+  .ai-magazine-main-content-{{ ai_gen_id }} {
+    position: relative;
+  }
+
+  .ai-magazine-drop-cap-{{ ai_gen_id }} {
+    float: left;
+    font-size: 72px;
+    line-height: 60px;
+    padding-right: 8px;
+    padding-top: 4px;
+    font-family: {{ block.settings.heading_font.family }}, serif;
+    font-weight: 700;
+    color: {{ block.settings.accent_color }};
+  }
+
+  .ai-magazine-columns-{{ ai_gen_id }} {
+    column-count: {{ block.settings.column_count }};
+    column-gap:40px;
+    column-rule: 1px solid {{ block.settings.column_divider_color }};
+    text-align: justify;
+    hyphens: auto;
+    background-color: {{ block.settings.columns_background_color }};
+    padding: 30px;
+    border-radius: 6px;
+    margin-bottom: 30px;
+  }
+
+  .ai-magazine-columns-{{ ai_gen_id }} p {
+    margin-bottom: 16px;
+    font-size: {{ block.settings.body_text_size }}px;
+  }
+
+  .ai-magazine-subheading-{{ ai_gen_id }} {
+    font-family: {{ block.settings.heading_font.family }}, serif;
+    font-size: {{ block.settings.subheading_size }}px;
+    font-weight: 600;
+    margin: 30px 0 15px;
+    color: {{ block.settings.heading_color }};
+    break-after: avoid;
+  }
+
+  .ai-magazine-pullquote-{{ ai_gen_id }} {
+    background-color: {{ block.settings.pullquote_bg_color }};
+    border-left: 4px solid {{ block.settings.accent_color }};
+    padding: 30px;
+    margin: 40px 0;
+    break-inside: avoid;
+    position: relative;
+  }
+
+  .ai-magazine-pullquote-text-{{ ai_gen_id }} {
+    font-family: {{ block.settings.heading_font.family }}, serif;
+    font-size: {{ block.settings.pullquote_size }}px;
+    font-style: italic;
+    line-height: 1.4;
+    color: {{ block.settings.pullquote_color }};
+    margin: 0;
+  }
+
+  .ai-magazine-pullquote-attribution-{{ ai_gen_id }} {
+    font-size: 14px;
+    color: {{ block.settings.byline_color }};
+    margin-top: 15px;font-style: normal;
+  }
+
+  .ai-magazine-product-link-{{ ai_gen_id }} {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background-color: {{ block.settings.product_link_bg_color }};
+    color: {{ block.settings.product_link_color }};
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    margin: 0 4px;
+    border: 1px solid {{ block.settings.product_link_border_color }};
+    transition: all 0.3s ease;break-inside: avoid;white-space: nowrap;
+  }
+
+  .ai-magazine-product-link-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.product_link_hover_bg_color }};
+    color: {{ block.settings.product_link_hover_color }};
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .ai-magazine-product-link-icon-{{ ai_gen_id }} {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .ai-magazine-product-showcase-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 30px;
+    margin: 40px 0;
+    padding: 30px;
+    background-color: {{ block.settings.product_showcase_bg_color }};
+    border-radius: 8px;
+    border: 1px solid {{ block.settings.column_divider_color }};
+  }
+
+  .ai-magazine-product-card-{{ ai_gen_id }} {
+    text-align: center;
+    padding: 20px;
+    background-color: {{ block.settings.background_color }};
+    border-radius: 6px;
+    transition: transform 0.3s ease;
+  }
+
+  .ai-magazine-product-card-{{ ai_gen_id }}:hover {
+    transform: translateY(-2px);
+  }
+
+  .ai-magazine-product-image-{{ ai_gen_id }} {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 4px;margin-bottom: 15px;
+  }
+
+  .ai-magazine-product-image-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 200px;
+    background-color: #f4f4f4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;margin-bottom: 15px;
+  }
+
+  .ai-magazine-product-image-placeholder-{{ ai_gen_id }} svg {
+    width: 60px;
+    height: 60px;
+    opacity: 0.3;
+  }
+
+  .ai-magazine-product-title-{{ ai_gen_id }} {
+    font-family: {{ block.settings.heading_font.family }}, serif;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: {{ block.settings.heading_color }};
+  }
+
+  .ai-magazine-product-price-{{ ai_gen_id }} {
+    font-size: 14px;
+    color: {{ block.settings.accent_color }};
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+
+  .ai-magazine-product-button-{{ ai_gen_id }} {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: {{ block.settings.accent_color }};
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: background-color 0.3s ease;
+  }
+
+  .ai-magazine-product-button-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.heading_color }};
+  }
+
+  .ai-magazine-sidebar-{{ ai_gen_id }} {
+    background-color: {{ block.settings.sidebar_bg_color }};
+    padding: 30px;
+    border-radius: 8px;
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+  }
+
+  .ai-magazine-sidebar-title-{{ ai_gen_id }} {
+    font-family: {{ block.settings.heading_font.family }}, serif;
+    font-size:18px;
+    font-weight: 700;
+    margin: 0 0 20px;
+    color: {{ block.settings.heading_color }};
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .ai-magazine-sidebar-content-{{ ai_gen_id }} {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .ai-magazine-sidebar-content-{{ ai_gen_id }} p {
+    margin-bottom: 15px;
+  }
+
+  .ai-magazine-callout-box-{{ ai_gen_id }} {
+    background-color: {{ block.settings.callout_bg_color }};
+    border: 2px solid {{ block.settings.accent_color }};
+    padding: 25px;
+    margin: 40px 0;
+    text-align: center;
+    border-radius: 4px;
+  }
+
+  .ai-magazine-callout-title-{{ ai_gen_id }} {
+    font-family: {{ block.settings.heading_font.family }}, serif;
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 15px;
+    color: {{ block.settings.heading_color }};
+  }
+
+  .ai-magazine-callout-text-{{ ai_gen_id }} {
+    font-size: 16px;
+    margin: 0;
+  }
+
+  .ai-magazine-footer-{{ ai_gen_id }} {
+    border-top: 1px solid {{ block.settings.column_divider_color }};
+    padding-top: 30px;
+    text-align: center;
+    font-size: 12px;
+    color: {{ block.settings.byline_color }};
+  }
+
+  @media screen and (max-width: 768px) {
+    .ai-magazine-layout-{{ ai_gen_id }} {
+      padding: 20px 15px;
+    }
+
+    .ai-magazine-header-{{ ai_gen_id }} {
+      padding: 30px 20px 20px;
+    }
+
+    .ai-magazine-headline-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.headline_size }}px * 0.8);
+    }
+
+    .ai-magazine-content-grid-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+
+    .ai-magazine-columns-{{ ai_gen_id }} {
+      column-count: 1;
+      padding: 20px;
+    }
+
+    .ai-magazine-sidebar-{{ ai_gen_id }} {
+      position: static;}
+
+    .ai-magazine-featured-image-{{ ai_gen_id }} img,
+    .ai-magazine-image-placeholder-{{ ai_gen_id }} {
+      height: 250px;
+    }
+
+    .ai-magazine-product-showcase-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+    }
+
+    .ai-magazine-product-link-{{ ai_gen_id }} {
+      display: block;
+      margin: 8px 0;
+      text-align: center;
+    }
+  }
+{% endstyle %}
+
+<article class="ai-magazine-layout-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <header class="ai-magazine-header-{{ ai_gen_id }}">
+    {% if block.settings.category != blank %}
+      <div class="ai-magazine-category-{{ ai_gen_id }}">{{ block.settings.category }}</div>
+    {% endif %}
+    
+    {% if block.settings.headline != blank %}
+      <h1 class="ai-magazine-headline-{{ ai_gen_id }}">{{ block.settings.headline }}</h1>
+    {% endif %}
+    
+    {% if block.settings.subtitle != blank %}
+      <p class="ai-magazine-subtitle-{{ ai_gen_id }}">{{ block.settings.subtitle }}</p>
+    {% endif %}
+    
+    <div class="ai-magazine-byline-{{ ai_gen_id }}">
+      {% if block.settings.author != blank %}
+        By {{ block.settings.author }}
+      {% endif %}
+    </div>
+    
+    {% if block.settings.publish_date != blank %}
+      <div class="ai-magazine-date-{{ ai_gen_id }}">{{ block.settings.publish_date }}</div>
+    {% endif %}
+  </header>
+
+  {% if block.settings.featured_image or block.settings.show_placeholder %}
+    <div class="ai-magazine-featured-image-{{ ai_gen_id }}">
+      {% if block.settings.featured_image %}
+        <img
+          src="{{ block.settings.featured_image | image_url: width: 1200 }}"
+          alt="{{ block.settings.featured_image.alt | escape }}"
+          loading="lazy"
+          width="{{ block.settings.featured_image.width }}"
+          height="{{ block.settings.featured_image.height }}"
+        >
+      {% else %}
+        <div class="ai-magazine-image-placeholder-{{ ai_gen_id }}">
+          {{ 'hero-apparel-1' | placeholder_svg_tag }}
+        </div>
+      {% endif %}{% if block.settings.image_caption != blank %}
+        <div class="ai-magazine-image-caption-{{ ai_gen_id }}">{{ block.settings.image_caption }}</div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="ai-magazine-content-grid-{{ ai_gen_id }}">
+    <main class="ai-magazine-main-content-{{ ai_gen_id }}">
+      {% if block.settings.body_text != blank %}
+        <div class="ai-magazine-columns-{{ ai_gen_id }}">
+          {% if block.settings.show_drop_cap %}
+            <span class="ai-magazine-drop-cap-{{ ai_gen_id }}">{{ block.settings.body_text | strip_html | slice: 0 }}</span>
+          {% endif %}
+          {{ block.settings.body_text }}
+          
+          {% if block.settings.inline_product_1 != blank %}
+            <a href="{{ block.settings.inline_product_1.url }}" class="ai-magazine-product-link-{{ ai_gen_id }}">
+              <svg class="ai-magazine-product-link-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6"/>
+              </svg>
+              {{ block.settings.inline_product_1.title }}{% if block.settings.show_inline_price %}
+                - {{ block.settings.inline_product_1.price | money }}
+              {% endif %}
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if block.settings.subheading_1 != blank or block.settings.body_text_2 != blank %}
+        <div class="ai-magazine-columns-{{ ai_gen_id }}">
+          {% if block.settings.subheading_1 != blank %}
+            <h2 class="ai-magazine-subheading-{{ ai_gen_id }}">{{ block.settings.subheading_1 }}</h2>
+          {% endif %}
+          {% if block.settings.body_text_2 != blank %}
+            {{ block.settings.body_text_2 }}
+          {% endif %}
+
+          {% if block.settings.inline_product_2 != blank %}
+            <a href="{{ block.settings.inline_product_2.url }}" class="ai-magazine-product-link-{{ ai_gen_id }}">
+              <svg class="ai-magazine-product-link-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6"/>
+              </svg>
+              {{ block.settings.inline_product_2.title }}{% if block.settings.show_inline_price %}
+                - {{ block.settings.inline_product_2.price | money }}
+              {% endif %}
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% if block.settings.pullquote_text != blank %}
+        <blockquote class="ai-magazine-pullquote-{{ ai_gen_id }}"><p class="ai-magazine-pullquote-text-{{ ai_gen_id }}">{{ block.settings.pullquote_text }}</p>
+          {% if block.settings.pullquote_attribution != blank %}
+            <cite class="ai-magazine-pullquote-attribution-{{ ai_gen_id }}">— {{ block.settings.pullquote_attribution }}</cite>
+          {% endif %}
+        </blockquote>
+      {% endif %}
+
+      {% if block.settings.subheading_2 != blank or block.settings.body_text_3 != blank %}
+        <div class="ai-magazine-columns-{{ ai_gen_id }}">
+          {% if block.settings.subheading_2 != blank %}
+            <h2 class="ai-magazine-subheading-{{ ai_gen_id }}">{{ block.settings.subheading_2 }}</h2>
+          {% endif %}
+          
+          {% if block.settings.body_text_3 != blank %}
+            {{ block.settings.body_text_3 }}
+          {% endif %}
+
+          {% if block.settings.inline_product_3 != blank %}
+            <a href="{{ block.settings.inline_product_3.url }}" class="ai-magazine-product-link-{{ ai_gen_id }}">
+              <svg class="ai-magazine-product-link-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6"/>
+              </svg>
+              {{ block.settings.inline_product_3.title }}
+              {% if block.settings.show_inline_price %}
+                - {{ block.settings.inline_product_3.price | money }}
+              {% endif %}
+            </a>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      {% assign featured_products = block.settings.featured_products_list %}
+      {% if featured_products.size > 0 %}
+        <div class="ai-magazine-product-showcase-{{ ai_gen_id }}">
+          {% for product in featured_products limit: 4 %}
+            <div class="ai-magazine-product-card-{{ ai_gen_id }}">
+              {% if product.featured_image %}
+                <img
+                  src="{{ product.featured_image | image_url: width: 300 }}"
+                  alt="{{ product.featured_image.alt | escape }}"
+                  class="ai-magazine-product-image-{{ ai_gen_id }}"
+                  loading="lazy"
+                  width="300"
+                  height="300"
+                >
+              {% else %}
+                <div class="ai-magazine-product-image-placeholder-{{ ai_gen_id }}">
+                  {{ 'product-apparel-1' | placeholder_svg_tag }}
+                </div>
+              {% endif %}
+              <h3 class="ai-magazine-product-title-{{ ai_gen_id }}">{{ product.title }}</h3>
+              <div class="ai-magazine-product-price-{{ ai_gen_id }}">{{ product.price | money }}</div>
+              <a href="{{ product.url }}" class="ai-magazine-product-button-{{ ai_gen_id }}">Shop Now</a>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {% if block.settings.callout_title != blank or block.settings.callout_text != blank %}
+        <div class="ai-magazine-callout-box-{{ ai_gen_id }}">
+          {% if block.settings.callout_title != blank %}
+            <h3 class="ai-magazine-callout-title-{{ ai_gen_id }}">{{ block.settings.callout_title }}</h3>
+          {% endif %}
+          {% if block.settings.callout_text != blank %}
+            <p class="ai-magazine-callout-text-{{ ai_gen_id }}">{{ block.settings.callout_text }}</p>
+          {% endif %}
+        </div>
+      {% endif %}
+    </main><aside class="ai-magazine-sidebar-{{ ai_gen_id }}">
+      {% if block.settings.sidebar_title != blank %}
+        <h3 class="ai-magazine-sidebar-title-{{ ai_gen_id }}">{{ block.settings.sidebar_title }}</h3>
+      {% endif %}
+      {% if block.settings.sidebar_content != blank %}
+        <div class="ai-magazine-sidebar-content-{{ ai_gen_id }}">{{ block.settings.sidebar_content }}</div>
+      {% endif %}
+    </aside>
+  </div>
+
+  {% if block.settings.footer_text != blank %}
+    <footer class="ai-magazine-footer-{{ ai_gen_id }}">
+      {{ block.settings.footer_text }}
+    </footer>
+  {% endif %}
+</article>
+
+{% schema %}
+{
+  "name": "Magazine Editorial Layout",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Article Header"
+    },
+    {
+      "type": "text",
+      "id": "category",
+      "label": "Category",
+      "default": "Featured Story"
+    },
+    {
+      "type": "text",
+      "id": "headline",
+      "label": "Headline",
+      "default": "The Future of Editorial Design"
+    },
+    {
+      "type": "textarea",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Exploring the intersection of traditional magazine layouts and modern digital storytelling"
+    },
+    {
+      "type": "text",
+      "id": "author",
+      "label": "Author name",
+      "default": "Editorial Team"
+    },
+    {
+      "type": "text",
+      "id": "publish_date",
+      "label": "Publish date",
+      "default": "December 2024"
+    },
+    {
+      "type": "header",
+      "content": "Featured Image"
+    },
+    {
+      "type": "image_picker",
+      "id": "featured_image",
+      "label": "Featured image"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_placeholder",
+      "label": "Show placeholder if no image",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "image_caption",
+      "label": "Image caption"
+    },
+    {
+      "type": "header",
+      "content": "Article Content"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_drop_cap",
+      "label": "Show drop cap",
+      "default": true
+    },
+    {
+      "type": "richtext",
+      "id": "body_text",
+      "label": "Opening paragraphs",
+      "default": "<p>In the world of editorial design, the marriage of traditional magazine aesthetics with modern digital capabilities creates compelling narratives that engage readers across multiple platforms. This sophisticated approach to content presentation draws from decades of print design excellence while embracing the flexibility of contemporary web technologies.</p><p>The art of magazine layout has always been about more than just organizing text and images. It's about creating a visual hierarchy that guides the reader's eye, establishing rhythm through typography, and using white space as a design element in its own right.</p>"
+    },
+    {
+      "type": "product",
+      "id": "inline_product_1",
+      "label": "Inline product link1"
+    },
+    {
+      "type": "text",
+      "id": "subheading_1",
+      "label": "First subheading",
+      "default": "Typography as Visual Language"
+    },
+    {
+      "type": "richtext",
+      "id": "body_text_2",
+      "label": "Second section content",
+      "default": "<p>Typography in editorial design serves as both functional communication and artistic expression. The careful selection of typefaces, the precise adjustment of spacing, and the thoughtful arrangement of text blocks all contribute to the overall reading experience.</p><p>Modern editorial layouts embrace the principles established by legendary art directors while adapting to contemporary reading habits and digital consumption patterns.</p>"
+    },
+    {
+      "type": "product",
+      "id": "inline_product_2",
+      "label": "Inline product link 2"
+    },
+    {
+      "type": "header",
+      "content": "Pull Quote"
+    },
+    {
+      "type": "textarea",
+      "id": "pullquote_text",
+      "label": "Pull quote text",
+      "default": "Great editorial design doesn't just present information—it creates an experience that draws readers deeper into the story."
+    },
+    {
+      "type": "text",
+      "id": "pullquote_attribution",
+      "label": "Pull quote attribution",
+      "default": "Design Director"
+    },
+    {
+      "type": "text",
+      "id": "subheading_2",
+      "label": "Second subheading",
+      "default": "The Digital Evolution"
+    },
+    {
+      "type": "richtext",
+      "id": "body_text_3",
+      "label": "Third section content",
+      "default": "<p>As editorial design continues to evolve in the digital age, the fundamental principles of good magazine layout remain constant: clarity, hierarchy, and visual appeal. The challenge lies in adapting these timeless concepts to new mediums while maintaining the sophisticated aesthetic that defines quality editorial work.</p><p>The future of editorial design lies in this balance between tradition and innovation, creating layouts that honor the craft's rich history while embracing the possibilities of tomorrow.</p>"
+    },
+    {
+      "type": "product",
+      "id": "inline_product_3",
+      "label": "Inline product link 3"
+    },
+    {
+      "type": "header",
+      "content": "Product Showcase"
+    },
+    {
+      "type": "product_list",
+      "id": "featured_products_list",
+      "label": "Featured products",
+      "limit": 4
+    },
+    {
+      "type": "checkbox",
+      "id": "show_inline_price",
+      "label": "Show prices on inline links",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Sidebar"
+    },
+    {
+      "type": "text",
+      "id": "sidebar_title",
+      "label": "Sidebar title",
+      "default": "Editor's Note"
+    },
+    {
+      "type": "richtext",
+      "id": "sidebar_content",
+      "label": "Sidebar content",
+      "default": "<p>This layout demonstrates the power of multi-column text formatting, sophisticated typography, and thoughtful use of white space in creating engaging editorial content.</p><p>The design elements work together to create a reading experience that feels both familiar and fresh, honoring magazine design traditions while embracing modern digital capabilities.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Callout Box"
+    },
+    {
+      "type": "text",
+      "id": "callout_title",
+      "label": "Callout title",
+      "default": "Key Insight"
+    },
+    {
+      "type": "textarea",
+      "id": "callout_text",
+      "label": "Callout text",
+      "default": "Effective editorial design creates a seamless flow between content elements, guiding readers through the narrative with visual cues and typographic rhythm."
+    },
+    {
+      "type": "richtext",
+      "id": "footer_text",
+      "label": "Footer text",
+      "default": "<p>© 2024 Editorial Design Magazine. All rights reserved.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Layout Settings"
+    },
+    {
+      "type": "select",
+      "id": "column_count",
+      "label": "Text columns",
+      "options": [
+        {"value": "1", "label": "1 column"},
+        {"value": "2", "label": "2 columns"},
+        {"value": "3", "label": "3 columns"}
+      ],
+      "default": "2"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "font_picker",
+      "id": "heading_font",
+      "label": "Heading font",
+      "default": "playfair_display_n4"
+    },
+    {
+      "type": "font_picker",
+      "id": "body_font",
+      "label": "Body font",
+      "default": "crimson_text_n4"
+    },
+    {
+      "type": "range",
+      "id": "headline_size",
+      "min": 28,
+      "max": 72,
+      "step": 2,
+      "unit": "px",
+      "label": "Headline size",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size",
+      "min": 14,
+      "max": 28,
+      "step": 1,
+      "unit": "px",
+      "label": "Subtitle size",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "subheading_size",
+      "min": 16,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "label": "Subheading size",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "body_text_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Body text size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "pullquote_size",
+      "min": 18,
+      "max": 36,
+      "step": 1,
+      "unit": "px",
+      "label": "Pull quote size",
+      "default": 24
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "header_background_color",
+      "label": "Header background color",
+      "default": "#f8f9fa"
+    },
+    {
+      "type": "color",
+      "id": "columns_background_color",
+      "label": "Columns background color",
+      "default": "#fafbfc"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#2c2c2c"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "subtitle_color",
+      "label": "Subtitle color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#d4af37"
+    },
+    {
+      "type": "color",
+      "id": "byline_color",
+      "label": "Byline color",
+      "default": "#888888"
+    },
+    {
+      "type": "color",
+      "id": "caption_color",
+      "label": "Caption color",
+      "default": "#999999"
+    },
+    {
+      "type": "color",
+      "id": "column_divider_color",
+      "label": "Column divider color",
+      "default": "#e5e5e5"
+    },
+    {
+      "type": "color",
+      "id": "pullquote_color",
+      "label": "Pull quote text color",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "pullquote_bg_color",
+      "label": "Pull quote background",
+      "default": "#f8f8f8"
+    },
+    {
+      "type": "color",
+      "id": "sidebar_bg_color",
+      "label": "Sidebar background",
+      "default": "#f5f5f5"
+    },
+    {
+      "type": "color",
+      "id": "callout_bg_color",
+      "label": "Callout background",
+      "default": "#fafafa"
+    },
+    {
+      "type": "color",
+      "id": "product_showcase_bg_color",
+      "label": "Product showcase background",
+      "default": "#f9f9f9"
+    },
+    {
+      "type": "header",
+      "content": "Product Link Colors"
+    },
+    {
+      "type": "color",
+      "id": "product_link_color",
+      "label": "Product link text color",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "product_link_bg_color",
+      "label": "Product link background",
+      "default": "#f0f0f0"
+    },
+    {
+      "type": "color",
+      "id": "product_link_border_color",
+      "label": "Product link border",
+      "default": "#d4af37"
+    },
+    {
+      "type": "color",
+      "id": "product_link_hover_color",
+      "label": "Product link hover text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "product_link_hover_bg_color",
+      "label": "Product link hover background",
+      "default": "#d4af37"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Magazine Editorial Layout"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,277 @@
+{% doc %}
+  Responsive slideshow (SECTION) with functional height dropdown (Small 250px – XXL 1050px),
+  smooth transitions, autoplay, swipe on mobile, arrows on hover (desktop only),
+  dots styled in #4B3F82. Uses section.settings so controls appear.
+{% enddoc %}
+
+{% assign ai_gen_id = section.id | replace: '_', '' | downcase %}
+
+{%- liquid
+  assign height_option = section.settings.height_option
+  case height_option
+    when 'small'
+      assign height_px = 250
+    when 'medium'
+      assign height_px = 400
+    when 'large'
+      assign height_px = 600
+    when 'xlarge'
+      assign height_px = 800
+    when 'xxl'
+      assign height_px = 1050
+    else
+      assign height_px = 600
+  endcase
+-%}
+
+{% style %}
+  .ai-slideshow-{{ ai_gen_id }}{
+    --ai-ss-height: {{ height_px }}px;
+    position:relative;width:100%;overflow:hidden;
+    border-radius:{{ section.settings.border_radius }}px;
+    background-color:{{ section.settings.background_color }};
+    height:var(--ai-ss-height);
+  }
+  .ai-slideshow-container-{{ ai_gen_id }}{position:relative;width:100%;height:100%;display:flex;transition:transform {{ section.settings.transition_duration }}ms ease-in-out;}
+  .ai-slide-{{ ai_gen_id }}{min-width:100%;height:100%;position:relative;display:flex;align-items:center;justify-content:center;}
+  .ai-slide-image-{{ ai_gen_id }}{width:100%;height:100%;object-fit:cover;object-position:center;}
+  .ai-slide-placeholder-{{ ai_gen_id }}{width:100%;height:100%;background:#f4f4f4;display:flex;align-items:center;justify-content:center;}
+  .ai-slide-placeholder-{{ ai_gen_id }} svg{max-width:200px;max-height:200px;opacity:.3;}
+  .ai-slide-content-{{ ai_gen_id }}{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:{{ section.settings.text_color }};z-index:2;max-width:90%;}
+  .ai-slide-title-{{ ai_gen_id }}{font-size:{{ section.settings.title_size }}px;font-weight:600;margin:0 0 10px;text-shadow:0 2px 4px rgba(0,0,0,.3);}
+  .ai-slide-description-{{ ai_gen_id }}{font-size:{{ section.settings.description_size }}px;margin:0 0 20px;text-shadow:0 1px 2px rgba(0,0,0,.3);}
+  .ai-slide-button-{{ ai_gen_id }}{display:inline-block;padding:12px 24px;background:{{ section.settings.button_color }};color:{{ section.settings.button_text_color }};text-decoration:none;border-radius:{{ section.settings.button_border_radius }}px;font-weight:500;transition:background-color .3s, transform .2s;}
+  .ai-slide-button-{{ ai_gen_id }}:hover{background:{{ section.settings.button_hover_color }};transform:translateY(-1px);}
+
+  .ai-slideshow-nav-{{ ai_gen_id }}{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.9);border:none;width:50px;height:50px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:3;opacity:0;visibility:hidden;transition:opacity .3s, visibility .3s, transform .2s;box-shadow:0 2px 8px rgba(0,0,0,.15);}
+  .ai-slideshow-{{ ai_gen_id }}:hover .ai-slideshow-nav-{{ ai_gen_id }}{opacity:1;visibility:visible;}
+  .ai-slideshow-nav-prev-{{ ai_gen_id }}{left:20px;}
+  .ai-slideshow-nav-next-{{ ai_gen_id }}{right:20px;}
+  .ai-slideshow-nav-{{ ai_gen_id }} svg{width:20px;height:20px;color:#333;}
+
+  .ai-slideshow-dots-{{ ai_gen_id }}{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:12px;z-index:3;padding:8px 16px;background:rgba(255,255,255,.1);backdrop-filter:blur(10px);border-radius:40px;border:1px solid rgba(255,255,255,.2);}
+  .ai-slideshow-dot-{{ ai_gen_id }}{width:8px;height:8px;border-radius:40px;background:rgba(255,255,255,.4);border:none;cursor:pointer;transition:all .3s;}
+  .ai-slideshow-dot-{{ ai_gen_id }}.active{background:#4B3F82;width:24px;box-shadow:0 2px 8px rgba(75,63,130,.4);}
+
+  .ai-slide-overlay-{{ ai_gen_id }}{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0) 0%, rgba(0,0,0,{{ section.settings.overlay_opacity | divided_by: 100.0 }}) 100%);z-index:1;}
+
+  @media(max-width:749px){
+    .ai-slideshow-{{ ai_gen_id }}{height:clamp(220px,var(--ai-ss-height),560px);}
+    .ai-slideshow-nav-{{ ai_gen_id }}{display:none;} /* no arrows on mobile */
+    .ai-slideshow-dot-{{ ai_gen_id }}{width:6px;height:6px;}
+    .ai-slideshow-dot-{{ ai_gen_id }}.active{width:20px;}
+  }
+{% endstyle %}
+
+<responsive-slideshow-{{ ai_gen_id }}
+  class="ai-slideshow-{{ ai_gen_id }}"
+  data-autoplay="{{ section.settings.autoplay }}"
+  data-autoplay-speed="{{ section.settings.autoplay_speed }}"
+>
+  <div class="ai-slideshow-container-{{ ai_gen_id }}">
+    {% for i in (1..5) %}
+      {% liquid
+        assign slide_enabled_key     = 'slide_' | append: i | append: '_enabled'
+        assign slide_image_key       = 'slide_' | append: i | append: '_image'
+        assign slide_title_key       = 'slide_' | append: i | append: '_title'
+        assign slide_description_key = 'slide_' | append: i | append: '_description'
+        assign slide_button_text_key = 'slide_' | append: i | append: '_button_text'
+        assign slide_button_link_key = 'slide_' | append: i | append: '_button_link'
+
+        assign slide_enabled     = section.settings[slide_enabled_key]
+        assign slide_image       = section.settings[slide_image_key]
+        assign slide_title       = section.settings[slide_title_key]
+        assign slide_description = section.settings[slide_description_key]
+        assign slide_button_text = section.settings[slide_button_text_key]
+        assign slide_button_link = section.settings[slide_button_link_key]
+      %}
+      {% if slide_enabled %}
+        <div class="ai-slide-{{ ai_gen_id }}" data-slide="{{ forloop.index0 }}">
+          {% if slide_image %}
+            <img src="{{ slide_image | image_url: width: 2000 }}"
+                 alt="{{ slide_image.alt | escape }}"
+                 class="ai-slide-image-{{ ai_gen_id }}"
+                 loading="lazy"
+                 width="{{ slide_image.width }}"
+                 height="{{ slide_image.height }}">
+          {% else %}
+            <div class="ai-slide-placeholder-{{ ai_gen_id }}">{{ 'image' | placeholder_svg_tag }}</div>
+          {% endif %}
+
+          {% if section.settings.show_overlay %}<div class="ai-slide-overlay-{{ ai_gen_id }}"></div>{% endif %}
+
+          {% if slide_title or slide_description or slide_button_text %}
+            <div class="ai-slide-content-{{ ai_gen_id }}">
+              {% if slide_title %}<h2 class="ai-slide-title-{{ ai_gen_id }}">{{ slide_title }}</h2>{% endif %}
+              {% if slide_description %}<p class="ai-slide-description-{{ ai_gen_id }}">{{ slide_description }}</p>{% endif %}
+              {% if slide_button_text and slide_button_link %}
+                <a href="{{ slide_button_link }}" class="ai-slide-button-{{ ai_gen_id }}">{{ slide_button_text }}</a>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+
+  {% assign count = 0 %}
+  {% for i in (1..5) %}
+    {% liquid
+      assign enabled_key = 'slide_' | append: i | append: '_enabled'
+      assign is_enabled = section.settings[enabled_key]
+    %}
+    {% if is_enabled %}
+      {% assign count = count | plus: 1 %}
+    {% endif %}
+  {% endfor %}
+
+  {% if count == 0 %}
+    <div class="ai-empty-state-{{ ai_gen_id }}">Add images to create your slideshow</div>
+  {% endif %}
+
+  {% if count > 1 %}
+    <button class="ai-slideshow-nav-{{ ai_gen_id }} ai-slideshow-nav-prev-{{ ai_gen_id }}" aria-label="Previous slide">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15,18 9,12 15,6"/></svg>
+    </button>
+    <button class="ai-slideshow-nav-{{ ai_gen_id }} ai-slideshow-nav-next-{{ ai_gen_id }}" aria-label="Next slide">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9,6 15,12 9,18"/></svg>
+    </button>
+
+    <div class="ai-slideshow-dots-{{ ai_gen_id }}">
+      {% for i in (1..count) %}
+        <button class="ai-slideshow-dot-{{ ai_gen_id }}{% if forloop.first %} active{% endif %}" data-slide="{{ forloop.index0 }}"></button>
+      {% endfor %}
+    </div>
+  {% endif %}
+</responsive-slideshow-{{ ai_gen_id }}>
+
+<script>
+(function(){
+class ResponsiveSlideshow{{ ai_gen_id }} extends HTMLElement{
+  constructor(){super();this.current=0;this.interval=null;this.isTrans=false;}
+  connectedCallback(){
+    this.container=this.querySelector('.ai-slideshow-container-{{ ai_gen_id }}');
+    this.slides=[...this.querySelectorAll('.ai-slide-{{ ai_gen_id }}')];
+    this.dots=[...this.querySelectorAll('.ai-slideshow-dot-{{ ai_gen_id }}')];
+    this.prev=this.querySelector('.ai-slideshow-nav-prev-{{ ai_gen_id }}');
+    this.next=this.querySelector('.ai-slideshow-nav-next-{{ ai_gen_id }}');
+    this.auto=this.dataset.autoplay==='true';
+    this.speed=parseInt(this.dataset.autoplaySpeed)||5000;
+
+    if(this.slides.length<=1) return;
+
+    if(this.prev) this.prev.addEventListener('click',()=>!this.isTrans&&this.prevSlide());
+    if(this.next) this.next.addEventListener('click',()=>!this.isTrans&&this.nextSlide());
+    this.dots.forEach((d,i)=>d.addEventListener('click',()=>!this.isTrans&&this.go(i)));
+
+    this.addEventListener('mouseenter',()=>this.stop());
+    this.addEventListener('mouseleave',()=>this.auto&&this.start());
+
+    this.addEventListener('touchstart',e=>{this.x1=e.touches[0].clientX;this.stop();},{passive:true});
+    this.addEventListener('touchend',e=>{
+      const dx=this.x1-e.changedTouches[0].clientX;
+      if(Math.abs(dx)>50){dx>0?this.nextSlide():this.prevSlide();}
+      if(this.auto) setTimeout(()=>this.start(),800);
+    },{passive:true});
+
+    this.container.addEventListener('transitionstart',()=>this.isTrans=true);
+    this.container.addEventListener('transitionend',()=>this.isTrans=false);
+
+    if(this.auto) this.start();
+  }
+  go(i){ if(i===this.current)return; this.current=i; this.update(); }
+  nextSlide(){ this.current=(this.current+1)%this.slides.length; this.update(); }
+  prevSlide(){ this.current=(this.current?this.current:this.slides.length)-1; this.update(); }
+  update(){
+    this.container.style.transform=`translateX(${-this.current*100}%)`;
+    this.dots.forEach((d,i)=>d.classList.toggle('active',i===this.current));
+    this.reset();
+  }
+  start(){ this.stop(); this.interval=setInterval(()=>!this.isTrans&&this.nextSlide(),this.speed); }
+  stop(){ if(this.interval) clearInterval(this.interval); }
+  reset(){ this.stop(); if(this.auto) this.start(); }
+  disconnectedCallback(){ this.stop(); }
+}
+customElements.define('responsive-slideshow-{{ ai_gen_id }}', ResponsiveSlideshow{{ ai_gen_id }});
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Responsive slideshow",
+  "settings": [
+    { "type": "header", "content": "Slideshow settings" },
+    {
+      "type": "select",
+      "id": "height_option",
+      "label": "Banner height",
+      "default": "large",
+      "options": [
+        { "value": "small",  "label": "Small — 250px"  },
+        { "value": "medium", "label": "Medium — 400px" },
+        { "value": "large",  "label": "Large — 600px"  },
+        { "value": "xlarge", "label": "Extra Large — 800px" },
+        { "value": "xxl",    "label": "XXL — 1050px" }
+      ]
+    },
+
+    { "type": "range", "id": "border_radius", "min": 0, "max": 40, "step": 2, "unit": "px", "label": "Border radius", "default": 8 },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#f4f4f4" },
+    { "type": "range", "id": "transition_duration", "min": 200, "max": 1000, "step": 100, "unit": "ms", "label": "Transition speed", "default": 500 },
+
+    { "type": "header", "content": "Autoplay" },
+    { "type": "checkbox", "id": "autoplay", "label": "Enable autoplay", "default": true },
+    { "type": "range", "id": "autoplay_speed", "min": 2000, "max": 9000, "step": 500, "unit": "ms", "label": "Autoplay speed", "default": 5000 },
+
+    { "type": "header", "content": "Content styling" },
+    { "type": "checkbox", "id": "show_overlay", "label": "Show overlay", "default": true },
+    { "type": "range", "id": "overlay_opacity", "min": 0, "max": 80, "step": 10, "unit": "%", "label": "Overlay opacity", "default": 30 },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#ffffff" },
+    { "type": "range", "id": "title_size", "min": 16, "max": 60, "step": 2, "unit": "px", "label": "Title size", "default": 32 },
+    { "type": "range", "id": "description_size", "min": 12, "max": 24, "step": 1, "unit": "px", "label": "Description size", "default": 16 },
+
+    { "type": "color", "id": "button_color", "label": "Button color", "default": "#4b3f82" },
+    { "type": "color", "id": "button_hover_color", "label": "Button hover color", "default": "#3d3268" },
+    { "type": "color", "id": "button_text_color", "label": "Button text color", "default": "#ffffff" },
+    { "type": "range", "id": "button_border_radius", "min": 0, "max": 40, "step": 2, "unit": "px", "label": "Button border radius", "default": 40 },
+
+    { "type": "header", "content": "Slides" },
+
+    { "type": "checkbox", "id": "slide_1_enabled", "label": "Enable slide 1", "default": true },
+    { "type": "image_picker", "id": "slide_1_image", "label": "Image" },
+    { "type": "text", "id": "slide_1_title", "label": "Title", "default": "Welcome to our store" },
+    { "type": "textarea", "id": "slide_1_description", "label": "Description", "default": "Discover amazing products and great deals" },
+    { "type": "text", "id": "slide_1_button_text", "label": "Button text", "default": "Shop now" },
+    { "type": "url", "id": "slide_1_button_link", "label": "Button link" },
+
+    { "type": "checkbox", "id": "slide_2_enabled", "label": "Enable slide 2", "default": true },
+    { "type": "image_picker", "id": "slide_2_image", "label": "Image" },
+    { "type": "text", "id": "slide_2_title", "label": "Title", "default": "New arrivals" },
+    { "type": "textarea", "id": "slide_2_description", "label": "Description", "default": "Check out our latest collection" },
+    { "type": "text", "id": "slide_2_button_text", "label": "Button text", "default": "Explore" },
+    { "type": "url", "id": "slide_2_button_link", "label": "Button link" },
+
+    { "type": "checkbox", "id": "slide_3_enabled", "label": "Enable slide 3", "default": false },
+    { "type": "image_picker", "id": "slide_3_image", "label": "Image" },
+    { "type": "text", "id": "slide_3_title", "label": "Title" },
+    { "type": "textarea", "id": "slide_3_description", "label": "Description" },
+    { "type": "text", "id": "slide_3_button_text", "label": "Button text" },
+    { "type": "url", "id": "slide_3_button_link", "label": "Button link" },
+
+    { "type": "checkbox", "id": "slide_4_enabled", "label": "Enable slide 4", "default": false },
+    { "type": "image_picker", "id": "slide_4_image", "label": "Image" },
+    { "type": "text", "id": "slide_4_title", "label": "Title" },
+    { "type": "textarea", "id": "slide_4_description", "label": "Description" },
+    { "type": "text", "id": "slide_4_button_text", "label": "Button text" },
+    { "type": "url", "id": "slide_4_button_link", "label": "Button link" },
+
+    { "type": "checkbox", "id": "slide_5_enabled", "label": "Enable slide 5", "default": false },
+    { "type": "image_picker", "id": "slide_5_image", "label": "Image" },
+    { "type": "text", "id": "slide_5_title", "label": "Title" },
+    { "type": "textarea", "id": "slide_5_description", "label": "Description" },
+    { "type": "text", "id": "slide_5_button_text", "label": "Button text" },
+    { "type": "url", "id": "slide_5_button_link", "label": "Button link" }
+  ],
+  "presets": [{ "name": "Responsive slideshow" }]
+}
+{% endschema %}

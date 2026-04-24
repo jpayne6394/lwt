@@ -1,0 +1,596 @@
+{% doc %}
+  @prompt
+    Create a comprehensive company bio section with mission and vision statements that seamlessly integrates with the existing site theme. Include customizable fields for company description, mission statement, vision statement, founding story, and team highlights. Add style controls for background colors, text alignment, spacing, and typography. Include image upload capabilities for company photos, team images, or brand visuals. Provide layout options (single column, two column, card-based) and color scheme controls that match the site's existing design system. Make it fully responsive with smooth animations and professional styling., add better style that fits theme, make more luxury saas feel, close but give more wellness as a service, lets do a horizontal main card and trust and vision smaller under, remove badge, more style like our theme, more style, better style more luxury, wellness as a serivce, have the stats span the length at the btoom, no image hover, no card hover but we want the color gradient for the icons, add font size control for all
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-company-bio-{{ ai_gen_id }} {
+    padding: {{ block.settings.section_padding_top }}px 0 {{ block.settings.section_padding_bottom }}px;
+    background: {{ block.settings.background_color }};
+    background: radial-gradient(ellipse at top, {{ block.settings.background_gradient_color }} 0%, {{ block.settings.background_color }} 70%);
+    color: {{ block.settings.text_color }};
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-company-bio-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(circle at 20% 80%, rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba({{ block.settings.secondary_accent | color_extract: 'red' }}, {{ block.settings.secondary_accent | color_extract: 'green' }}, {{ block.settings.secondary_accent | color_extract: 'blue' }}, 0.02) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .ai-company-bio-container-{{ ai_gen_id }} {
+    max-width: {{ settings.page_width }}px;
+    margin: 0 auto;
+    padding: 0 {{ settings.spacing_grid_horizontal }}px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .ai-company-bio-main-card-{{ ai_gen_id }} {
+    background: {{ block.settings.card_background }};
+    background: linear-gradient(145deg, {{ block.settings.card_background }} 0%, {{ block.settings.card_gradient_color }} 100%);
+    border-radius: {{ settings.card_corner_radius | plus: 16 }}px;
+    padding: 100px 80px 60px;
+    margin-bottom: {{ settings.spacing_sections | plus: 32 }}px;
+    position: relative;
+    overflow: hidden;
+    {% if settings.card_shadow_opacity > 0 %}
+      box-shadow:
+        0 32px 64px rgba({{ settings.card_shadow_color.red }}, {{ settings.card_shadow_color.green }}, {{ settings.card_shadow_color.blue }}, {{ settings.card_shadow_opacity | divided_by: 100.0 | times: 0.25 }}),
+        0 16px 32px rgba({{ settings.card_shadow_color.red }}, {{ settings.card_shadow_color.green }}, {{ settings.card_shadow_color.blue }}, {{ settings.card_shadow_opacity | divided_by: 100.0 | times: 0.15 }}),
+        0 8px 16px rgba({{ settings.card_shadow_color.red }}, {{ settings.card_shadow_color.green }}, {{ settings.card_shadow_color.blue }}, {{ settings.card_shadow_opacity | divided_by: 100.0 | times: 0.1 }}),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.05);
+    {% endif %}
+    {% if settings.card_border_thickness > 0 %}
+      border: {{ settings.card_border_thickness }}px solid rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.08);
+    {% endif %}
+    backdrop-filter: blur(20px) saturate(1.2);
+  }
+
+  .ai-company-bio-main-card-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute; left: 0; right: 0; top: 0; height: 2px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.6) 20%,
+      {{ block.settings.accent_color }} 50%,
+      rgba({{ block.settings.secondary_accent | color_extract: 'red' }}, {{ block.settings.secondary_accent | color_extract: 'green' }}, {{ block.settings.secondary_accent | color_extract: 'blue' }}, 0.6) 80%,
+      transparent 100%);
+  }
+
+  .ai-company-bio-main-card-{{ ai_gen_id }}::after {
+    content: '';
+    position: absolute; top: -100px; right: -100px; width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.03) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  .ai-company-bio-main-content-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 100px;
+    align-items: center;
+    margin-bottom: 80px;
+  }
+
+  .ai-company-bio-content-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    text-align: {{ settings.card_text_alignment }};
+    position: relative;
+  }
+
+  .ai-company-bio-tagline-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: {{ block.settings.tagline_font_size }}px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: {{ block.settings.accent_color }};
+    margin: 0;
+    opacity: 0.9;
+  }
+
+  .ai-company-bio-heading-{{ ai_gen_id }} {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-weight: 300;
+    font-size: {{ block.settings.heading_font_size }}px;
+    line-height: 1.1;
+    margin: 0;
+    color: {{ block.settings.text_color }};
+    letter-spacing: -0.02em;
+    position: relative;
+  }
+
+  .ai-company-bio-heading-highlight-{{ ai_gen_id }} {
+    background: linear-gradient(135deg, {{ block.settings.accent_color }} 0%, {{ block.settings.secondary_accent }} 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 400;
+  }
+
+  .ai-company-bio-description-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: {{ block.settings.description_font_size }}px;
+    line-height: 1.8;
+    margin: 0;
+    color: {{ block.settings.text_color }};
+    opacity: 0.85;
+    font-weight: 300;
+    letter-spacing: 0.01em;
+  }
+
+/* Trailing link — bold, full-width underline, arrow on right, hover lift */
+.ai-company-bio-description-link-{{ ai_gen_id }} {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  font-weight: 700;
+  color: {{ block.settings.accent_color }};
+  text-decoration: none;            /* custom underline instead */
+  position: relative;
+  padding-bottom: 6px;              /* room for underline */
+  transition: color .2s ease, transform .2s ease;  /* enable lift */
+  will-change: transform;
+}
+
+/* Full-width underline under BOTH text + arrow */
+.ai-company-bio-description-link-{{ ai_gen_id }}::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: currentColor;
+}
+
+/* Right arrow */
+.ai-company-bio-description-link-{{ ai_gen_id }}::after {
+  content: '→';
+  font-weight: 600;
+  transform: translateX(0);
+  transition: transform .2s ease;
+}
+
+/* Hover interactions: lift the whole link and nudge arrow */
+.ai-company-bio-description-link-{{ ai_gen_id }}:hover {
+  transform: translateY(-2px);
+}
+.ai-company-bio-description-link-{{ ai_gen_id }}:hover::after {
+  transform: translateX(4px);
+}
+
+/* Accessible focus */
+.ai-company-bio-description-link-{{ ai_gen_id }}:focus-visible {
+  outline: 2px solid {{ block.settings.accent_color }};
+  outline-offset: 3px;
+}
+
+
+.ai-company-bio-description-link-{{ ai_gen_id }}:focus-visible {
+  outline: 2px solid {{ block.settings.accent_color }};
+  outline-offset: 3px;
+}
+
+
+  .ai-company-bio-image-wrapper-{{ ai_gen_id }} {
+    position: relative;
+    border-radius: {{ settings.media_radius | plus: 20 }}px;
+    overflow: hidden;
+    aspect-ratio: 4/3;
+    {% if settings.media_border_thickness > 0 %}
+      border: {{ settings.media_border_thickness }}px solid rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.12);
+    {% endif %}
+    {% if settings.media_shadow_opacity > 0 %}
+      box-shadow:
+        0 40px 80px rgba({{ settings.card_shadow_color.red }}, {{ settings.card_shadow_color.green }}, {{ settings.card_shadow_color.blue }}, {{ settings.media_shadow_opacity | divided_by: 100.0 | times: 0.3 }}),
+        0 20px 40px rgba({{ settings.card_shadow_color.red }}, {{ settings.card_shadow_color.green }}, {{ settings.card_shadow_color.blue }}, {{ settings.media_shadow_opacity | divided_by: 100.0 | times: 0.2 }}),
+        0 10px 20px rgba({{ settings.card_shadow_color.red }}, {{ settings.card_shadow_color.green }}, {{ settings.card_shadow_color.blue }}, {{ settings.media_shadow_opacity | divided_by: 100.0 | times: 0.1 }});
+    {% endif %}
+    transform: perspective(1200px) rotateY(-8deg) rotateX(3deg);
+  }
+
+  .ai-company-bio-image-wrapper-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg,
+      rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.08) 0%,
+      transparent 40%,
+      rgba({{ block.settings.secondary_accent | color_extract: 'red' }}, {{ block.settings.secondary_accent | color_extract: 'green' }}, {{ block.settings.secondary_accent | color_extract: 'blue' }}, 0.05) 100%);
+    z-index: 1; pointer-events: none;
+  }
+
+  .ai-company-bio-image-{{ ai_gen_id }} {
+    width: 100%; height: 100%; object-fit: cover;
+    filter: contrast(1.05) saturate(1.1) brightness(1.02);
+  }
+
+  .ai-company-bio-image-placeholder-{{ ai_gen_id }} {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, {{ block.settings.card_background }} 0%, rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.03) 100%);
+    position: relative;
+  }
+
+  .ai-company-bio-image-placeholder-{{ ai_gen_id }} svg {
+    width: 50%; height: 50%; opacity: 0.15; color: {{ block.settings.accent_color }};
+  }
+
+  .ai-company-bio-empty-state-{{ ai_gen_id }} {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    padding: 16px 24px;
+    background: rgba({{ block.settings.card_background | color_extract: 'red' }}, {{ block.settings.card_background | color_extract: 'green' }}, {{ block.settings.card_background | color_extract: 'blue' }}, 0.95);
+    border-radius: {{ settings.buttons_radius | plus: 8 }}px;
+    font-size: 0.875rem; color: {{ block.settings.text_color }};
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.1);
+    font-weight: 500; letter-spacing: 0.01em;
+  }
+
+  .ai-company-bio-stats-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 60px;
+    padding-top: 60px;
+    position: relative;
+    width: 100%;
+  }
+  .ai-company-bio-stats-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute; left: 0; right: 0; top: 0; height: 1px;
+    background: linear-gradient(90deg,
+      transparent 0%,
+      rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.3) 20%,
+      {{ block.settings.accent_color }} 50%,
+      rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.3) 80%,
+      transparent 100%);
+  }
+
+  .ai-company-bio-stat-{{ ai_gen_id }} { text-align: center; position: relative; }
+
+  .ai-company-bio-stat-number-{{ ai_gen_id }} {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-size: {{ block.settings.stat_number_font_size }}px;
+    font-weight: 200;
+    background: linear-gradient(135deg, {{ block.settings.accent_color }} 0%, {{ block.settings.secondary_accent }} 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    display: block; line-height: 1; letter-spacing: -0.03em;
+  }
+
+  .ai-company-bio-stat-label-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: {{ block.settings.stat_label_font_size }}px;
+    color: {{ block.settings.text_color }}; opacity: 0.6; margin-top: 12px;
+    font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase;
+  }
+
+  .ai-company-bio-cards-grid-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    gap: {{ settings.spacing_grid_horizontal | plus: 16 }}px;
+  }
+
+  .ai-company-bio-card-{{ ai_gen_id }} {
+    background: {{ block.settings.card_background }};
+    background: linear-gradient(145deg, {{ block.settings.card_background }} 0%, {{ block.settings.card_gradient_color }} 100%);
+    border-radius: {{ settings.card_corner_radius | plus: 8 }}px;
+    padding: 60px 48px;
+    text-align: {{ settings.card_text_alignment }};
+    {% if settings.card_border_thickness > 0 %}
+      border: {{ settings.card_border_thickness }}px solid rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.06);
+    {% endif %}
+    {% if settings.card_shadow_opacity > 0 %}
+      box-shadow:
+        0 20px 40px rgba({{ settings.card_shadow_color.red }}, {{ settings.card_shadow_color.green }}, {{ settings.card_shadow_color.blue }}, {{ settings.card_shadow_opacity | divided_by: 100.0 | times: 0.15 }}),
+        0 10px 20px rgba({{ settings.card_shadow_color.red }}, {{ settings.card_shadow_color.green }}, {{ settings.card_shadow_color.blue }}, {{ settings.card_shadow_opacity | divided_by: 100.0 | times: 0.1 }}),
+        0 5px 10px rgba({{ settings.card_shadow_color.red }}, {{ settings.card_shadow_color.green }}, {{ settings.card_shadow_color.blue }}, {{ settings.card_shadow_opacity | divided_by: 100.0 | times: 0.05 }}),
+        inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    {% endif %}
+    position: relative; overflow: hidden; backdrop-filter: blur(20px) saturate(1.1);
+  }
+
+  .ai-company-bio-card-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute; left: 0; right: 0; top: 0; height: 3px;
+    background: linear-gradient(90deg, {{ block.settings.accent_color }} 0%, {{ block.settings.secondary_accent }} 50%, rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.3) 100%);
+  }
+
+  .ai-company-bio-card-{{ ai_gen_id }}::after {
+    content: '';
+    position: absolute; top: -50%; right: -50%; width: 100%; height: 100%;
+    background: radial-gradient(circle, rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.02) 0%, transparent 70%);
+    pointer-events: none; z-index: -1;
+  }
+
+  .ai-company-bio-card-icon-{{ ai_gen_id }} {
+    width: 80px; height: 80px; margin: 0 auto 32px; padding: 20px;
+    background: linear-gradient(135deg, {{ block.settings.accent_color }} 0%, {{ block.settings.secondary_accent }} 100%);
+    border-radius: {{ settings.buttons_radius | plus: 12 }}px;
+    display: flex; align-items: center; justify-content: center; color: white; position: relative;
+    border: 1px solid rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.08);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 15px 30px rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.3);
+  }
+  .ai-company-bio-card-icon-{{ ai_gen_id }} svg { position: relative; z-index: 1; }
+
+  .ai-company-bio-card-title-{{ ai_gen_id }} {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-weight: 400;
+    font-size: {{ block.settings.card_title_font_size }}px;
+    margin: 0 0 20px;
+    color: {{ block.settings.text_color }};
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+
+  .ai-company-bio-card-text-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: {{ block.settings.card_text_font_size }}px;
+    line-height: 1.7;
+    margin: 0;
+    color: {{ block.settings.text_color }};
+    opacity: 0.8;
+    letter-spacing: 0.01em;
+    font-weight: 300;
+  }
+
+  .ai-company-bio-floating-elements-{{ ai_gen_id }} {
+    position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0;
+  }
+  .ai-company-bio-floating-element-{{ ai_gen_id }} {
+    position: absolute; width: 4px; height: 4px; background: {{ block.settings.accent_color }};
+    border-radius: 50%; opacity: 0.1; animation: ai-float-{{ ai_gen_id }} 25s infinite linear;
+  }
+  .ai-company-bio-floating-element-{{ ai_gen_id }}:nth-child(1){ top:15%; left:8%;  animation-delay:0s;   background: {{ block.settings.accent_color }}; }
+  .ai-company-bio-floating-element-{{ ai_gen_id }}:nth-child(2){ top:70%; right:12%; animation-delay:-8s; background: {{ block.settings.secondary_accent }}; }
+  .ai-company-bio-floating-element-{{ ai_gen_id }}:nth-child(3){ bottom:25%; left:15%; animation-delay:-16s; background: {{ block.settings.accent_color }}; }
+  .ai-company-bio-floating-element-{{ ai_gen_id }}:nth-child(4){ top:40%; right:25%; animation-delay:-12s; background: {{ block.settings.secondary_accent }}; }
+
+  @keyframes ai-float-{{ ai_gen_id }} {
+    0%,100% { transform: translateY(0) translateX(0) rotate(0); opacity: .05; }
+    25%     { transform: translateY(-15px) translateX(10px) rotate(90deg); opacity: .15; }
+    50%     { transform: translateY(-30px) translateX(-5px) rotate(180deg); opacity: .25; }
+    75%     { transform: translateY(-15px) translateX(-10px) rotate(270deg); opacity: .15; }
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-company-bio-main-card-{{ ai_gen_id }} { padding: 60px {{ settings.spacing_grid_horizontal }}px 40px; }
+    .ai-company-bio-main-content-{{ ai_gen_id }} { grid-template-columns: 1fr; gap: 60px; margin-bottom: 60px; }
+    .ai-company-bio-content-{{ ai_gen_id }} { text-align: center; gap: 32px; }
+    .ai-company-bio-image-wrapper-{{ ai_gen_id }} { transform: perspective(1200px) rotateY(0) rotateX(0); }
+    .ai-company-bio-cards-grid-{{ ai_gen_id }} { grid-template-columns: 1fr; gap: {{ settings.spacing_grid_vertical | plus: 16 }}px; }
+    .ai-company-bio-stats-{{ ai_gen_id }} { grid-template-columns: 1fr; gap: 40px; padding-top: 40px; }
+    .ai-company-bio-heading-{{ ai_gen_id }} { font-size: {{ block.settings.heading_font_size | times: 0.75 }}px; }
+    .ai-company-bio-card-{{ ai_gen_id }} { padding: 48px 32px; }
+    .ai-company-bio-tagline-{{ ai_gen_id }} { font-size: {{ block.settings.tagline_font_size | times: 0.9 }}px; }
+    .ai-company-bio-description-{{ ai_gen_id }} { font-size: {{ block.settings.description_font_size | times: 0.9 }}px; }
+    .ai-company-bio-stat-number-{{ ai_gen_id }} { font-size: {{ block.settings.stat_number_font_size | times: 0.8 }}px; }
+    .ai-company-bio-card-title-{{ ai_gen_id }} { font-size: {{ block.settings.card_title_font_size | times: 0.9 }}px; }
+    .ai-company-bio-card-text-{{ ai_gen_id }} { font-size: {{ block.settings.card_text_font_size | times: 0.9 }}px; }
+  }
+
+  @media screen and (max-width: 480px) {
+    .ai-company-bio-main-card-{{ ai_gen_id }} { padding: 48px 24px 32px; margin-bottom: {{ settings.spacing_sections | divided_by: 2 }}px; }
+    .ai-company-bio-card-{{ ai_gen_id }} { padding: 40px 24px; }
+    .ai-company-bio-heading-{{ ai_gen_id }} { font-size: {{ block.settings.heading_font_size | times: 0.65 }}px; }
+    .ai-company-bio-cards-grid-{{ ai_gen_id }} { grid-template-columns: 1fr; gap: {{ settings.spacing_grid_vertical }}px; }
+    .ai-company-bio-stats-{{ ai_gen_id }} { gap: 32px; padding-top: 32px; }
+    .ai-company-bio-tagline-{{ ai_gen_id }} { font-size: {{ block.settings.tagline_font_size | times: 0.8 }}px; }
+    .ai-company-bio-description-{{ ai_gen_id }} { font-size: {{ block.settings.description_font_size | times: 0.85 }}px; }
+    .ai-company-bio-stat-number-{{ ai_gen_id }} { font-size: {{ block.settings.stat_number_font_size | times: 0.7 }}px; }
+    .ai-company-bio-stat-label-{{ ai_gen_id }} { font-size: {{ block.settings.stat_label_font_size | times: 0.9 }}px; }
+    .ai-company-bio-card-title-{{ ai_gen_id }} { font-size: {{ block.settings.card_title_font_size | times: 0.85 }}px; }
+    .ai-company-bio-card-text-{{ ai_gen_id }} { font-size: {{ block.settings.card_text_font_size | times: 0.85 }}px; }
+  }
+{% endstyle %}
+
+<div class="ai-company-bio-{{ ai_gen_id }} color-{{ block.settings.color_scheme }}" {{ block.shopify_attributes }}>
+  <div class="ai-company-bio-floating-elements-{{ ai_gen_id }}">
+    <div class="ai-company-bio-floating-element-{{ ai_gen_id }}"></div>
+    <div class="ai-company-bio-floating-element-{{ ai_gen_id }}"></div>
+    <div class="ai-company-bio-floating-element-{{ ai_gen_id }}"></div>
+    <div class="ai-company-bio-floating-element-{{ ai_gen_id }}"></div>
+  </div>
+
+  <div class="ai-company-bio-container-{{ ai_gen_id }}">
+    <div class="ai-company-bio-main-card-{{ ai_gen_id }}">
+      <div class="ai-company-bio-main-content-{{ ai_gen_id }}">
+        <div class="ai-company-bio-content-{{ ai_gen_id }}">
+          {% if block.settings.tagline != blank %}
+            <p class="ai-company-bio-tagline-{{ ai_gen_id }}">{{ block.settings.tagline }}</p>
+          {% endif %}
+
+          {% if block.settings.company_name != blank %}
+            <h2 class="ai-company-bio-heading-{{ ai_gen_id }}">
+              {{ block.settings.company_name_prefix }}<span class="ai-company-bio-heading-highlight-{{ ai_gen_id }}">{{ block.settings.company_name }}</span>
+              {{ block.settings.company_name_suffix }}
+            </h2>
+          {% endif %}
+
+          {% if block.settings.company_description != blank %}
+            <div class="ai-company-bio-description-{{ ai_gen_id }}">
+              {{ block.settings.company_description }}
+              {% if block.settings.description_link_text != blank and block.settings.description_link_url != blank %}
+                <a
+                  class="ai-company-bio-description-link-{{ ai_gen_id }}"
+                  href="{{ block.settings.description_link_url }}"
+                  {% if block.settings.description_link_new_tab %}target="_blank" rel="noopener noreferrer"{% endif %}
+                >
+                  {{ block.settings.description_link_text }}
+                </a>
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="ai-company-bio-image-wrapper-{{ ai_gen_id }}">
+          {% if block.settings.company_image %}
+            <img
+              src="{{ block.settings.company_image | image_url: width: 1000 }}"
+              alt="{{ block.settings.company_image.alt | escape }}"
+              class="ai-company-bio-image-{{ ai_gen_id }}"
+              loading="lazy"
+              width="{{ block.settings.company_image.width }}"
+              height="{{ block.settings.company_image.height }}"
+            >
+          {% else %}
+            <div class="ai-company-bio-image-placeholder-{{ ai_gen_id }}">
+              {{ 'image' | placeholder_svg_tag }}
+              <div class="ai-company-bio-empty-state-{{ ai_gen_id }}">
+                Add wellness center image
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if block.settings.show_stats %}
+        <div class="ai-company-bio-stats-{{ ai_gen_id }}">
+          {% if block.settings.stat_1_number != blank %}
+            <div class="ai-company-bio-stat-{{ ai_gen_id }}">
+              <span class="ai-company-bio-stat-number-{{ ai_gen_id }}">{{ block.settings.stat_1_number }}</span>
+              <div class="ai-company-bio-stat-label-{{ ai_gen_id }}">{{ block.settings.stat_1_label }}</div>
+            </div>
+          {% endif %}
+          {% if block.settings.stat_2_number != blank %}
+            <div class="ai-company-bio-stat-{{ ai_gen_id }}">
+              <span class="ai-company-bio-stat-number-{{ ai_gen_id }}">{{ block.settings.stat_2_number }}</span>
+              <div class="ai-company-bio-stat-label-{{ ai_gen_id }}">{{ block.settings.stat_2_label }}</div>
+            </div>
+          {% endif %}
+          {% if block.settings.stat_3_number != blank %}
+            <div class="ai-company-bio-stat-{{ ai_gen_id }}">
+              <span class="ai-company-bio-stat-number-{{ ai_gen_id }}">{{ block.settings.stat_3_number }}</span>
+              <div class="ai-company-bio-stat-label-{{ ai_gen_id }}">{{ block.settings.stat_3_label }}</div>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="ai-company-bio-cards-grid-{{ ai_gen_id }}">
+      {% if block.settings.show_mission %}
+        <div class="ai-company-bio-card-{{ ai_gen_id }}">
+          <div class="ai-company-bio-card-icon-{{ ai_gen_id }}">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-4"/>
+              <path d="M9 11V9a3 3 0 1 1 6 0v2"/>
+              <circle cx="12" cy="16" r="1"/>
+            </svg>
+          </div>
+          <h3 class="ai-company-bio-card-title-{{ ai_gen_id }}">{{ block.settings.mission_title }}</h3>
+          <div class="ai-company-bio-card-text-{{ ai_gen_id }}">
+            {{ block.settings.mission_statement }}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if block.settings.show_vision %}
+        <div class="ai-company-bio-card-{{ ai_gen_id }}">
+          <div class="ai-company-bio-card-icon-{{ ai_gen_id }}">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+          </div>
+          <h3 class="ai-company-bio-card-title-{{ ai_gen_id }}">{{ block.settings.vision_title }}</h3>
+          <div class="ai-company-bio-card-text-{{ ai_gen_id }}">
+            {{ block.settings.vision_statement }}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Luxury wellness bio",
+  "settings": [
+    { "type": "header", "content": "Company information" },
+    { "type": "text", "id": "tagline", "label": "Tagline", "default": "Premium Wellness Technology" },
+    { "type": "text", "id": "company_name_prefix", "label": "Company name prefix", "default": "Elevating" },
+    { "type": "text", "id": "company_name", "label": "Company name (highlighted)", "default": "Wellness" },
+    { "type": "text", "id": "company_name_suffix", "label": "Company name suffix", "default": "Through Innovation" },
+    {
+      "type": "richtext",
+      "id": "company_description",
+      "label": "Company description",
+      "default": "<p>We curate transformative wellness experiences through cutting-edge technology and personalized care. Our platform seamlessly connects discerning clients with world-class practitioners, creating a sanctuary of well-being that transcends traditional boundaries and elevates your journey to optimal health.</p>"
+    },
+    { "type": "text", "id": "description_link_text", "label": "Description trailing link text", "default": "Learn About Us" },
+    { "type": "url", "id": "description_link_url", "label": "Description trailing link URL" },
+    { "type": "checkbox", "id": "description_link_new_tab", "label": "Open description link in new tab", "default": true },
+
+    { "type": "image_picker", "id": "company_image", "label": "Wellness center image" },
+
+    { "type": "header", "content": "Mission statement" },
+    { "type": "checkbox", "id": "show_mission", "label": "Show mission", "default": true },
+    { "type": "text", "id": "mission_title", "label": "Mission title", "default": "Our Purpose" },
+    {
+      "type": "richtext",
+      "id": "mission_statement",
+      "label": "Mission statement",
+      "default": "<p>To democratize access to premium wellness experiences through innovative technology, creating a seamless bridge between world-class practitioners and individuals seeking transformative health journeys in an atmosphere of luxury and care.</p>"
+    },
+
+    { "type": "header", "content": "Vision statement" },
+    { "type": "checkbox", "id": "show_vision", "label": "Show vision", "default": true },
+    { "type": "text", "id": "vision_title", "label": "Vision title", "default": "Our Future" },
+    {
+      "type": "richtext",
+      "id": "vision_statement",
+      "label": "Vision statement",
+      "default": "<p>A world where exceptional wellness is accessible to all, where technology enhances human connection rather than replacing it, and where every individual has the tools and support to achieve their highest potential for well-being and vitality.</p>"
+    },
+
+    { "type": "header", "content": "Statistics" },
+    { "type": "checkbox", "id": "show_stats", "label": "Show statistics", "default": true },
+    { "type": "text", "id": "stat_1_number", "label": "Statistic 1 number", "default": "25K+" },
+    { "type": "text", "id": "stat_1_label", "label": "Statistic 1 label", "default": "Wellness journeys" },
+    { "type": "text", "id": "stat_2_number", "label": "Statistic 2 number", "default": "500+" },
+    { "type": "text", "id": "stat_2_label", "label": "Statistic 2 label", "default": "Expert practitioners" },
+    { "type": "text", "id": "stat_3_number", "label": "Statistic 3 number", "default": "98%" },
+    { "type": "text", "id": "stat_3_label", "label": "Statistic 3 label", "default": "Client satisfaction" },
+
+    { "type": "header", "content": "Typography" },
+    { "type": "range", "id": "tagline_font_size", "min": 10, "max": 24, "step": 1, "unit": "px", "label": "Tagline font size", "default": 14 },
+    { "type": "range", "id": "heading_font_size", "min": 32, "max": 120, "step": 2, "unit": "px", "label": "Main heading font size", "default": 64 },
+    { "type": "range", "id": "description_font_size", "min": 14, "max": 32, "step": 1, "unit": "px", "label": "Description font size", "default": 18 },
+    { "type": "range", "id": "stat_number_font_size", "min": 24, "max": 80, "step": 2, "unit": "px", "label": "Statistic number font size", "default": 48 },
+    { "type": "range", "id": "stat_label_font_size", "min": 10, "max": 20, "step": 1, "unit": "px", "label": "Statistic label font size", "default": 14 },
+    { "type": "range", "id": "card_title_font_size", "min": 16, "max": 36, "step": 1, "unit": "px", "label": "Card title font size", "default": 24 },
+    { "type": "range", "id": "card_text_font_size", "min": 12, "max": 24, "step": 1, "unit": "px", "label": "Card text font size", "default": 16 },
+
+    { "type": "header", "content": "Colors" },
+    { "type": "color_scheme", "id": "color_scheme", "label": "Color scheme", "default": "scheme-1" },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#fdfbfb" },
+    { "type": "color", "id": "background_gradient_color", "label": "Background gradient color", "default": "#f9f4f7" },
+    { "type": "color", "id": "card_background", "label": "Card background", "default": "#ffffff" },
+    { "type": "color", "id": "card_gradient_color", "label": "Card gradient color", "default": "#fefefe" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#1a1a1a" },
+    { "type": "color", "id": "accent_color", "label": "Primary accent color", "default": "#6b5b95" },
+    { "type": "color", "id": "secondary_accent", "label": "Secondary accent color", "default": "#88d8c0" },
+
+    { "type": "header", "content": "Spacing" },
+    { "type": "range", "id": "section_padding_top", "min": 0, "max": 160, "step": 8, "unit": "px", "label": "Top padding", "default": 120 },
+    { "type": "range", "id": "section_padding_bottom", "min": 0, "max": 160, "step": 8, "unit": "px", "label": "Bottom padding", "default": 120 }
+  ],
+  "presets": [
+    { "name": "Luxury wellness bio" }
+  ]
+}
+{% endschema %}

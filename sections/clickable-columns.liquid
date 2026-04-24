@@ -1,0 +1,319 @@
+<style>
+ 
+  .clickable-columns-section {
+    background-color: #FDF2F2;
+    padding: 30px 20px 160px; /* more top padding for better section header spacing */ /* top right/left bottom */
+    margin-top: 25px;
+    margin-bottom: 50px;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06); /* subtle floating effect */
+  }
+
+  .clickable-columns-wrapper {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 3rem;
+    align-items: stretch;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .clickable-tile {
+    position: relative;
+    cursor: pointer;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 2rem 2.5rem;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    overflow: hidden;
+}
+
+.clickable-tile:hover {
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15); /* bit more depth */
+  transform: translateY(-4px) scale(1.02); /* slight scale + lift */
+
+}
+
+.clickable-tile::after {
+    content: '';
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 24px;
+    height: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238e4ec6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3Cpolyline points='12 5 19 12 12 19'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transform: translateX(-5px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+}
+
+.clickable-tile:hover::after {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+
+
+  .clickable-tile .tile-image {
+    margin: 0 auto 1.5rem;
+  }
+
+  .tile-image img {
+    object-fit: cover;
+    height: auto;
+    width: 100%;
+    max-width: 100px;
+  }
+
+  .image--square img {
+    aspect-ratio: 1 / 1;
+  }
+
+  .image--portrait img {
+    aspect-ratio: 3 / 4;
+  }
+
+  .image--circle img {
+    border-radius: 50%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .image--adapt img {
+    height: auto;
+    width: auto;
+    max-width: 100px;
+  }
+
+  .clickable-tile h3 {
+    font-size: 1.375rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .clickable-tile p {
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: #333;
+    max-width: 90%;
+    margin: 0 auto;
+  }
+
+.clickable-columns-section .section-heading {
+  text-align: center;
+  margin-top: -3.5rem;
+  margin-bottom: 4rem;
+  min-height: 4rem; /* reserve full space always */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+  .clickable-columns-section .section-heading:empty {
+  min-height: 2rem; /* when heading empty — force spacing */
+  margin-bottom: 4rem; /* keep same spacing */
+}
+
+  .clickable-columns-section .section-heading h2 {
+    font-size: 4rem;
+    font-weight: 500;
+    line-height: 1.3;
+}
+</style>
+
+
+
+<section class="clickable-columns-section section">
+  
+<div class="section-heading">
+  {% if section.settings.heading != blank %}
+    <h2>{{ section.settings.heading }}</h2>
+  {% endif %}
+</div>
+
+  <div class="clickable-columns-wrapper">
+    {% for block in section.blocks %}
+      {% assign image = block.settings.image %}
+      {% assign title = block.settings.title %}
+      {% assign text = block.settings.text %}
+      {% assign link = block.settings.link %}
+      
+      {% if link != blank %}
+        <a href="{{ link }}" class="clickable-tile" {{ block.shopify_attributes }}>
+      {% else %}
+        <div class="clickable-tile" {{ block.shopify_attributes }}>
+      {% endif %}
+
+          {% if image != blank %}
+            <div class="tile-image image--{{ section.settings.image_ratio }}">
+              <img src="{{ image | image_url: width: 300 }}" alt="{{ title | escape }}">
+            </div>
+          {% endif %}
+
+          {% if title != blank %}
+            <h3>{{ title }}</h3>
+          {% endif %}
+
+          {% if text != blank %}
+            <p>{{ text }}</p>
+          {% endif %}
+
+      {% if link != blank %}
+        </a>
+      {% else %}
+        </div>
+      {% endif %}
+
+    {% endfor %}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Clickable Columns",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Section Heading",
+      "default": "What Makes Us Different"
+    },
+    {
+      "type": "select",
+      "id": "image_ratio",
+      "label": "Image aspect ratio",
+      "default": "adapt",
+      "options": [
+        { "value": "adapt", "label": "Adapt to image" },
+        { "value": "square", "label": "Square (1:1)" },
+        { "value": "portrait", "label": "Portrait (3:4)" },
+        { "value": "circle", "label": "Circle" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "heading_size",
+      "label": "Heading size",
+      "default": "medium",
+      "options": [
+        { "value": "small", "label": "Small" },
+        { "value": "medium", "label": "Medium" },
+        { "value": "large", "label": "Large" }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "label": "Number of columns on desktop",
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "default": 4
+    },
+    {
+      "type": "radio",
+      "id": "column_alignment",
+      "label": "Column alignment",
+      "default": "center",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Center" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "background",
+      "label": "Secondary background",
+      "default": "none",
+      "options": [
+        { "value": "none", "label": "None" },
+        { "value": "background-1", "label": "Scheme 1" },
+        { "value": "background-2", "label": "Scheme 2" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-6",
+      "options": [
+        { "value": "scheme-1", "label": "Scheme 1" },
+        { "value": "scheme-2", "label": "Scheme 2" },
+        { "value": "scheme-3", "label": "Scheme 3" },
+        { "value": "scheme-4", "label": "Scheme 4" },
+        { "value": "scheme-5", "label": "Scheme 5" },
+        { "value": "scheme-6", "label": "Scheme 6" }
+      ]
+    },
+    {
+      "type": "radio",
+      "id": "columns_mobile",
+      "label": "Number of columns on mobile",
+      "default": "1",
+      "options": [
+        { "value": "1", "label": "1 column" },
+        { "value": "2", "label": "2 columns" }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "swipe_on_mobile",
+      "label": "Enable swipe on mobile",
+      "default": false
+    }
+  ],
+  "blocks": [
+    {
+      "type": "column",
+      "name": "Column",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Icon image"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Heading",
+          "default": "Column title"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Description",
+          "default": "Column description goes here."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link URL"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Clickable Columns",
+      "blocks": [
+        { "type": "column" },
+        { "type": "column" },
+        { "type": "column" },
+        { "type": "column" },
+        { "type": "column" }
+      ]
+    }
+  ]
+}
+{% endschema %}

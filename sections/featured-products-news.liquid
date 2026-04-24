@@ -1,0 +1,131 @@
+{% schema %}
+{
+  "name": "Products & News Row",
+  "settings": [
+    { "type": "text", "id": "heading_products", "label": "Products heading", "default": "Product Highlights" },
+    { "type": "collection", "id": "collection", "label": "Collection to show" },
+    { "type": "number", "id": "product_limit", "label": "Number of products", "default": 3 },
+    { "type": "text", "id": "button_text", "label": "Products button text", "default": "View All Packges" },
+    { "type": "url", "id": "button_link", "label": "Products button link" },
+    { "type": "text", "id": "heading_blog", "label": "News heading", "default": "Latest News & Events" },
+    { "type": "blog", "id": "blog", "label": "Blog to show" },
+    { "type": "number", "id": "article_limit", "label": "Number of articles", "default": 3 },
+    { "type": "text", "id": "button_text_news", "label": "News link text", "default": "View All News" },
+    { "type": "color", "id": "product_title_color", "label": "Product title color", "default": "#000000" },
+    { "type": "color", "id": "news_title_color", "label": "News title color", "default": "#000000" },
+    { "type": "color", "id": "divider_color", "label": "Divider color", "default": "#cccccc" }
+  ],
+  "presets": [ { "name": "Products & News Row" } ]
+}
+{% endschema %}
+
+<div id="section-{{ section.id }}" class="page-width" style="position: relative; z-index: 1; overflow-x: hidden; margin-top: 60px; margin-bottom: 60px;">
+  <style>
+    #section-{{ section.id }} .title-products { color: {{ section.settings.product_title_color }}; }
+    #section-{{ section.id }} .title-news { color: {{ section.settings.news_title_color }}; }
+    #section-{{ section.id }} .news-column { border-left-color: {{ section.settings.divider_color }} !important; padding-left: 4rem; }
+
+    /* Only image hover */
+    #section-{{ section.id }} .product-card img:hover {
+      transform: scale(1.05);
+      transition: all 0.3s ease;
+    }
+
+    @media screen and (max-width: 749px) {
+      #section-{{ section.id }} .news-column {
+        border-left: none;
+        padding-left: 0;
+        margin-top: 2rem;
+      }
+
+      #section-{{ section.id }} .product-card {
+        flex: 1 1 100%;
+      }
+    }
+
+    @media screen and (min-width: 750px) and (max-width: 989px) {
+      #section-{{ section.id }} .product-card {
+        flex: 1 1 calc(50% - 1rem);
+      }
+    }
+
+    @media screen and (min-width: 990px) {
+      #section-{{ section.id }} .product-card {
+        flex: 1 1 calc(33.333% - 1rem);
+      }
+    }
+  </style>
+
+  <div class="grid grid--2-col-desktop grid--2-col-tablet grid--1-col-mobile gap__large">
+
+    <!-- Products Column -->
+    <div class="grid__item">
+      <h2 class="title title-products">{{ section.settings.heading_products }}</h2>
+
+      <div class="product-card-flex" style="display: flex; flex-wrap: wrap; gap: 1rem;">
+        {% assign products = collections[section.settings.collection].products %}
+        {% if products.size > 0 %}
+          {% for product in products limit: section.settings.product_limit %}
+            <div class="product-card" style="min-width: 160px; max-width: 100%; padding: 1rem; box-sizing: border-box; overflow: hidden; transition: all 0.3s ease;">
+              <a href="{{ product.url }}" class="card" style="display: flex; flex-direction: column; align-items: center;">
+                {% if product.featured_media.preview_image %}
+                  <div class="card__media" style="width: 100%; max-width: 180px; margin-bottom: 1rem; display: flex; justify-content: center; position: relative; z-index: 1;">
+                    <img
+                      src="{{ product.featured_media.preview_image | image_url: width: 400 }}"
+                      alt="{{ product.title | escape }}"
+                      width="400"
+                      height="400"
+                      style="width: auto; max-width: 100%; max-height: 160px; height: auto; object-fit: contain; display: block;"
+                      loading="lazy"
+                    />
+                  </div>
+                {% endif %}
+                <div class="card__content" style="text-align: center;">
+                  <h3 style="font-size: 0.95rem; line-height: 1.4;">{{ product.title }}</h3>
+                </div>
+              </a>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p style="color:red;">⚠️ No products found in selected collection.</p>
+        {% endif %}
+      </div>
+
+      {% if section.settings.collection %}
+        <div style="margin-top: 1rem;">
+          <a href="{{ collections[section.settings.collection].url }}" class="link underlined-link">{{ section.settings.button_text }}</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- News Column -->
+    <div class="grid__item news-column" style="border-left:1px solid;">
+      <h2 class="title title-news">{{ section.settings.heading_blog }}</h2>
+      <ul style="list-style:none; padding:0; margin:0;">
+        {% for article in blogs[section.settings.blog].articles limit: section.settings.article_limit %}
+          <li style="display:flex; align-items:flex-start; margin-bottom:1rem;">
+            {% if article.image %}
+              <div style="flex:0 0 auto; width:60px; height:60px; margin-right:1rem; overflow:hidden;">
+                <img
+                  src="{{ article.image | image_url: width: 100 }}"
+                  alt="{{ article.title | escape }}"
+                  width="100" height="100"
+                  style="width:100%; height:100%; object-fit:cover;"
+                  loading="lazy"
+                />
+              </div>
+            {% endif %}
+            <div style="flex:1 1 auto;">
+              <a href="{{ article.url }}" class="link" style="font-weight:600;">{{ article.title }}</a>
+              <p class="caption small light" style="margin:0.25rem 0 0;">{{ article.published_at | date: "%B %d, %Y" }}</p>
+            </div>
+          </li>
+        {% endfor %}
+      </ul>
+      <div style="margin-top: 1rem;">
+        <a href="/blogs/{{ section.settings.blog.handle }}" class="link underlined-link">{{ section.settings.button_text_news }}</a>
+      </div>
+    </div>
+
+  </div>
+</div>

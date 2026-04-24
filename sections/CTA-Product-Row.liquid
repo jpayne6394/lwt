@@ -1,0 +1,446 @@
+{% stylesheet %}
+/* ====== LAYOUT ====== */
+.best-sellers-row{
+  display:flex;flex-wrap:nowrap;justify-content:space-between;align-items:stretch;
+  gap:3rem;padding:4rem 2rem;background:#ffffff;border-radius:28px;max-width:1600px;margin:0 auto;
+}
+.best-sellers-row.reverse{flex-direction:row-reverse}
+
+/* PRODUCTS COLUMN (cards + dots + centered CTA) */
+.bs-products-col{
+  flex:1 1 60%;
+  display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;
+}
+
+/* PRODUCT ROW (desktop grid → mobile swipe) */
+.bs-product-cards{
+  display:flex;gap:2rem;justify-content:space-between;align-items:stretch;width:100%;
+}
+
+/* ====== PRODUCT CARD (equal heights) ====== */
+.bs-product-card{
+  background:#fff;border-radius:20px;padding:1.5rem;
+  box-shadow:0 10px 30px rgba(0,0,0,.08);text-align:center;
+  display:flex;flex-direction:column;align-items:center;
+  flex:1 1 calc(33.333% - 1.5rem);max-width:calc(33.333% - 1.5rem);
+  border:1px solid #f0f0f0;transition:transform .3s ease;height:100%;
+}
+.bs-product-card:hover{transform:translateY(-4px)}
+
+/* image wrapper — fixed height for even cards */
+.bs-media{
+  position:relative;isolation:isolate;width:100%;display:flex;justify-content:center;align-items:center;
+  height:170px;
+}
+.bs-media img{max-height:160px;object-fit:contain;margin-bottom:1rem;display:block}
+
+/* SALE BADGE */
+.bs-sale-badge{
+  position:absolute;top:.5rem;left:.5rem;padding:.35rem .6rem;border-radius:999px;
+  font-weight:700;font-size:.75rem;line-height:1;box-shadow:0 6px 16px rgba(0,0,0,.12);
+  z-index:3;pointer-events:none
+}
+
+/* Text + price (clamped) */
+.bs-product-card h4{font-size:1rem;font-weight:600;margin-bottom:.3rem;min-height:2.6em;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.vendor{font-size:.75rem;color:#6c6c6c;margin-bottom:.4rem;text-transform:uppercase;min-height:1em}
+.bs-product-card .subtitle{font-size:.9rem;color:#6c6c6c;margin-bottom:.7rem;min-height:1.2em}
+.bs-product-card .price-wrap{font-size:1rem;font-weight:700;color:#3e2764;margin-bottom:.6rem;min-height:1.2em}
+.bs-product-card .compare-price{text-decoration:line-through;color:#999;font-size:.85rem;margin-left:.5rem}
+
+/* === ORIGINAL PRODUCT BUTTON STYLE (reverted) === */
+.bs-product-card form{margin-top:auto;width:100%;display:flex;justify-content:center}
+.bs-product-card .button{
+  margin-top:auto;padding:.5rem 1.4rem;background-color:#3e2764;color:#fff;font-size:.9rem;
+  border-radius:999px;border:none;transition:background .3s ease;box-shadow:0 4px 12px rgba(0,0,0,.05);
+}
+.bs-product-card .button:hover{background-color:#281946}
+
+/* ===== CTA side panel ===== */
+.bs-cta-panel{
+  flex:0 0 35%;position:relative;background-size:cover;background-position:center;border-radius:24px;
+  min-height:500px;box-shadow:0 16px 48px rgba(0,0,0,.08);display:flex;justify-content:center;align-items:center;
+  padding:2.5rem;text-align:center;color:#fff;overflow:hidden;
+}
+.bs-cta-panel[data-align="top"]{align-items:flex-start}
+.bs-cta-panel[data-align="middle"]{align-items:center}
+.bs-cta-panel[data-align="bottom"]{align-items:flex-end}
+.bs-cta-overlay{position:absolute;inset:0;border-radius:24px}
+.bs-cta-panel .content{position:relative;z-index:2}
+.bs-cta-panel h3{font-size:1.5rem;font-weight:700;margin-bottom:.6rem}
+.bs-cta-panel p{font-size:1rem;margin-bottom:1.4rem}
+
+/* ===== Universal animated button (for CTA buttons only) ===== */
+.ai-btn{
+  position:relative;display:inline-flex;align-items:center;justify-content:center;
+  border:none;cursor:pointer;text-decoration:none;user-select:none;outline:none;
+  padding:var(--btn-py,10px) var(--btn-px,22px);border-radius:var(--btn-radius,28px);
+  font-weight:var(--btn-weight,700);text-transform:var(--btn-transform,none);
+  box-shadow:0 10px 30px rgba(0,0,0,var(--btn-shadow,.10));
+  transition:transform .25s cubic-bezier(.2,.7,.2,1), box-shadow .25s ease, background .25s ease, color .25s ease;
+  will-change:transform;
+  font-size:var(--btn-font-size, 1rem); /* NEW: global CTA button font size (used by mobile banner cta too) */
+}
+.has-luxury-anim .ai-btn:hover{transform:translateY(-2px) scale(1.015);box-shadow:0 18px 40px rgba(0,0,0,calc(var(--btn-shadow,.10)+.08))}
+.has-luxury-anim .ai-btn::after{
+  content:"";position:absolute;inset:-2px;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(120deg, rgba(255,255,255,.0) 0%, rgba(255,255,255,.35) 35%, rgba(255,255,255,.0) 70%);
+  transform:translateX(-160%);opacity:.0;transition:transform .9s cubic-bezier(.2,.7,.2,1), opacity .3s ease;mix-blend-mode:screen;
+}
+.has-luxury-anim .ai-btn:hover::after{transform:translateX(160%);opacity:.5}
+
+/* Dots */
+.bs-dots{display:none}
+
+/* Centered CTA under cards (spaced down) — DESKTOP */
+.bs-grid-cta{
+  display:flex;justify-content:center;align-items:center;
+  width:100%;text-align:center;margin-top:var(--grid-cta-mt,72px);
+}
+.bs-grid-cta .bs-grid-btn{
+  margin:0 auto;display:inline-flex;align-items:center;justify-content:center;
+  font-size:var(--grid-cta-font-size, 1rem);        /* NEW: desktop grid CTA font size */
+  font-weight:var(--grid-cta-weight, 700);          /* NEW: desktop grid CTA font weight */
+  text-transform:var(--grid-cta-transform, none);   /* NEW: desktop grid CTA transform */
+  letter-spacing:var(--grid-cta-letter, 0px);       /* NEW: desktop grid CTA letter-spacing */
+}
+
+/* Desktop fine-tune */
+@media (max-width:1024px){
+  .bs-product-card{flex:1 1 calc(33.333% - 1.2rem);max-width:calc(33.333% - 1.2rem)}
+}
+
+/* Desktop badge sizing */
+@media (min-width: 990px){
+  .bs-sale-badge{font-size:.8rem;padding:.4rem .7rem}
+}
+
+/* ===== Mobile ===== */
+@media (max-width:989px){
+  .best-sellers-row,.best-sellers-row.reverse{flex-direction:column}
+  .bs-cta-panel{width:100%;max-width:95%;min-height:320px;margin-bottom:2rem}
+  .bs-product-cards{
+    --cardW: 100%;
+    display:flex;flex-direction:row;gap:1.25rem;
+    overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;justify-content:flex-start;
+    padding-inline:0;scroll-padding-inline:0;
+    -ms-overflow-style:none;scrollbar-width:none;
+  }
+  .bs-product-cards::-webkit-scrollbar{display:none}
+  .bs-product-card{
+    flex:0 0 var(--cardW);max-width:var(--cardW);scroll-snap-align:center;
+    box-sizing:border-box;padding:1.2rem 1rem;border-radius:20px;box-shadow:0 10px 30px rgba(0,0,0,.08);
+  }
+  .bs-media{height:150px}
+  .bs-media img{max-height:140px}
+
+  .bs-dots{display:flex;gap:.5rem;justify-content:center;margin:.9rem 0 0 0}
+  .bs-dots button{
+    width:8px;height:8px;border-radius:50%;background:#d6d6d6;border:none;cursor:pointer;padding:0;
+    box-shadow:none;outline:none;transition:transform .15s, background .15s;
+  }
+  .bs-dots button.is-active{background:#3e2764}
+}
+{% endstylesheet %}
+
+{% assign overlay_alpha = section.settings.cta_overlay_opacity | default: 35 | times: 0.01 %}
+{% assign btn_shadow_alpha = section.settings.buttons_shadow_alpha | default: 12 | times: 0.01 %}
+
+{%- style -%}
+/* Live controls + variables */
+#bsr-{{ section.id }}{
+  --btn-radius: {{ section.settings.buttons_radius | default: 28 }}px;
+  --btn-py: {{ section.settings.buttons_padding_y | default: 10 }}px;
+  --btn-px: {{ section.settings.buttons_padding_x | default: 22 }}px;
+  --btn-weight: {{ section.settings.buttons_weight | default: 700 }};
+  --btn-transform: {% if section.settings.buttons_uppercase %}uppercase{% else %}none{% endif %};
+  --btn-shadow: {{ btn_shadow_alpha | default: 0.12 }};
+  --btn-font-size: {{ section.settings.buttons_font_size | default: 16 }}px; /* NEW: global CTA (affects mobile banner button) */
+
+  --grid-cta-mt: {{ section.settings.grid_cta_spacing_top | default: 72 }}px;
+
+  /* NEW: Desktop under-products CTA-specific font controls */
+  --grid-cta-font-size: {{ section.settings.grid_cta_font_size | default: 16 }}px;
+  --grid-cta-weight: {{ section.settings.grid_cta_weight | default: 700 }};
+  --grid-cta-transform: {% if section.settings.grid_cta_uppercase %}uppercase{% else %}none{% endif %};
+  --grid-cta-letter: {{ section.settings.grid_cta_letter_spacing | default: 0 }}px;
+}
+
+/* Helpers for responsive visibility of CTAs */
+#bsr-{{ section.id }} .only-desktop{display:block}
+#bsr-{{ section.id }} .only-mobile{display:none}
+
+/* Product title color */
+#bsr-{{ section.id }} .bs-product-card h4{color:{{ section.settings.text_color | default: '#1a1a1a' }}}
+
+/* PRODUCT button colors (reverted style) */
+#bsr-{{ section.id }} .bs-product-card .button{
+  background-color:{{ section.settings.button_bg | default: '#3e2764' }};
+  color:{{ section.settings.button_text | default: '#ffffff' }};
+}
+#bsr-{{ section.id }} .bs-product-card .button:hover{background-color:{{ section.settings.button_hover | default: '#281946' }}}
+
+/* Card borders */
+#bsr-{{ section.id }} .bs-product-card{
+  border: {{ section.settings.card_border_width | default: 1 }}px solid {{ section.settings.card_border_color | default: '#f0f0f0' }};
+}
+@media (max-width:989px){
+  #bsr-{{ section.id }} .bs-product-card{ border-width: {{ section.settings.card_border_width_mobile | default: 1 }}px; }
+}
+
+/* Side CTA colors */
+#bsr-{{ section.id }} .bs-cta-panel h3{color:{{ section.settings.cta_heading_color | default: '#ffffff' }}}
+#bsr-{{ section.id }} .bs-cta-panel p{color:{{ section.settings.cta_subheading_color | default: '#ffffff' }}}
+#bsr-{{ section.id }} .bs-cta-overlay{ background: {{ section.settings.cta_overlay_color | default: '#000000' | color_modify: 'alpha', overlay_alpha }}; }
+
+/* Side CTA button (mobile-only) */
+#bsr-{{ section.id }} .bs-cta-panel .cta-btn{
+  background:{{ section.settings.cta_btn_bg | default: '#ffffff' }};
+  color:{{ section.settings.cta_btn_text | default: '#3e2764' }};
+}
+#bsr-{{ section.id }} .bs-cta-panel .cta-btn:hover{background:{{ section.settings.cta_btn_hover | default: '#f1f1f1' }}}
+
+/* Sale badge colors */
+#bsr-{{ section.id }} .bs-sale-badge{
+  background: {{ section.settings.sale_badge_bg | default: '#e11d48' }};
+  color: {{ section.settings.sale_badge_text | default: '#ffffff' }};
+}
+
+/* Grid CTA button colors (desktop-only container below) */
+#bsr-{{ section.id }} .bs-grid-cta .bs-grid-btn{
+  background: {{ section.settings.grid_cta_bg | default: '#3e2764' }};
+  color: {{ section.settings.grid_cta_text | default: '#ffffff' }};
+}
+#bsr-{{ section.id }} .bs-grid-cta .bs-grid-btn:hover{ background: {{ section.settings.grid_cta_hover | default: '#281946' }}; }
+
+/* Responsive rules for CTA visibility + banner order */
+@media (max-width:989px){
+  #bsr-{{ section.id }} .only-desktop{display:none !important}
+  #bsr-{{ section.id }} .only-mobile{display:inline-flex}
+  /* Move image banner above products on mobile */
+  #bsr-{{ section.id }} .bs-cta-panel{ order:-1; }
+}
+{%- endstyle -%}
+
+<div id="bsr-{{ section.id }}" class="best-sellers-row{% if section.settings.reverse_order %} reverse{% endif %}{% if section.settings.enable_luxury_anim %} has-luxury-anim{% endif %}">
+  <!-- PRODUCTS COLUMN -->
+  <div class="bs-products-col">
+    <div class="bs-product-cards">
+      {% for block in section.blocks %}
+        {% assign product = all_products[block.settings.product] %}
+        {% if product %}
+          {%- assign on_sale = false -%}
+          {%- assign compare_max = product.compare_at_price_max -%}
+          {%- assign price_min = product.price_min -%}
+          {%- if compare_max and compare_max > price_min -%}
+            {%- assign on_sale = true -%}
+            {%- assign save = compare_max | minus: price_min -%}
+            {%- assign pct = save | times: 100 | divided_by: compare_max | round: 0 -%}
+          {%- endif -%}
+          <div class="bs-product-card" {{ block.shopify_attributes }}>
+            <div class="bs-media">
+              {% if on_sale %}<span class="bs-sale-badge" aria-label="On sale {{ pct }}% off">SAVE {{ pct }}%</span>{% endif %}
+              <a href="{{ product.url }}" style="position:relative;z-index:2"><img src="{{ product.featured_image | image_url: width: 500 }}" alt="{{ product.title }}"></a>
+            </div>
+
+            <h4>{{ product.title }}</h4>
+            <div class="vendor">{% if product.vendor %}{{ product.vendor }}{% endif %}</div>
+            {% if block.settings.subtitle != blank %}<div class="subtitle">{{ block.settings.subtitle }}</div>{% else %}<div class="subtitle"></div>{% endif %}
+
+            <div class="price-wrap">
+              <span>{{ product.price | money }}</span>
+              {% if compare_max and compare_max > product.price %}
+                <span class="compare-price">{{ compare_max | money }}</span>
+              {% endif %}
+            </div>
+
+            {% if section.settings.hide_all_buttons != true and section.settings.show_product_buttons %}
+              <form method="post" action="/cart/add" class="bs-atc-form" novalidate>
+                <input type="hidden" name="id" value="{{ product.variants.first.id }}">
+                <button type="submit" class="button">Add to Cart</button>
+              </form>
+            {% endif %}
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <!-- Mobile dots -->
+    <div class="bs-dots" data-dots></div>
+
+    {% if section.settings.hide_all_buttons != true and section.settings.hide_both_cta_buttons != true and section.settings.show_grid_cta and section.settings.grid_cta_label != blank and section.settings.grid_cta_link != blank %}
+      <!-- Under-cards CTA: desktop only (centered) -->
+      <div class="bs-grid-cta only-desktop">
+        <a class="bs-grid-btn ai-btn" href="{{ section.settings.grid_cta_link }}">{{ section.settings.grid_cta_label }}</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- CTA SIDE PANEL -->
+  <div class="bs-cta-panel" data-align="{{ section.settings.cta_text_align | default: 'middle' }}" style="background-image:url({{ section.settings.cta_image | image_url: width: 900 }});">
+    <div class="bs-cta-overlay"></div>
+    <div class="content">
+      <h3>{{ section.settings.cta_heading }}</h3>
+      <p>{{ section.settings.cta_subheading }}</p>
+
+      {% if section.settings.hide_all_buttons != true and section.settings.hide_both_cta_buttons != true and section.settings.show_side_cta_button %}
+        <!-- Side CTA button: mobile only -->
+        <a class="cta-btn ai-btn only-mobile" href="{{ section.settings.cta_button_link }}">{{ section.settings.cta_button_label }}</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const root = document.getElementById('bsr-{{ section.id }}');
+  const track = root?.querySelector('.bs-product-cards');
+  const dotsWrap = root?.querySelector('[data-dots]');
+  if(!root || !track || !dotsWrap) return;
+
+  /* AJAX ATC */
+  root.querySelectorAll('.bs-atc-form').forEach(form=>{
+    form.addEventListener('submit',async(e)=>{
+      e.preventDefault();e.stopPropagation();
+      const btn=form.querySelector('button[type="submit"]');const fd=new FormData(form);
+      try{
+        btn.disabled=true;btn.textContent='Adding…';
+        const r=await fetch('/cart/add.js',{method:'POST',headers:{'Accept':'application/json'},body:fd});
+        if(!r.ok) throw new Error('add_failed');
+        const toggle=document.querySelector('[data-cart-toggle],[aria-controls="CartDrawer"],.header__icon--cart');
+        if(toggle) toggle.click();
+        document.dispatchEvent(new CustomEvent('cart:open',{bubbles:true}));
+        document.dispatchEvent(new CustomEvent('cart:refresh',{bubbles:true}));
+        btn.textContent='Added ✓';setTimeout(()=>{btn.textContent='Add to Cart';btn.disabled=false;},1000);
+      }catch(err){
+        console.error(err);btn.textContent='Add to Cart';btn.disabled=false;alert('Sorry—could not add to cart. Please try again.');
+      }
+    });
+  });
+
+  /* Mobile dots */
+  const cards = Array.from(track.querySelectorAll('.bs-product-card'));
+  if(cards.length <= 1){
+    dotsWrap.style.display = 'none';
+  }else{
+    dotsWrap.innerHTML = cards.map((_,i)=>`<button type="button" aria-label="Go to item ${i+1}"></button>`).join('');
+  }
+  const dots = Array.from(dotsWrap.querySelectorAll('button'));
+  const isMobile = () => window.matchMedia('(max-width: 989px)').matches;
+
+  function activeIndex(){
+    const tr = track.getBoundingClientRect();
+    const center = tr.left + tr.width/2;
+    let best = 0, bestDist = Infinity;
+    cards.forEach((c,i)=>{
+      const r=c.getBoundingClientRect();
+      const d=Math.abs((r.left+r.width/2)-center);
+      if(d<bestDist){bestDist=d;best=i;}
+    });
+    return best;
+  }
+  function setActive(i){ dots.forEach((d,idx)=>d.classList.toggle('is-active', idx===i)); }
+  function scrollToIndex(i){
+    if(!isMobile()) return;
+    const card = cards[i];
+    const targetLeft = card.offsetLeft - (track.clientWidth - card.clientWidth)/2;
+    track.scrollTo({ left: targetLeft, behavior:'smooth' });
+  }
+  function updateDots(){
+    if(!isMobile() || dots.length === 0) return;
+    setActive(activeIndex());
+  }
+  dots.forEach((d,idx)=>d.addEventListener('click', ()=>scrollToIndex(idx)));
+  track.addEventListener('scroll', updateDots, { passive:true });
+  window.addEventListener('resize', updateDots);
+  updateDots();
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Best Sellers Row",
+  "settings": [
+    { "type":"checkbox","id":"hide_all_buttons","label":"Hide ALL buttons (overrides everything below)", "default": false },
+
+    { "type":"image_picker","id":"cta_image","label":"CTA Background Image" },
+    { "type":"text","id":"cta_heading","label":"CTA Heading","default":"Just Shopping?" },
+    { "type":"textarea","id":"cta_subheading","label":"CTA Subheading","default":"Top picks from our most trusted brands." },
+    { "type":"url","id":"cta_button_link","label":"Side CTA Button Link","default":"/collections/all" },
+    { "type":"text","id":"cta_button_label","label":"Side CTA Button Text","default":"Shop Now" },
+    { "type":"checkbox","id":"show_side_cta_button","label":"Show Side CTA Button","default":true },
+
+    { "type":"color","id":"cta_heading_color","label":"CTA Heading Color","default":"#ffffff" },
+    { "type":"color","id":"cta_subheading_color","label":"CTA Subheading Color","default":"#ffffff" },
+    { "type":"color","id":"cta_btn_bg","label":"Side CTA Button Background","default":"#ffffff" },
+    { "type":"color","id":"cta_btn_text","label":"Side CTA Button Text Color","default":"#3e2764" },
+    { "type":"color","id":"cta_btn_hover","label":"Side CTA Button Hover","default":"#f1f1f1" },
+    { "type":"color","id":"cta_overlay_color","label":"CTA Overlay Color","default":"#000000" },
+    { "type":"range","id":"cta_overlay_opacity","label":"CTA Overlay Opacity (%)","min":0,"max":90,"step":5,"default":35 },
+
+    { "type":"color","id":"text_color","label":"Product Title Color","default":"#1a1a1a" },
+
+    /* Product ATC button (reverted style) + toggle */
+    { "type":"checkbox","id":"show_product_buttons","label":"Show Product Add to Cart Buttons","default":true },
+    { "type":"color","id":"button_bg","label":"Product Button Background","default":"#3e2764" },
+    { "type":"color","id":"button_text","label":"Product Button Text","default":"#ffffff" },
+    { "type":"color","id":"button_hover","label":"Product Button Hover","default":"#281946" },
+
+    /* Card borders */
+    { "type":"color","id":"card_border_color","label":"Product Card Border","default":"#f0f0f0" },
+    { "type":"range","id":"card_border_width","label":"Card Border Width (desktop px)","min":0,"max":6,"step":1,"default":1 },
+    { "type":"range","id":"card_border_width_mobile","label":"Card Border Width (mobile px)","min":0,"max":6,"step":1,"default":1 },
+
+    { "type":"checkbox","id":"reverse_order","label":"Show CTA on Left","default":false },
+    { "type":"select","id":"cta_text_align","label":"Side CTA Vertical Alignment","default":"middle",
+      "options":[{"value":"top","label":"Top Center"},{"value":"middle","label":"Middle Center"},{"value":"bottom","label":"Bottom Center"}]
+    },
+
+    /* Sale badge colors */
+    { "type":"color","id":"sale_badge_bg","label":"Sale badge background","default":"#e11d48" },
+    { "type":"color","id":"sale_badge_text","label":"Sale badge text","default":"#ffffff" },
+
+    /* Grid CTA under cards + toggle + spacing + colors */
+    { "type":"checkbox","id":"hide_both_cta_buttons","label":"Hide both CTA buttons (side + under-cards)", "default": false },
+    { "type":"checkbox","id":"show_grid_cta","label":"Show Grid CTA (under cards)","default":true },
+    { "type":"text","id":"grid_cta_label","label":"Grid CTA label","default":"View All Best Sellers" },
+    { "type":"url","id":"grid_cta_link","label":"Grid CTA link","default":"/collections/all" },
+    { "type":"range","id":"grid_cta_spacing_top","label":"Grid CTA Top Spacing (px)","min":12,"max":160,"step":4,"default":72 },
+    { "type":"color","id":"grid_cta_bg","label":"Grid CTA background","default":"#3e2764" },
+    { "type":"color","id":"grid_cta_text","label":"Grid CTA text color","default":"#ffffff" },
+    { "type":"color","id":"grid_cta_hover","label":"Grid CTA hover","default":"#281946" },
+
+    /* NEW: Desktop under-products button font controls */
+    { "type":"range","id":"grid_cta_font_size","label":"Grid CTA Font Size (px, desktop only)","min":12,"max":28,"step":1,"default":16 },
+    { "type":"select","id":"grid_cta_weight","label":"Grid CTA Font Weight (desktop only)","default":"700",
+      "options":[ { "value":"600","label":"Semi-bold (600)" }, { "value":"700","label":"Bold (700)" } ]
+    },
+    { "type":"checkbox","id":"grid_cta_uppercase","label":"Grid CTA Uppercase (desktop only)","default":false },
+    { "type":"range","id":"grid_cta_letter_spacing","label":"Grid CTA Letter Spacing (px, desktop only)","min":0,"max":3,"step":1,"default":0 },
+
+    /* Global CTA button styling (affects mobile banner button too) */
+    { "type":"range","id":"buttons_font_size","label":"CTA Buttons Font Size (px, global)","min":12,"max":28,"step":1,"default":16 },
+    { "type":"range","id":"buttons_radius","label":"CTA Buttons Border Radius (px)","min":6,"max":40,"step":1,"default":28 },
+    { "type":"range","id":"buttons_padding_y","label":"CTA Buttons Padding Y (px)","min":8,"max":20,"step":1,"default":12 },
+    { "type":"range","id":"buttons_padding_x","label":"CTA Buttons Padding X (px)","min":16,"max":40,"step":2,"default":26 },
+    { "type":"select","id":"buttons_weight","label":"CTA Buttons Font Weight (global)","default":"700",
+      "options":[ { "value":"600","label":"Semi-bold (600)" }, { "value":"700","label":"Bold (700)" } ]
+    },
+    { "type":"range","id":"buttons_shadow_alpha","label":"CTA Buttons Shadow Strength","min":0,"max":30,"step":1,"default":12 },
+    { "type":"checkbox","id":"buttons_uppercase","label":"Uppercase CTA Button Text (global)","default":false },
+    { "type":"checkbox","id":"enable_luxury_anim","label":"Enable Luxury Hover Animation (CTA buttons)", "default":true }
+  ],
+  "blocks": [
+    {
+      "type":"product","name":"Best Seller Product",
+      "settings":[
+        { "type":"product","id":"product","label":"Product" },
+        { "type":"text","id":"subtitle","label":"Product Subtitle (e.g. 90-Day Supply)" }
+      ]
+    }
+  ],
+  "max_blocks": 3,
+  "presets": [{ "name": "Best Sellers Row", "category": "Custom" }]
+}
+{% endschema %}
+ 

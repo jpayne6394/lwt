@@ -1,0 +1,830 @@
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-experts-section-{{ ai_gen_id }}{
+    padding: {{ block.settings.section_padding_top }}px {{ block.settings.section_padding_horizontal }}px {{ block.settings.section_padding_bottom }}px;
+    background: {% if block.settings.use_section_background %}linear-gradient(135deg, {{ block.settings.background_color }}, {{ block.settings.background_gradient }}){% else %}transparent{% endif %};
+    position: relative;
+    margin-bottom: {{ block.settings.section_bottom_margin }}px;
+    isolation: auto !important;
+  }
+  {% if block.settings.use_section_background and block.settings.show_background_pattern %}
+  .ai-experts-section-{{ ai_gen_id }}::before{
+    content:''; position:absolute; inset:0;
+    background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+    pointer-events:none;
+  }
+  {% endif %}
+
+  .ai-experts-container-{{ ai_gen_id }}{max-width:{{ block.settings.container_max_width }}px;margin:0 auto;position:relative;z-index:1}
+
+  .ai-experts-header-{{ ai_gen_id }}{
+    text-align: {{ block.settings.text_alignment }};
+    margin-bottom: {{ block.settings.header_spacing }}px;
+    max-width: {{ block.settings.header_max_width }}px;
+    {% if block.settings.text_alignment == 'center' %}
+      margin-left:auto;margin-right:auto;
+    {% elsif block.settings.text_alignment == 'right' %}
+      margin-left:auto;margin-right:0;
+    {% else %}
+      margin-left:0;margin-right:auto;
+    {% endif %}
+  }
+
+  .ai-experts-title-{{ ai_gen_id }}{
+    font-size: {{ block.settings.title_size }}px;
+    color: {{ block.settings.title_color }};
+    margin:0 0 {{ block.settings.title_subtitle_spacing }}px;
+    letter-spacing:-0.5px;
+    line-height: {{ block.settings.title_line_height }};
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-weight: {{ settings.type_header_font.weight }};
+    font-style: {{ settings.type_header_font.style }};
+  }
+  .ai-experts-subtitle-{{ ai_gen_id }}{
+    font-size: {{ block.settings.subtitle_size }}px;
+    color: {{ block.settings.subtitle_color }};
+    margin:0;
+    line-height: {{ block.settings.subtitle_line_height }};
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-weight: {{ settings.type_body_font.weight }};
+    font-style: {{ settings.type_body_font.style }};
+  }
+
+  .ai-experts-grid-{{ ai_gen_id }}{
+    display:grid;
+    grid-template-columns:repeat({{ block.settings.columns_desktop }},1fr);
+    gap:{{ block.settings.card_spacing }}px {{ block.settings.card_horizontal_spacing }}px;
+    margin-top:{{ block.settings.grid_top_spacing }}px;
+    margin-bottom:{{ block.settings.grid_bottom_spacing }}px;
+  }
+
+  .ai-expert-card-{{ ai_gen_id }}{
+    background:#ffffff;
+    border-radius:{{ block.settings.card_border_radius }}px;
+    padding:{{ block.settings.card_padding_vertical }}px {{ block.settings.card_padding_horizontal }}px {{ block.settings.card_padding_bottom }}px;
+    text-align:{{ block.settings.card_text_alignment }};
+    box-shadow:0 {{ block.settings.card_shadow_vertical }}px {{ block.settings.card_shadow_blur }}px rgba(0,0,0,{{ block.settings.card_shadow_opacity | divided_by: 100.0 }});
+    transition: all 0.4s cubic-bezier(.4,0,.2,1);
+    border:{{ block.settings.card_border_thickness }}px solid {{ block.settings.card_border_color }};
+    position:relative;overflow:hidden;cursor:pointer;min-height:{{ block.settings.card_min_height }}px;
+    display:flex;flex-direction:column;justify-content:space-between;
+  }
+  .ai-expert-card-{{ ai_gen_id }}::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:4px;
+    background:linear-gradient(90deg, {{ block.settings.accent_color }}, {{ block.settings.accent_secondary }});
+    opacity:0;transition:opacity .3s ease;
+  }
+  .ai-expert-card-{{ ai_gen_id }}:hover{
+    transform:translateY(-{{ block.settings.card_hover_lift }}px);
+    box-shadow:0 {{ block.settings.card_shadow_vertical | plus: 12 }}px {{ block.settings.card_shadow_blur | plus: 20 }}px rgba(0,0,0,{{ block.settings.card_shadow_opacity | divided_by: 100.0 | plus: 0.04 }});
+    border-color:{{ block.settings.card_hover_border_color }};
+  }
+  .ai-expert-card-{{ ai_gen_id }}:hover::before{opacity:1}
+
+  .ai-expert-content-{{ ai_gen_id }}{flex-grow:1;display:flex;flex-direction:column}
+
+  .ai-expert-image-{{ ai_gen_id }}{
+    width: {{ block.settings.image_size }}px;
+    height: {{ block.settings.image_size }}px;
+    border-radius: 50%;
+    margin: 0 auto {{ block.settings.image_bottom_spacing }}px;
+    overflow: hidden;
+    position: relative;
+    border: 3px solid rgba(255,255,255,0.9);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+    flex-shrink: 0;
+    aspect-ratio: 1/1;
+    line-height: 0;
+  }
+  .ai-expert-image-{{ ai_gen_id }} img{
+    position:absolute; inset:0;
+    width:100% !important; height:100% !important;
+    object-fit: cover !important;
+    object-position: {% if block.settings.image_focus == 'center' %}50% 50%{% elsif block.settings.image_focus == 'bottom' %}50% 80%{% else %}50% 20%{% endif %} !important;
+    display:block; border-radius:50%;
+    transform: scale(0.92);
+    transition: transform .3s ease;
+  }
+  .ai-expert-card-{{ ai_gen_id }}:hover .ai-expert-image-{{ ai_gen_id }} img{transform:scale(0.97)}
+
+  .ai-expert-name-{{ ai_gen_id }}{font-size:{{ block.settings.name_size }}px;font-weight:500;color:{{ block.settings.text_color }};margin:4px 0 {{ block.settings.name_bottom_spacing }}px;line-height:{{ block.settings.name_line_height }};letter-spacing:-.3px;font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};font-weight: {{ settings.type_header_font.weight }};font-style: {{ settings.type_header_font.style }};}
+  .ai-expert-credentials-{{ ai_gen_id }}{color:{{ block.settings.accent_color }};margin:6px 0 {{ block.settings.credentials_bottom_spacing }}px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;font-size:{{ block.settings.credentials_size }}px;font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};font-weight: {{ settings.type_body_font.weight }};font-style: {{ settings.type_body_font.style }};}
+  .ai-expert-description-{{ ai_gen_id }}{font-size:{{ block.settings.description_size }}px;color:{{ block.settings.text_color }};line-height:{{ block.settings.description_line_height }};margin:0 0 {{ block.settings.description_bottom_spacing }}px;opacity:.85;font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};font-weight: {{ settings.type_body_font.weight }};font-style: {{ settings.type_body_font.style }};flex-grow:1;}
+
+  .ai-view-profile-link-{{ ai_gen_id }}{
+    color:{{ block.settings.link_color }};
+    text-decoration:none;font-size:{{ block.settings.link_size }}px;font-weight:600;cursor:pointer;
+    transition: all 0.3s ease;text-transform:uppercase;letter-spacing:.5px;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    position:relative;display:inline-block;margin-top:auto;width:fit-content;align-self:center;
+    {% if block.settings.link_as_button %}
+      background: {{ block.settings.btn_bg }}; color: {{ block.settings.btn_text }};
+      padding: 12px 20px; border-radius: {{ block.settings.btn_radius }}px; box-shadow: 0 6px 18px rgba(0,0,0,.08);
+    {% endif %}
+  }
+  .ai-view-profile-link-{{ ai_gen_id }}::after{
+    {% if block.settings.link_as_button %}
+      content:none;
+    {% else %}
+      content:'';position:absolute;bottom:-2px;left:0;width:0;height:2px;background:{{ block.settings.link_color }};transition:width .3s ease;
+    {% endif %}
+  }
+  .ai-expert-card-{{ ai_gen_id }}:hover .ai-view-profile-link-{{ ai_gen_id }}::after{width:100%}
+  {% if block.settings.link_as_button %}
+  .ai-view-profile-link-{{ ai_gen_id }}:hover{background: {{ block.settings.btn_bg_hover }}; color: {{ block.settings.btn_text_hover }}; transform: translateY(-1px);}
+  {% endif %}
+
+  /* MODAL overlay */
+  .ai-modal-overlay-{{ ai_gen_id }}{
+    position:fixed; inset:0;
+    background-color: rgba(0,0,0,{{ block.settings.modal_overlay_opacity | divided_by: 100.0 }});
+    z-index: 2147483646;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; visibility:hidden;
+    transition: opacity .4s ease, visibility .4s ease;
+    padding:20px;
+    backdrop-filter: blur(8px);
+    mix-blend-mode: normal;
+    pointer-events: none;
+  }
+  .ai-modal-overlay-{{ ai_gen_id }}.active{opacity:1;visibility:visible;pointer-events:auto}
+
+  .ai-modal-content-{{ ai_gen_id }}{
+    background:#fff; mix-blend-mode: normal;
+    border-radius:{{ block.settings.modal_border_radius }}px;
+    max-width:{{ block.settings.modal_max_width }}px; width:100%;
+    max-height:90vh; overflow:hidden;
+    position:relative; z-index:2147483647;
+    transform:scale(.9) translateY(30px); transition:transform .4s ease;
+    box-shadow:0 30px 80px rgba(0,0,0,.3);
+  }
+  .ai-modal-overlay-{{ ai_gen_id }}.active .ai-modal-content-{{ ai_gen_id }}{transform:scale(1) translateY(0)}
+
+  .ai-close-modal-{{ ai_gen_id }}{
+    position:absolute; top:{{ block.settings.modal_close_top }}px; right:{{ block.settings.modal_close_right }}px;
+    background:rgba(255,255,255,.95); border:none; font-size:24px; cursor:pointer; color:#666;
+    width:40px; height:40px; display:flex; align-items:center; justify-content:center;
+    border-radius:50%; transition:all .3s ease; z-index:10; backdrop-filter:blur(10px); box-shadow:0 4px 15px rgba(0,0,0,.1); line-height:1;
+  }
+  .ai-close-modal-{{ ai_gen_id }}:hover{background:#fff;color:#333;transform:scale(1.1)}
+
+  /* === Modal body: give more space to bio & center/shrink left === */
+  .ai-modal-body-{{ ai_gen_id }}{
+    --left-col-max: 260px; /* narrower column for more bio room */
+    display: grid;
+    grid-template-columns: minmax(160px, var(--left-col-max)) 1fr; /* was minmax(240px,320px) 1fr */
+    align-items: start;
+    gap: {{ block.settings.modal_content_gap }}px;
+    padding: {{ block.settings.modal_padding_vertical }}px {{ block.settings.modal_padding_horizontal }}px;
+    text-align: left;
+  }
+  .ai-modal-left-{{ ai_gen_id }}{
+    display:flex; flex-direction:column; align-items:center; text-align:center;
+  }
+
+  /* shrink image responsively + keep it centered */
+  .ai-modal-image-{{ ai_gen_id }}{
+    width: clamp(120px, 18vw, {{ block.settings.modal_image_size }}px);
+    height: clamp(120px, 18vw, {{ block.settings.modal_image_size }}px);
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 5px solid {{ block.settings.accent_color }};
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+    position: relative;
+    aspect-ratio: 1/1;
+    line-height: 0;
+    margin-inline:auto;
+  }
+  .ai-modal-image-{{ ai_gen_id }} img{
+    position:absolute; inset:0; width:100% !important; height:100% !important;
+    object-fit: cover !important;
+    object-position: {% if block.settings.image_focus == 'center' %}50% 50%{% elsif block.settings.image_focus == 'bottom' %}50% 80%{% else %}50% 20%{% endif %} !important;
+    display:block; border-radius:50%; transform: scale(0.92);
+  }
+
+  .ai-modal-left-text-{{ ai_gen_id }}{ margin-top:12px; text-align:center; }
+  /* shrink headings on left, responsive with clamp */
+  .ai-modal-name-{{ ai_gen_id }}{
+    font-size: clamp(18px, 2.2vw, {{ block.settings.modal_name_size }}px);
+    font-weight: 500;
+    margin:0 0 {{ block.settings.modal_name_bottom_spacing }}px;
+    color:{{ block.settings.text_color }};
+    letter-spacing:-.3px;
+    line-height:{{ block.settings.modal_name_line_height }};
+    text-align:center;
+  }
+  .ai-modal-credentials-{{ ai_gen_id }}{
+    font-size: clamp(11px, 1.5vw, {{ block.settings.modal_credentials_size }}px);
+    color:{{ block.settings.accent_color }};
+    margin:0 0 {{ block.settings.modal_credentials_bottom_spacing }}px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.6px;
+    text-align:center;
+  }
+
+  /* Right/bio column: real estate + smooth scroll + iOS momentum */
+  .ai-modal-right-{{ ai_gen_id }}{
+    max-height: calc(90vh - {{ block.settings.modal_padding_vertical }}px*2);
+    overflow:auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* INLINE LOGO ABOVE BIO */
+  .ai-modal-logo-inline-{{ ai_gen_id }}{
+    display:inline-flex; align-items:center; gap:10px;
+    background: {{ block.settings.modal_logo_bg }};
+    border-radius: {{ block.settings.modal_logo_radius }}px;
+    padding: 8px 12px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.08);
+    margin: 0 auto 14px; /* center the badge */
+  }
+  .ai-modal-logo-inline-{{ ai_gen_id }} img{
+    max-height: {{ block.settings.modal_logo_max_h }}px; width:auto; display:block;
+  }
+
+  .ai-modal-bio-{{ ai_gen_id }}{
+    font-size:{{ block.settings.modal_bio_size }}px;
+    line-height:{{ block.settings.modal_bio_line_height }};
+    color:{{ block.settings.text_color }};
+    margin:0;
+    opacity:.9;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+  }
+
+  /* CTA under grid */
+  .ai-experts-cta-wrap-{{ ai_gen_id }}{text-align:{{ block.settings.cta_align }};margin-top:{{ block.settings.cta_top_margin }}px}
+  .ai-experts-cta-{{ ai_gen_id }}{display:inline-block;padding:14px 26px;border-radius:{{ block.settings.cta_radius }}px;background:{{ block.settings.cta_bg }};color:{{ block.settings.cta_text_color }};text-decoration:none;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,.08);transition:transform .2s ease, box-shadow .2s ease, background .2s ease;}
+  .ai-experts-cta-{{ ai_gen_id }}:hover{transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,0,0,.12);text-decoration:underline}
+
+  /* Responsive */
+  @media (max-width:1199px){
+    .ai-experts-grid-{{ ai_gen_id }}{grid-template-columns:repeat({{ block.settings.columns_tablet }},1fr);gap:{{ block.settings.card_spacing | times: 0.8 }}px {{ block.settings.card_horizontal_spacing | times: 0.8 }}px;margin-bottom:{{ block.settings.grid_bottom_spacing | times: 0.8 }}px;}
+    .ai-experts-container-{{ ai_gen_id }}{max-width:100%;padding:0 {{ block.settings.section_padding_horizontal | times: 0.8 }}px}
+  }
+  @media (max-width:768px){
+    .ai-experts-section-{{ ai_gen_id }}{padding:{{ block.settings.section_padding_top | times: 0.7 }}px 0 {{ block.settings.section_padding_bottom | times: 0.7 }}px;margin-bottom:{{ block.settings.section_bottom_margin | times: 0.7 }}px}
+    .ai-experts-container-{{ ai_gen_id }}{padding:0 {{ block.settings.section_padding_horizontal | times: 0.6 }}px}
+    .ai-experts-grid-{{ ai_gen_id }}{grid-template-columns:repeat({{ block.settings.columns_mobile }},1fr);gap:{{ block.settings.card_spacing | times: 0.6 }}px {{ block.settings.card_horizontal_spacing | times: 0.6 }}px;margin-top:{{ block.settings.grid_top_spacing | times: 0.8 }}px;margin-bottom:{{ block.settings.grid_bottom_spacing | times: 0.6 }}px;}
+    .ai-expert-card-{{ ai_gen_id }}{padding:{{ block.settings.card_padding_vertical | times: 0.8 }}px {{ block.settings.card_padding_horizontal | times: 0.8 }}px {{ block.settings.card_padding_bottom | times: 0.8 }}px;min-height:auto}
+    .ai-expert-image-{{ ai_gen_id }}{width:{{ block.settings.image_size | times: 0.8 }}px;height:{{ block.settings.image_size | times: 0.8 }}px}
+
+    .ai-modal-body-{{ ai_gen_id }}{
+      grid-template-columns: 1fr;
+      gap: 18px;
+      text-align: center;
+    }
+    .ai-modal-right-{{ ai_gen_id }}{max-height:none}
+    .ai-modal-logo-inline-{{ ai_gen_id }}{margin-left:auto;margin-right:auto;}
+  }
+{% endstyle %}
+
+{%- comment -%} Bottom-sheet swipe + Modal CTA styles {%- endcomment -%}
+{% style %}
+  .ai-modal-handle-{{ ai_gen_id }}{
+    width:48px;height:5px;border-radius:999px;background:#cbd5e1;
+    margin:10px auto 6px;pointer-events:none;
+  }
+  .ai-modal-cta-wrap-{{ ai_gen_id }}{ margin-top:18px; text-align:left; }
+  .ai-modal-cta-{{ ai_gen_id }}{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    padding:14px 22px;border-radius:{{ block.settings.modal_cta_radius }}px;
+    background:{{ block.settings.modal_cta_bg }};color:{{ block.settings.modal_cta_text_color }};
+    text-decoration:none;font-weight:600;
+    box-shadow:0 8px 22px rgba(0,0,0,.10);
+    transition:transform .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .ai-modal-cta-{{ ai_gen_id }}:hover{
+    transform:translateY(-1px);
+    box-shadow:0 12px 30px rgba(0,0,0,.14);
+    background:{{ block.settings.modal_cta_bg_hover }};
+    text-decoration:underline;
+  }
+  .ai-modal-cta-{{ ai_gen_id }} svg{width:1.1em;height:1.1em}
+  .ai-modal-cta-wrap-{{ ai_gen_id }}.is-full .ai-modal-cta-{{ ai_gen_id }}{display:block;width:100%;text-align:center;}
+
+  @media (max-width:768px){
+    .ai-modal-content-{{ ai_gen_id }}{
+      position:fixed;left:0;right:0;bottom:0;
+      width:100%;max-width:100%;
+      border-bottom-left-radius:0;border-bottom-right-radius:0;
+      max-height:92vh;
+      transform: translateY(100%);
+      transition: transform .40s ease;
+      will-change: transform;
+    }
+    .ai-modal-overlay-{{ ai_gen_id }}.active .ai-modal-content-{{ ai_gen_id }}{ transform: translateY(0); }
+    .ai-modal-cta-wrap-{{ ai_gen_id }}{ text-align:center; }
+    .ai-modal-cta-wrap-{{ ai_gen_id }}.is-full .ai-modal-cta-{{ ai_gen_id }}{ width:100%; }
+  }
+{% endstyle %}
+
+{%- comment -%} iOS scroll containment fix {%- endcomment -%}
+{% style %}
+@media (max-width:768px){
+  .ai-modal-content-{{ ai_gen_id }}{ display:flex; flex-direction:column; max-height:92vh; }
+  .ai-modal-body-{{ ai_gen_id }}{ display:flex; flex-direction:column; flex:1; overflow:hidden; }
+  .ai-modal-left-{{ ai_gen_id }}{ flex-shrink:0; }
+  .ai-modal-right-{{ ai_gen_id }}{ flex:1; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; touch-action: pan-y; }
+}
+{% endstyle %}
+
+<expert-profiles-{{ ai_gen_id }} class="ai-experts-section-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-experts-container-{{ ai_gen_id }}">
+    <div class="ai-experts-header-{{ ai_gen_id }}">
+      {% if block.settings.title != blank %}<h2 class="ai-experts-title-{{ ai_gen_id }}">{{ block.settings.title }}</h2>{% endif %}
+      {% if block.settings.subtitle != blank %}<p class="ai-experts-subtitle-{{ ai_gen_id }}">{{ block.settings.subtitle }}</p>{% endif %}
+    </div>
+
+    <div class="ai-experts-grid-{{ ai_gen_id }}">
+      {% for i in (1..block.settings.number_of_experts) %}
+        {% liquid
+          assign expert_name_key = 'expert_' | append: i | append: '_name'
+          assign expert_credentials_key = 'expert_' | append: i | append: '_credentials'
+          assign expert_description_key = 'expert_' | append: i | append: '_description'
+          assign expert_image_key = 'expert_' | append: i | append: '_image'
+          assign expert_bio_key = 'expert_' | append: i | append: '_bio'
+
+          assign expert_name = block.settings[expert_name_key]
+          assign expert_credentials = block.settings[expert_credentials_key]
+          assign expert_description = block.settings[expert_description_key]
+          assign expert_image = block.settings[expert_image_key]
+          assign expert_bio = block.settings[expert_bio_key]
+        %}
+        {% if expert_name != blank %}
+          <div class="ai-expert-card-{{ ai_gen_id }}" data-expert-index="{{ i }}" tabindex="0" role="button" aria-label="Open {{ expert_name }} profile">
+            <div class="ai-expert-content-{{ ai_gen_id }}">
+              <div class="ai-expert-image-{{ ai_gen_id }}">
+                {% if expert_image %}
+                  <img src="{{ expert_image | image_url: width: 600 }}" alt="{{ expert_name | escape }}" loading="lazy" width="300" height="300">
+                {% else %}
+                  <div class="ai-expert-image-placeholder-{{ ai_gen_id }}">{{ 'image' | placeholder_svg_tag }}</div>
+                {% endif %}
+              </div>
+
+              <h3 class="ai-expert-name-{{ ai_gen_id }}">{{ expert_name }}</h3>
+              {% if expert_credentials != blank %}<p class="ai-expert-credentials-{{ ai_gen_id }}">{{ expert_credentials }}</p>{% endif %}
+              {% if expert_description != blank %}<div class="ai-expert-description-{{ ai_gen_id }}">{{ expert_description }}</div>{% endif %}
+            </div>
+
+            <a href="#" class="ai-view-profile-link-{{ ai_gen_id }}" data-expert-index="{{ i }}" aria-label="View {{ expert_name }} profile">
+              {{ block.settings.link_text }}
+            </a>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if block.settings.show_cta %}
+      <div class="ai-experts-cta-wrap-{{ ai_gen_id }}">
+        <a class="ai-experts-cta-{{ ai_gen_id }}" href="{{ block.settings.cta_link | default: '/pages/booking' }}">{{ block.settings.cta_text }}</a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- MODAL -->
+  <div class="ai-modal-overlay-{{ ai_gen_id }}" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="ai-modal-content-{{ ai_gen_id }}">
+      <span class="ai-close-modal-{{ ai_gen_id }}" aria-label="Close modal">&times;</span>
+      <div class="ai-modal-handle-{{ ai_gen_id }}" aria-hidden="true"></div>
+
+      <div class="ai-modal-body-{{ ai_gen_id }}">
+        <div class="ai-modal-left-{{ ai_gen_id }}">
+          <div class="ai-modal-image-{{ ai_gen_id }}">
+            <div class="ai-modal-image-placeholder-{{ ai_gen_id }}">{{ 'image' | placeholder_svg_tag }}</div>
+          </div>
+          <div class="ai-modal-left-text-{{ ai_gen_id }}">
+            <h3 class="ai-modal-name-{{ ai_gen_id }}"></h3>
+            <p class="ai-modal-credentials-{{ ai_gen_id }}"></p>
+          </div>
+        </div>
+
+        <div class="ai-modal-right-{{ ai_gen_id }}">
+          {% if block.settings.modal_logo != blank %}
+            <div class="ai-modal-logo-inline-{{ ai_gen_id }}">
+              <img src="{{ block.settings.modal_logo | image_url: width: 600 }}"
+                   alt="{{ block.settings.modal_logo_alt | default: 'Company logo' | escape }}">
+            </div>
+          {% endif %}
+          <div class="ai-modal-bio-{{ ai_gen_id }}"></div>
+
+          {% if block.settings.show_modal_cta %}
+            <div class="ai-modal-cta-wrap-{{ ai_gen_id }} {% if block.settings.modal_cta_width == 'full' %}is-full{% endif %}">
+              <a class="ai-modal-cta-{{ ai_gen_id }}"
+                 href="{{ block.settings.modal_cta_link | default: '/pages/booking' }}"
+                 {% if block.settings.modal_cta_new_tab %}target="_blank" rel="noopener"{% endif %}>
+                {{ block.settings.modal_cta_text }}
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M13.5 5l7 7-7 7M3.5 12H20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</expert-profiles-{{ ai_gen_id }}>
+
+<script>
+(function(){
+  class ExpertProfiles{{ ai_gen_id }} extends HTMLElement{
+    constructor(){
+      super();
+      this.experts = {
+        {% for i in (1..6) %}
+          {% liquid
+            assign name_key = 'expert_' | append: i | append: '_name'
+            assign cred_key = 'expert_' | append: i | append: '_credentials'
+            assign desc_key = 'expert_' | append: i | append: '_description'
+            assign img_key = 'expert_' | append: i | append: '_image'
+            assign bio_key = 'expert_' | append: i | append: '_bio'
+          %}
+          {{ i }}: {
+            name: {{ block.settings[name_key] | json }},
+            credentials: {{ block.settings[cred_key] | json }},
+            description: {{ block.settings[desc_key] | json }},
+            {% if block.settings[img_key] %}
+              image: {{ block.settings[img_key] | image_url: width: 800 | json }},
+            {% else %}
+              image: null,
+            {% endif %}
+            bio: {{ block.settings[bio_key] | json }}
+          }{% unless forloop.last %},{% endunless %}
+        {% endfor %}
+      };
+    }
+
+    connectedCallback(){
+      this.modal = this.querySelector('.ai-modal-overlay-{{ ai_gen_id }}');
+      this.closeButton = this.querySelector('.ai-close-modal-{{ ai_gen_id }}');
+      this.expertCards = this.querySelectorAll('.ai-expert-card-{{ ai_gen_id }}');
+      this.viewProfileLinks = this.querySelectorAll('.ai-view-profile-link-{{ ai_gen_id }}');
+
+      this._modalHome = this.modal?.parentNode || null;
+
+      this.setupEventListeners();
+      this.setupMobileSwipe();
+    }
+
+    setupEventListeners(){
+      this.expertCards.forEach(card=>{
+        card.addEventListener('click',(e)=>{
+          const linkClick = e.target.closest('.ai-view-profile-link-{{ ai_gen_id }}');
+          const idx = (linkClick?.getAttribute('data-expert-index')) || card.getAttribute('data-expert-index');
+          e.preventDefault();
+          this.openModal(idx, card);
+        });
+        card.addEventListener('keydown',(e)=>{
+          if(e.key === 'Enter' || e.key === ' '){
+            e.preventDefault();
+            this.openModal(card.getAttribute('data-expert-index'), card);
+          }
+        });
+      });
+
+      this.viewProfileLinks.forEach(link=>{
+        link.addEventListener('click',(e)=>{
+          e.preventDefault();
+          const card = e.currentTarget.closest('.ai-expert-card-{{ ai_gen_id }}');
+          this.openModal(e.currentTarget.getAttribute('data-expert-index'), card);
+        });
+      });
+
+      this.closeButton.addEventListener('click',()=>this.closeModal());
+      this.modal.addEventListener('click',(e)=>{ if(e.target === this.modal){ this.closeModal(); }});
+      document.addEventListener('keydown',(e)=>{ if(e.key==='Escape' && this.modal.classList.contains('active')){ this.closeModal(); }});
+    }
+
+    lockBodyScroll(){
+      if(this._scrollLocked) return;
+      this._bodyScrollY = window.scrollY || window.pageYOffset;
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${this._bodyScrollY}px`;
+      document.body.style.left = '0';
+      document.body.style.right = '0';
+      document.body.style.width = '100%';
+      this._scrollLocked = true;
+    }
+    unlockBodyScroll(){
+      if(!this._scrollLocked) return;
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.left = '';
+      document.body.style.right = '';
+      document.body.style.width = '';
+      window.scrollTo(0, this._bodyScrollY || 0);
+      this._scrollLocked = false;
+    }
+
+    openModal(idx, cardEl){
+      const expert = { ...(this.experts[idx] || {}) };
+      if(!expert.name) return;
+
+      if(!expert.image && cardEl){
+        const imgEl = cardEl.querySelector('.ai-expert-image-{{ ai_gen_id }} img');
+        if(imgEl && imgEl.src) expert.image = imgEl.src;
+      }
+
+      this.populateModal(expert);
+
+      // choose the scroll container after content renders
+      this.scrollEl = this.modal.querySelector('.ai-modal-right-{{ ai_gen_id }}') 
+                   || this.modal.querySelector('.ai-modal-body-{{ ai_gen_id }}');
+
+      if(this.modal && !this.modal._ported){
+        document.body.appendChild(this.modal);
+        this.modal._ported = true;
+      }
+
+      this.modal.classList.add('active');
+      this.modal.setAttribute('aria-hidden','false');
+
+      this.lockBodyScroll();
+
+      this.closeButton.focus();
+    }
+
+    closeModal(){
+      const content = this.modal.querySelector('.ai-modal-content-{{ ai_gen_id }}');
+      if(content){ content.style.transform = ''; content.style.transition = ''; }
+
+      this.modal.classList.remove('active');
+      this.modal.setAttribute('aria-hidden','true');
+
+      this.unlockBodyScroll();
+    }
+
+    populateModal(expert){
+      const modalImage = this.modal.querySelector('.ai-modal-image-{{ ai_gen_id }}');
+      const modalName = this.modal.querySelector('.ai-modal-name-{{ ai_gen_id }}');
+      const modalCredentials = this.modal.querySelector('.ai-modal-credentials-{{ ai_gen_id }}');
+      const modalBio = this.modal.querySelector('.ai-modal-bio-{{ ai_gen_id }}');
+
+      modalImage.innerHTML = '';
+      if(expert.image){
+        modalImage.innerHTML = `<img src="${expert.image}" alt="${expert.name}" width="800" height="800">`;
+      } else {
+        modalImage.innerHTML = `<div class="ai-modal-image-placeholder-{{ ai_gen_id }}">{{ 'image' | placeholder_svg_tag }}</div>`;
+      }
+      modalName.textContent = expert.name || '';
+      modalCredentials.textContent = expert.credentials || '';
+      modalBio.innerHTML = expert.bio || expert.description || '';
+    }
+
+    setupMobileSwipe(){
+      const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+
+      this.modalContent = this.modal.querySelector('.ai-modal-content-{{ ai_gen_id }}');
+      this.scrollEl     = this.modal.querySelector('.ai-modal-right-{{ ai_gen_id }}');
+      if(!this.modalContent) return;
+
+      let startY = 0, currentY = 0, dragging = false, startScrollTop = 0, startTime = 0;
+
+      const withinTopZone = (y) => {
+        const rect = this.modalContent.getBoundingClientRect();
+        return (y - rect.top) <= 60;
+      };
+
+      const onStart = (e)=>{
+        if(!isMobile()) return;
+        const t = e.touches && e.touches[0];
+        if(!t) return;
+
+        this.scrollEl = this.modal.querySelector('.ai-modal-right-{{ ai_gen_id }}') 
+                     || this.modal.querySelector('.ai-modal-body-{{ ai_gen_id }}');
+
+        startY = t.clientY;
+        startTime = Date.now();
+        startScrollTop = this.scrollEl ? this.scrollEl.scrollTop : 0;
+
+        if(startScrollTop <= 0 && withinTopZone(t.clientY)){
+          dragging = true;
+          currentY = 0;
+          this.modalContent.style.transition = 'none';
+        }
+      };
+
+      const onMove = (e)=>{
+        if(!dragging) return;
+        e.preventDefault();
+        const t = e.touches && e.touches[0];
+        if(!t) return;
+
+        const delta = t.clientY - startY;
+        currentY = Math.max(0, delta);
+        const translate = currentY * 0.9;
+        this.modalContent.style.transform = `translateY(${translate}px)`;
+      };
+
+      const onEnd = ()=>{
+        if(!dragging) return;
+        const dt = Math.max(1, Date.now() - startTime);
+        const velocity = currentY / dt;
+
+        const CLOSE_DISTANCE = 140;
+        const CLOSE_VELOCITY = 0.6;
+
+        this.modalContent.style.transition = 'transform .25s ease-out';
+
+        if(currentY > CLOSE_DISTANCE || velocity > CLOSE_VELOCITY){
+          this.closeModal();
+          setTimeout(()=>{ this.modalContent && (this.modalContent.style.transform = ''); }, 260);
+        } else {
+          this.modalContent.style.transform = '';
+        }
+
+        dragging = false; startY = 0; currentY = 0;
+      };
+
+      this.modalContent.addEventListener('touchstart', onStart, {passive:true});
+      this.modalContent.addEventListener('touchmove',  onMove,  {passive:false});
+      this.modalContent.addEventListener('touchend',   onEnd);
+    }
+  }
+  customElements.define('expert-profiles-{{ ai_gen_id }}', ExpertProfiles{{ ai_gen_id }});
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Meet the experts",
+  "settings": [
+    { "type": "header", "content": "Section content" },
+    { "type": "text", "id": "title", "label": "Section title", "default": "Meet Our Wellness Experts" },
+    { "type": "textarea", "id": "subtitle", "label": "Section subtitle", "default": "Our certified wellness professionals are dedicated to guiding you on your journey to optimal health and well-being through personalized, evidence-based approaches." },
+    { "type": "text", "id": "link_text", "label": "Profile link text", "default": "VIEW PROFILE" },
+
+    { "type": "range", "id": "number_of_experts", "min": 1, "max": 6, "step": 1, "label": "Number of experts to display", "default": 2 },
+
+    { "type": "header", "content": "Layout" },
+    { "type": "range", "id": "container_max_width", "min": 1000, "max": 1600, "step": 50, "unit": "px", "label": "Container max width", "default": 1400 },
+    { "type": "range", "id": "header_max_width", "min": 400, "max": 1000, "step": 50, "unit": "px", "label": "Header max width", "default": 800 },
+    { "type": "select", "id": "text_alignment", "label": "Header text alignment", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}], "default": "center" },
+    { "type": "select", "id": "card_text_alignment", "label": "Card text alignment", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}], "default": "center" },
+    { "type": "select", "id": "columns_desktop", "label": "Columns on desktop", "options": [{"value":"1","label":"1"},{"value":"2","label":"2"},{"value":"3","label":"3"},{"value":"4","label":"4"}], "default": "2" },
+    { "type": "select", "id": "columns_tablet", "label": "Columns on tablet", "options": [{"value":"1","label":"1"},{"value":"2","label":"2"},{"value":"3","label":"3"}], "default": "2" },
+    { "type": "select", "id": "columns_mobile", "label": "Columns on mobile", "options": [{"value":"1","label":"1"},{"value":"2","label":"2"}], "default": "1" },
+
+    { "type": "header", "content": "Section background" },
+    { "type": "checkbox", "id": "use_section_background", "label": "Use section background (turn OFF to remove any color bleed)", "default": false },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#f8fafb" },
+    { "type": "color", "id": "background_gradient", "label": "Background gradient end", "default": "#f1f5f9" },
+    { "type": "checkbox", "id": "show_background_pattern", "label": "Subtle pattern over background", "default": false },
+
+    { "type": "header", "content": "Spacing" },
+    { "type": "range", "id": "section_padding_top", "min": 40, "max": 120, "step": 4, "unit": "px", "label": "Section top padding", "default": 80 },
+    { "type": "range", "id": "section_padding_bottom", "min": 40, "max": 120, "step": 4, "unit": "px", "label": "Section bottom padding", "default": 80 },
+    { "type": "range", "id": "section_padding_horizontal", "min": 20, "max": 80, "step": 4, "unit": "px", "label": "Section horizontal padding", "default": 40 },
+    { "type": "range", "id": "section_bottom_margin", "min": 0, "max": 200, "step": 10, "unit": "px", "label": "Section bottom margin", "default": 80 },
+    { "type": "range", "id": "header_spacing", "min": 40, "max": 100, "step": 5, "unit": "px", "label": "Header bottom spacing", "default": 70 },
+    { "type": "range", "id": "title_subtitle_spacing", "min": 10, "max": 40, "step": 2, "unit": "px", "label": "Title to subtitle spacing", "default": 20 },
+    { "type": "range", "id": "grid_top_spacing", "min": 40, "max": 100, "step": 5, "unit": "px", "label": "Grid top spacing", "default": 60 },
+    { "type": "range", "id": "grid_bottom_spacing", "min": 40, "max": 120, "step": 5, "unit": "px", "label": "Grid bottom spacing", "default": 80 },
+
+    { "type": "header", "content": "Card layout" },
+    { "type": "range", "id": "card_padding_vertical", "min": 20, "max": 60, "step": 5, "unit": "px", "label": "Card top padding", "default": 40 },
+    { "type": "range", "id": "card_padding_horizontal", "min": 20, "max": 60, "step": 5, "unit": "px", "label": "Card horizontal padding", "default": 35 },
+    { "type": "range", "id": "card_padding_bottom", "min": 20, "max": 80, "step": 5, "unit": "px", "label": "Card bottom padding", "default": 50 },
+    { "type": "range", "id": "card_min_height", "min": 300, "max": 600, "step": 25, "unit": "px", "label": "Card minimum height", "default": 450 },
+    { "type": "range", "id": "card_border_radius", "min": 0, "max": 40, "step": 2, "unit": "px", "label": "Card border radius", "default": 12 },
+    { "type": "range", "id": "card_border_thickness", "min": 1, "max": 5, "step": 1, "unit": "px", "label": "Card border thickness", "default": 2 },
+    { "type": "range", "id": "card_hover_lift", "min": 4, "max": 16, "step": 2, "unit": "px", "label": "Card hover lift distance", "default": 8 },
+
+    { "type": "header", "content": "Card content spacing & type" },
+    { "type": "range", "id": "image_size", "min": 100, "max": 200, "step": 10, "unit": "px", "label": "Profile image size", "default": 140 },
+    { "type": "select", "id": "image_focus", "label": "Image focus (prevents cutting foreheads)", "options": [{"value":"top","label":"Top"},{"value":"center","label":"Center"},{"value":"bottom","label":"Bottom"}], "default": "top" },
+    { "type": "range", "id": "image_bottom_spacing", "min": 15, "max": 40, "step": 5, "unit": "px", "label": "Image bottom spacing", "default": 25 },
+    { "type": "range", "id": "name_bottom_spacing", "min": 5, "max": 20, "step": 1, "unit": "px", "label": "Name bottom spacing", "default": 8 },
+    { "type": "range", "id": "credentials_bottom_spacing", "min": 10, "max": 30, "step": 2, "unit": "px", "label": "Credentials bottom spacing", "default": 20 },
+    { "type": "range", "id": "description_bottom_spacing", "min": 20, "max": 40, "step": 2, "unit": "px", "label": "Description bottom spacing", "default": 30 },
+
+    { "type": "header", "content": "Typography" },
+    { "type": "range", "id": "title_size", "min": 24, "max": 60, "step": 2, "unit": "px", "label": "Title size", "default": 42 },
+    { "type": "range", "id": "title_line_height", "min": 1, "max": 2, "step": 0.1, "label": "Title line height", "default": 1.2 },
+    { "type": "range", "id": "subtitle_size", "min": 14, "max": 24, "step": 1, "unit": "px", "label": "Subtitle size", "default": 18 },
+    { "type": "range", "id": "subtitle_line_height", "min": 1.2, "max": 2, "step": 0.1, "label": "Subtitle line height", "default": 1.6 },
+    { "type": "range", "id": "name_size", "min": 18, "max": 32, "step": 1, "unit": "px", "label": "Expert name size", "default": 26 },
+    { "type": "range", "id": "name_line_height", "min": 1, "max": 1.8, "step": 0.1, "label": "Expert name line height", "default": 1.3 },
+    { "type": "range", "id": "credentials_size", "min": 12, "max": 18, "step": 1, "unit": "px", "label": "Credentials size", "default": 14 },
+    { "type": "range", "id": "description_size", "min": 13, "max": 18, "step": 1, "unit": "px", "label": "Description size", "default": 15 },
+    { "type": "range", "id": "description_line_height", "min": 1.4, "max": 2, "step": 0.1, "label": "Description line height", "default": 1.7 },
+    { "type": "range", "id": "link_size", "min": 12, "max": 20, "step": 1, "unit": "px", "label": "Link size", "default": 16 },
+
+    { "type": "header", "content": "Header colors" },
+    { "type": "color", "id": "title_color", "label": "Title color", "default": "#2d3748" },
+    { "type": "color", "id": "subtitle_color", "label": "Subtitle color", "default": "#4a5568" },
+
+    { "type": "header", "content": "Modal layout & type" },
+    { "type": "range", "id": "modal_max_width", "min": 600, "max": 1200, "step": 50, "unit": "px", "label": "Modal max width", "default": 900 },
+    { "type": "range", "id": "modal_border_radius", "min": 8, "max": 40, "step": 2, "unit": "px", "label": "Modal border radius", "default": 24 },
+    { "type": "range", "id": "modal_padding_vertical", "min": 40, "max": 80, "step": 5, "unit": "px", "label": "Modal vertical padding", "default": 60 },
+    { "type": "range", "id": "modal_padding_horizontal", "min": 40, "max": 80, "step": 5, "unit": "px", "label": "Modal horizontal padding", "default": 50 },
+    { "type": "range", "id": "modal_content_gap", "min": 30, "max": 60, "step": 5, "unit": "px", "label": "Modal content gap", "default": 40 },
+    { "type": "range", "id": "modal_image_size", "min": 150, "max": 250, "step": 10, "unit": "px", "label": "Modal image size", "default": 200 },
+    { "type": "range", "id": "modal_text_left_padding", "min": 0, "max": 40, "step": 5, "unit": "px", "label": "Modal text left padding", "default": 20 },
+    { "type": "range", "id": "modal_close_top", "min": 15, "max": 35, "step": 5, "unit": "px", "label": "Close button top position", "default": 25 },
+    { "type": "range", "id": "modal_close_right", "min": 15, "max": 35, "step": 5, "unit": "px", "label": "Close button right position", "default": 25 },
+
+    { "type": "header", "content": "Card/Link styling" },
+    { "type": "range", "id": "card_shadow_vertical", "min": 4, "max": 20, "step": 2, "unit": "px", "label": "Card shadow vertical offset", "default": 8 },
+    { "type": "range", "id": "card_shadow_blur", "min": 10, "max": 40, "step": 5, "unit": "px", "label": "Card shadow blur", "default": 25 },
+    { "type": "range", "id": "card_shadow_opacity", "min": 5, "max": 25, "step": 5, "unit": "%", "label": "Card shadow opacity", "default": 10 },
+    { "type": "color", "id": "card_border_color", "label": "Card border color", "default": "#e2e8f0" },
+    { "type": "color", "id": "card_hover_border_color", "label": "Card hover border color", "default": "#cbd5e0" },
+    { "type": "color", "id": "link_color", "label": "Link color", "default": "#4b3f82" },
+
+    { "type": "checkbox", "id": "link_as_button", "label": "Style the card link as a button", "default": false },
+    { "type": "color", "id": "btn_bg", "label": "Link button background", "default": "#4b3f82" },
+    { "type": "color", "id": "btn_text", "label": "Link button text", "default": "#ffffff" },
+    { "type": "color", "id": "btn_bg_hover", "label": "Link button hover background", "default": "#3f3570" },
+    { "type": "color", "id": "btn_text_hover", "label": "Link button hover text", "default": "#ffffff" },
+    { "type": "range", "id": "btn_radius", "min": 6, "max": 28, "step": 2, "unit": "px", "label": "Link button radius", "default": 12 },
+
+    { "type": "header", "content": "Modal overlay" },
+    { "type": "range", "id": "modal_overlay_opacity", "min": 60, "max": 90, "step": 5, "unit": "%", "label": "Overlay opacity", "default": 80 },
+    { "type": "color", "id": "accent_color", "label": "Accent color", "default": "#4b3f82" },
+    { "type": "color", "id": "accent_secondary", "label": "Secondary accent color", "default": "#7a6fc2" },
+    { "type": "color", "id": "text_color", "label": "Text color", "default": "#2d3748" },
+    { "type": "color", "id": "modal_background", "label": "Modal background", "default": "#ffffff" },
+
+    { "type": "header", "content": "Modal logo" },
+    { "type": "image_picker", "id": "modal_logo", "label": "Logo for modal (optional)" },
+    { "type": "text", "id": "modal_logo_alt", "label": "Logo alt text", "default": "Company logo" },
+    { "type": "range", "id": "modal_logo_max_h", "label": "Logo max height", "min": 16, "max": 80, "step": 2, "unit": "px", "default": 28 },
+    { "type": "color", "id": "modal_logo_bg", "label": "Logo background", "default": "#ffffff" },
+    { "type": "range", "id": "modal_logo_radius", "label": "Logo badge radius", "min": 0, "max": 24, "step": 2, "unit": "px", "default": 12 },
+
+    { "type": "header", "content": "Modal CTA" },
+    { "type": "checkbox", "id": "show_modal_cta", "label": "Show 'Book a Session' button in modal", "default": true },
+    { "type": "text", "id": "modal_cta_text", "label": "Modal CTA text", "default": "Book a Session" },
+    { "type": "url", "id": "modal_cta_link", "label": "Modal CTA link" },
+    { "type": "checkbox", "id": "modal_cta_new_tab", "label": "Open link in new tab", "default": false },
+    { "type": "select", "id": "modal_cta_width", "label": "Modal CTA width", "options": [
+      { "value":"fit","label":"Fit content" },
+      { "value":"full","label":"Full width" }
+    ], "default": "full" },
+    { "type": "color", "id": "modal_cta_bg", "label": "Modal CTA background", "default": "#4b3f82" },
+    { "type": "color", "id": "modal_cta_bg_hover", "label": "Modal CTA hover background", "default": "#3f3570" },
+    { "type": "color", "id": "modal_cta_text_color", "label": "Modal CTA text color", "default": "#ffffff" },
+    { "type": "range", "id": "modal_cta_radius", "label": "Modal CTA radius", "min": 8, "max": 32, "step": 2, "unit": "px", "default": 14 },
+
+    { "type": "header", "content": "CTA under grid" },
+    { "type": "checkbox", "id": "show_cta", "label": "Show CTA button", "default": false },
+    { "type": "text", "id": "cta_text", "label": "CTA text", "default": "Book a Session" },
+    { "type": "url", "id": "cta_link", "label": "CTA link" },
+    { "type": "select", "id": "cta_align", "label": "CTA alignment", "options": [{"value":"left","label":"Left"},{"value":"center","label":"Center"},{"value":"right","label":"Right"}], "default": "center" },
+    { "type": "range", "id": "cta_top_margin", "min": 10, "max": 80, "step": 2, "unit": "px", "label": "CTA top margin", "default": 30 },
+    { "type": "color", "id": "cta_bg", "label": "CTA background", "default": "#4b3f82" },
+    { "type": "color", "id": "cta_text_color", "label": "CTA text color", "default": "#ffffff" },
+    { "type": "range", "id": "cta_radius", "min": 6, "max": 28, "step": 2, "unit": "px", "label": "CTA radius", "default": 12 },
+
+    { "type": "header", "content": "Expert 1" },
+    { "type": "text", "id": "expert_1_name", "label": "Name", "default": "Dr. Sarah Chen" },
+    { "type": "text", "id": "expert_1_credentials", "label": "Credentials", "default": "MD, INTEGRATIVE MEDICINE" },
+    { "type": "textarea", "id": "expert_1_description", "label": "Card description", "default": "With over 15 years of experience in integrative medicine, Dr. Chen specializes in combining traditional healing practices with modern medical approaches to create personalized wellness plans that address the root causes of health concerns." },
+    { "type": "image_picker", "id": "expert_1_image", "label": "Professional photo" },
+    { "type": "richtext", "id": "expert_1_bio", "label": "Full bio for modal", "default": "<p>Dr. Sarah Chen is a board-certified physician specializing in integrative medicine with over 15 years of experience. She earned her medical degree from Stanford and completed residency at UCSF.</p><p>Her approach focuses on treating the whole person by addressing root causes through personalized plans that include nutrition, lifestyle, and complementary therapies.</p>" },
+
+    { "type": "header", "content": "Expert 2" },
+    { "type": "text", "id": "expert_2_name", "label": "Name", "default": "Michael Rodriguez" },
+    { "type": "text", "id": "expert_2_credentials", "label": "Credentials", "default": "RD, CERTIFIED NUTRITIONIST" },
+    { "type": "textarea", "id": "expert_2_description", "label": "Card description", "default": "A registered dietitian and certified nutritionist, Michael helps clients develop sustainable eating habits through evidence-based nutrition strategies and personalized meal planning." },
+    { "type": "image_picker", "id": "expert_2_image", "label": "Professional photo" },
+    { "type": "richtext", "id": "expert_2_bio", "label": "Full bio for modal", "default": "<p>Michael Rodriguez is a registered dietitian with a Master's in Nutrition Science. He specializes in evidence-based strategies and realistic, enjoyable plans that support long-term health.</p>" },
+
+    { "type": "header", "content": "Expert 3" },
+    { "type": "text", "id": "expert_3_name", "label": "Name" },
+    { "type": "text", "id": "expert_3_credentials", "label": "Credentials" },
+    { "type": "textarea", "id": "expert_3_description", "label": "Card description" },
+    { "type": "image_picker", "id": "expert_3_image", "label": "Professional photo" },
+    { "type": "richtext", "id": "expert_3_bio", "label": "Full bio for modal" },
+
+    { "type": "header", "content": "Expert 4" },
+    { "type": "text", "id": "expert_4_name", "label": "Name" },
+    { "type": "text", "id": "expert_4_credentials", "label": "Credentials" },
+    { "type": "textarea", "id": "expert_4_description", "label": "Card description" },
+    { "type": "image_picker", "id": "expert_4_image", "label": "Professional photo" },
+    { "type": "richtext", "id": "expert_4_bio", "label": "Full bio for modal" },
+
+    { "type": "header", "content": "Expert 5" },
+    { "type": "text", "id": "expert_5_name", "label": "Name" },
+    { "type": "text", "id": "expert_5_credentials", "label": "Credentials" },
+    { "type": "textarea", "id": "expert_5_description", "label": "Card description" },
+    { "type": "image_picker", "id": "expert_5_image", "label": "Professional photo" },
+    { "type": "richtext", "id": "expert_5_bio", "label": "Full bio for modal" },
+
+    { "type": "header", "content": "Expert 6" },
+    { "type": "text", "id": "expert_6_name", "label": "Name" },
+    { "type": "text", "id": "expert_6_credentials", "label": "Credentials" },
+    { "type": "textarea", "id": "expert_6_description", "label": "Card description" },
+    { "type": "image_picker", "id": "expert_6_image", "label": "Professional photo" },
+    { "type": "richtext", "id": "expert_6_bio", "label": "Full bio for modal" }
+  ],
+  "presets": [{ "name": "Meet the experts" }],
+  "tag": null
+}
+{% endschema %}

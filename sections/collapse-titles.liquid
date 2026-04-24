@@ -1,0 +1,298 @@
+<!-- sections/collapse-titles.liquid -->
+<section class="collapse-titles">
+  <!-- Section Icon -->
+  {% if section.settings.section_icon %}
+    <div class="section-icon">
+      <img src="{{ section.settings.section_icon | img_url: '200x' }}" alt="{{ section.settings.section_title }} icon">
+    </div>
+  {% endif %}
+
+  <!-- Section header -->
+  <h2 class="section-title">{{ section.settings.section_title }}</h2>
+
+  <!-- Cards -->
+  <div class="cards-container">
+    {% for block in section.blocks %}
+      <div class="card">
+        <div class="card-header" onclick="toggleDetails(this)">
+          <h3>{{ block.settings.title }}</h3>
+          <span class="price">{{ block.settings.price_text }}</span>
+          <span class="chevron">&gt;</span>
+        </div>
+        <div class="details">
+          {{ block.settings.details }}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- CTA -->
+  <div class="collapse-titles__cta">
+    <a href="{{ section.settings.button_url }}" class="book-now">{{ section.settings.button_text }}</a>
+  </div>
+</section>
+
+<style>
+:root {
+  --purple: #3e2764;
+  --bg:     #fcfbf9;
+  --card-bg:#ffffff;
+  --radius:16px;
+  --gap:    1rem;
+}
+
+.collapse-titles {
+  position: relative;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
+  padding: 5rem 2rem 3.8rem;
+  max-width: 1610px;
+  /* increase top spacing below hero */
+  margin: 8rem auto 0;
+  /* add extra top padding to push header and cards downward */
+  padding: 4rem 1rem 2rem;
+  backdrop-filter: blur(6px);
+   /* richer multi-stop gradient with subtle highlight overlay */
+  background: radial-gradient(ellipse at top, rgba(255,255,255,0.4) 0%, transparent 50%),
+              linear-gradient(135deg, #fdf2f2, #fbe1e1, #fcdede);
+  background-blend-mode: overlay;
+  background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 8px),
+                    radial-gradient(ellipse at top, rgba(255,255,255,0.35) 0%, transparent 60%),
+                    linear-gradient(135deg, #fdf2f2, #fbe1e1, #fcdede);
+  border-radius: 20px;
+  box-shadow: 0 25px 70px rgba(0,0,0,0.15);
+  position: relative;
+}
+
+/* Section Icon */
+/* Section Icon (adjust space to header by tweaking 'top' or adding 'margin-bottom') */
+.collapse-titles .section-icon {
+  position: absolute;
+  /* Change this 'top' value to move the icon closer/further from the header */
+  top: -45px;
+  /* You can also add margin-bottom to push the header down: */
+  margin-bottom: 10px;
+  left: 50%;
+  margin-bottom: 60px;
+  transform: translateX(-50%);
+  background-color: #f3f1f0;
+  border-radius: 50%;
+  width: 90px;
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+.collapse-titles .section-icon img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+}
+
+.collapse-titles .section-icon img {
+  width: 100%;       /* fill the entire circle */
+  height: 100%;
+  object-fit: cover; /* cover ensures no empty space */
+  border-radius: 50%;
+}
+
+.collapse-titles .section-title {
+  text-align: center;
+  font-size: clamp(1.4rem, 5.2vw, 3.4rem);
+  font-weight: 700;
+  color: var(--purple);
+  margin: 3rem 0 3rem;  /* increased bottom margin for more spacing */
+}
+
+
+.collapse-titles .cards-container {
+  margin-top: 2rem; /* added space between header and cards */
+  display: flex;
+  gap: var(--gap);
+  align-items: flex-start;
+}
+
+.collapse-titles .card {
+  flex: 1 1 0%;
+  min-width: 0;
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+  transition: transform .2s;
+  overflow: hidden;
+}
+.collapse-titles .card:hover { transform: translateY(-4px); }
+
+/* Header row */
+.collapse-titles .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+.collapse-titles .card-header h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--purple);
+  margin: 0;
+}
+.collapse-titles .card-header .price {
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #666;
+  margin-left: auto;
+  margin-right: 1.5rem;
+  white-space: nowrap;
+}
+.collapse-titles .chevron {
+  font-size: 2rem;
+  color: var(--purple);
+  transition: transform .2s;
+}
+.collapse-titles .card.is-open .chevron {
+  transform: rotate(90deg);
+}
+
+/* Details: show only first three lines */
+.collapse-titles .details {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+  padding: 1rem 1.5rem;
+  color: #333;
+}
+.collapse-titles .card.is-open .details {
+  display: block;
+}
+
+/* CTA button */
+.collapse-titles__cta {
+  text-align: center;
+  margin-top: 2.5rem;
+}
+.collapse-titles__cta .book-now {
+  background: var(--purple);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 1rem 2.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+.collapse-titles__cta .book-now:hover {
+  background: #2e1e50;
+  transform: translateY(-4px);
+}
+/* Tighter card styling */
+.collapse-titles .card {
+  padding: 0.8rem 1rem;
+}
+
+/* Slightly smaller header text & price */
+.collapse-titles .card-header h3 {
+  font-size: 1.5rem;
+}
+.collapse-titles .card-header .price {
+  font-size: 1.2rem;
+}
+
+/* Reduce details padding & line spacing */
+.collapse-titles .details {
+  padding: 0.8rem 1rem;
+  line-height: 1.4;
+}
+
+/* Less prominent icon above section */
+.collapse-titles .section-icon {
+  width: 70px;
+  height: 70px;
+}
+.collapse-titles .section-icon img {
+  width: 100%;
+  height: 100%;
+}
+
+/* Slightly reduce gap between cards */
+.collapse-titles .cards-container {
+  margin-top: 2rem;
+  display: flex;
+  gap: var(--gap);
+  align-items: flex-start;
+  padding: 0 2rem; /* new line */
+}
+
+/* Mobile Responsive: stack cards vertically */
+@media screen and (max-width: 600px) {
+  .collapse-titles .cards-container {
+    flex-direction: column;
+  }
+  .collapse-titles .card {
+    width: 100%;
+    margin-bottom: var(--gap);
+  }
+  .collapse-titles .card-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
+  }
+  .collapse-titles .card-header h3 {
+    width: 100%;
+    margin: 0 0 0.5rem;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .collapse-titles .card-header .price {
+    display: block;
+    margin: 0 0 0.5rem;
+    white-space: nowrap;
+  }
+  .collapse-titles .card-header .chevron {
+    display: block;
+    text-align: right;
+    margin: 0;
+  }
+}
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.collapse-titles .card-header').forEach(header => {
+      header.addEventListener('click', () => {
+        const card = header.closest('.card');
+        const open = !card.classList.contains('is-open');
+        document.querySelectorAll('.collapse-titles .card').forEach(c => c.classList.remove('is-open'));
+        if (open) card.classList.add('is-open');
+      });
+    });
+  });
+</script>
+
+{% schema %}
+{
+  "name": "collapse-titles",
+  "settings": [
+    { "type": "image_picker", "id": "section_icon", "label": "Section Icon" },
+    { "type": "text", "id": "section_title", "label": "Section Title", "default": "Our Consultation Packages" },
+    { "type": "text", "id": "button_text",  "label": "Button Text",      "default": "Book Now" },
+    { "type": "url",  "id": "button_url",   "label": "Button URL",       "default": "/" }
+  ],
+  "blocks": [
+    { "type": "consultation_option", "name": "Consultation Option", "settings": [
+        { "type": "text",     "id": "title",      "label": "Card Title",      "default": "Initial Consultation" },
+        { "type": "text",     "id": "price_text","label": "Price Text",      "default": "Starting at $475" },
+        { "type": "richtext","id": "details",   "label": "Details (bulleted list)", "default": "<ul><li>60-min functional medicine screening</li><li>Biofeedback analysis</li><li>Follow-up plan</li></ul>" }
+    ] }
+  ],
+  "max_blocks": 2,
+  "presets": [ { "name": "Collapse Titles", "category": "Custom" } ]
+}
+{% endschema %}

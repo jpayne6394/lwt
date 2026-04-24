@@ -1,0 +1,145 @@
+<div class="pf-btn-row-wrapper">
+  <form method="post"
+        action="/cart/add"
+        id="product-form-custom-buttons"
+        class="product-form"
+        enctype="multipart/form-data"
+        data-type="add-to-cart-form"
+        data-section-id="custom-buttons">
+
+    <!-- Variant ID -->
+    <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+
+    <!-- Quantity -->
+    <div class="product-form__input product-form__quantity">
+      <label for="Quantity-custom-buttons">Quantity</label>
+      <quantity-input class="quantity">
+        <button class="quantity__button no-js-hidden" name="minus" type="button">
+          <span class="visually-hidden">Decrease quantity</span>
+          &minus;
+        </button>
+        <input class="quantity__input"
+               type="number"
+               name="quantity"
+               id="Quantity-custom-buttons"
+               min="1"
+               value="1"
+               form="product-form-custom-buttons">
+        <button class="quantity__button no-js-hidden" name="plus" type="button">
+          <span class="visually-hidden">Increase quantity</span>
+          +
+        </button>
+      </quantity-input>
+    </div>
+
+    <!-- Buttons -->
+    <div class="pf-btn-row">
+      {% if section.settings.show_add_to_cart %}
+        <button type="submit" name="add" class="pf-add">
+          {{ section.settings.add_to_cart_label }}
+        </button>
+      {% endif %}
+
+      {% if section.settings.show_buy_now %}
+        <button type="submit" name="checkout" class="pf-buy-now">
+          {{ section.settings.buy_now_label }}
+        </button>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('product-form-custom-buttons');
+    if (!form) return;
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const isBuyNow = e.submitter?.name === 'checkout';
+
+      try {
+        const response = await fetch('/cart/add.js', {
+          method: 'POST',
+          body: formData,
+          headers: { 'Accept': 'application/json' }
+        });
+
+        if (!response.ok) throw new Error('Add to cart failed');
+
+        if (isBuyNow) {
+          window.location.href = '/checkout';
+        } else {
+          const drawerHTML = await fetch('/?section_id=cart-drawer').then(r => r.text());
+          const drawerDOM = new DOMParser().parseFromString(drawerHTML, 'text/html');
+          const newDrawer = drawerDOM.getElementById('CartDrawer');
+          const existingDrawer = document.getElementById('CartDrawer');
+
+          if (existingDrawer && newDrawer) {
+            existingDrawer.innerHTML = newDrawer.innerHTML;
+            existingDrawer.classList.add('is-open');
+            existingDrawer.setAttribute('aria-hidden', 'false');
+            document.body.classList.add('overflow-hidden');
+            if (typeof trapFocus === 'function') trapFocus(existingDrawer);
+          }
+
+          const bubbleHTML = await fetch('/?section_id=cart-icon-bubble').then(r => r.text());
+          const bubbleDOM = new DOMParser().parseFromString(bubbleHTML, 'text/html');
+          const bubbleTarget = document.getElementById('cart-icon-bubble');
+          const bubbleSource = bubbleDOM.getElementById('cart-icon-bubble');
+          if (bubbleTarget && bubbleSource) {
+            bubbleTarget.innerHTML = bubbleSource.innerHTML;
+          }
+        }
+      } catch (err) {
+        console.error('Cart submission error:', err);
+      }
+    });
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Custom Product Buttons",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_add_button",
+      "label": "Show Add to Cart Button",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_buy_now_button",
+      "label": "Show Buy Now Button",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "product_form_id",
+      "label": "Product Form ID (no prefix)",
+      "default": "main"
+    },
+    {
+      "type": "text",
+      "id": "add_button_text",
+      "label": "Add to Cart Button Text",
+      "default": "Add to Cart"
+    },
+    {
+      "type": "text",
+      "id": "buy_button_text",
+      "label": "Buy Now Button Text",
+      "default": "Buy Now"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Product Buttons Block",
+      "category": "Product"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,396 @@
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-testimonials-section-{{ ai_gen_id }}{
+    background-color: {{ block.settings.background_color }};
+    padding: {{ block.settings.section_padding_top }}px 20px {{ block.settings.section_padding_bottom }}px;
+  }
+  .ai-testimonials-container-{{ ai_gen_id }}{
+    max-width: {{ block.settings.container_width }}px;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
+  /* Heading */
+  .ai-testimonials-heading-{{ ai_gen_id }}{
+    text-align: center;
+    margin: 0 0 {{ block.settings.heading_spacing }}px;
+    color: {{ block.settings.heading_color }};
+    font-size: {{ block.settings.heading_size }}px;
+    font-weight: 600;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Grid (desktop when layout=grid) */
+  .ai-testimonials-grid-{{ ai_gen_id }}{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: {{ block.settings.card_gap }}px;
+  }
+
+  /* Carousel shell */
+  .ai-testimonials-carousel-{{ ai_gen_id }}{
+    position: relative;
+    overflow: hidden; /* keep contents in bounds */
+    display: none;
+  }
+  .ai-testimonials-carousel-track-{{ ai_gen_id }}{
+    display: flex;
+    transition: transform 0.5s ease;
+    will-change: transform;
+    touch-action: pan-y; /* prevent sideways scroll-bounce */
+  }
+  .ai-testimonials-carousel-slide-{{ ai_gen_id }}{
+    min-width: 100%;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    padding: 0 20px; /* desktop spacing */
+  }
+
+  /* Controls */
+  .ai-carousel-controls-{{ ai_gen_id }}{
+    display: none;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 30px;
+  }
+  .ai-carousel-button-{{ ai_gen_id }}{
+    background-color: {{ block.settings.carousel_button_bg }};
+    color: {{ block.settings.carousel_button_color }};
+    border: none; width: 44px; height: 44px; border-radius: 50%;
+    cursor: pointer; display:flex; align-items:center; justify-content:center;
+    transition: background-color .3s ease; flex-shrink:0;
+  }
+  .ai-carousel-button-{{ ai_gen_id }}:hover{ background-color: {{ block.settings.carousel_button_hover_bg }}; }
+  .ai-carousel-button-{{ ai_gen_id }}:disabled{ opacity:.3; cursor:not-allowed; }
+
+  .ai-carousel-dots-{{ ai_gen_id }}{ display:flex; gap:8px; }
+  .ai-carousel-dot-{{ ai_gen_id }}{
+    width:10px; height:10px; border-radius:50%;
+    background-color: {{ block.settings.carousel_dot_color }};
+    opacity:.3; border:none; cursor:pointer; padding:0; transition:opacity .3s ease;
+  }
+  .ai-carousel-dot-{{ ai_gen_id }}.active{ opacity:1; }
+
+  /* Card */
+  .ai-testimonial-card-{{ ai_gen_id }}{
+    background-color: {{ block.settings.card_background }};
+    border-radius: {{ block.settings.card_border_radius }}px;
+    padding: {{ block.settings.card_padding }}px;
+    box-shadow: 0 {{ block.settings.shadow_vertical }}px {{ block.settings.shadow_blur }}px rgba(0,0,0,{{ block.settings.shadow_opacity }});
+    display:flex; flex-direction:column; gap: {{ block.settings.card_content_gap }}px;
+    height:100%; min-height:250px; max-height:400px;
+    box-sizing: border-box;
+  }
+  .ai-testimonial-stars-{{ ai_gen_id }}{ display:flex; gap:4px; justify-content:flex-start; flex-shrink:0; }
+  .ai-testimonial-star-{{ ai_gen_id }}{ width: {{ block.settings.star_size }}px; height: {{ block.settings.star_size }}px; color: {{ block.settings.star_color }}; display:block; }
+
+  .ai-testimonial-quote-{{ ai_gen_id }}{
+    color: {{ block.settings.quote_color }};
+    font-size: {{ block.settings.quote_size }}px;
+    line-height: 1.6;
+    flex-grow: 1;
+    overflow: hidden; /* don't create internal scrollers by default */
+    max-height: 250px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
+  }
+  .ai-testimonial-author-{{ ai_gen_id }}{
+    color: {{ block.settings.author_color }};
+    font-size: {{ block.settings.author_size }}px;
+    font-weight: 600; flex-shrink:0;
+    overflow-wrap: anywhere; word-break: break-word;
+  }
+
+  /* Switch to carousel if layout=carousel on desktop */
+  {% if block.settings.layout == 'carousel' %}
+    .ai-testimonials-grid-{{ ai_gen_id }}{ display:none; }
+    .ai-testimonials-carousel-{{ ai_gen_id }}{ display:block; }
+    .ai-carousel-controls-{{ ai_gen_id }}{ display:flex; }
+    .ai-testimonial-card-{{ ai_gen_id }}{ max-width: 640px; margin: 0 auto; text-align:center; }
+    .ai-testimonial-stars-{{ ai_gen_id }}{ justify-content:center; }
+  {% endif %}
+
+  /* Tablet grid collapse */
+  @media screen and (max-width: 989px){
+    .ai-testimonials-grid-{{ ai_gen_id }}{ grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* MOBILE — one card, centered, no overflow */
+ /* MOBILE POLISH — replace your existing @media (max-width: 749px) block */
+@media screen and (max-width: 749px){
+  .ai-testimonials-section-{{ ai_gen_id }}{
+    padding-left: 16px;
+    padding-right: 16px;
+    overflow-x: hidden;              /* kill any horizontal scroll */
+  }
+
+  .ai-testimonials-container-{{ ai_gen_id }}{ padding: 0; }
+
+  .ai-testimonials-heading-{{ ai_gen_id }}{
+    font-size: clamp(20px, 7vw, {{ block.settings.heading_size }}px);
+    line-height: 1.2;
+    margin-bottom: {{ block.settings.heading_spacing | times: 0.55 }}px;
+    padding: 0 6px;                  /* keep inside gutters */
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Always show carousel on mobile */
+  .ai-testimonials-grid-{{ ai_gen_id }}{ display: none !important; }
+  .ai-testimonials-carousel-{{ ai_gen_id }}{ display: block; overflow: hidden; margin: 0; }
+  .ai-testimonials-carousel-track-{{ ai_gen_id }}{
+    overflow: visible;
+    padding: 0 2px;                  /* tiny safe gutter */
+    touch-action: pan-y;
+  }
+
+  .ai-testimonials-carousel-slide-{{ ai_gen_id }}{
+    min-width: 100%;
+    padding: 0;                      /* remove side padding that caused overflow */
+    box-sizing: border-box;
+  }
+
+  .ai-testimonial-card-{{ ai_gen_id }}{
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+    text-align: center;
+    padding: 20px 14px;
+    min-height: auto;
+    max-height: none;
+    box-sizing: border-box;
+  }
+
+  .ai-testimonial-stars-{{ ai_gen_id }}{ justify-content: center; }
+  .ai-testimonial-star-{{ ai_gen_id }}{
+    width: clamp(14px, 4.5vw, {{ block.settings.star_size }}px);
+    height: clamp(14px, 4.5vw, {{ block.settings.star_size }}px);
+    display: block;
+  }
+
+  .ai-testimonial-quote-{{ ai_gen_id }}{
+    font-size: clamp(14px, 4.2vw, {{ block.settings.quote_size }}px);
+    line-height: 1.55;
+    max-width: min(36ch, 100% - 8px);  /* comfortable measure + safe gutter */
+    margin: 0 auto;
+    overflow: visible;
+    max-height: none;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
+    text-align: center;
+  }
+
+  .ai-testimonial-author-{{ ai_gen_id }}{
+    font-size: clamp(13px, 4vw, {{ block.settings.author_size }}px);
+    margin-top: 6px;
+    text-align: center;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .ai-carousel-controls-{{ ai_gen_id }}{
+    display: flex;
+    gap: 16px;
+    margin-top: 18px;
+    padding: 0;
+  }
+}
+
+{% endstyle %}
+
+<testimonials-carousel-{{ ai_gen_id }} class="ai-testimonials-section-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-testimonials-container-{{ ai_gen_id }}">
+    {% if block.settings.heading != blank %}
+      <h2 class="ai-testimonials-heading-{{ ai_gen_id }}">{{ block.settings.heading }}</h2>
+    {% endif %}
+
+    <!-- Desktop grid (if layout=grid) -->
+    <div class="ai-testimonials-grid-{{ ai_gen_id }}">
+      {% for i in (1..3) %}
+        {% liquid
+          assign quote_key = 'testimonial_' | append: i | append: '_quote'
+          assign author_key = 'testimonial_' | append: i | append: '_author'
+          assign quote = block.settings[quote_key]
+          assign author = block.settings[author_key]
+        %}
+        <div class="ai-testimonial-card-{{ ai_gen_id }}">
+          <div class="ai-testimonial-stars-{{ ai_gen_id }}">
+            {% for star in (1..5) %}
+              <svg class="ai-testimonial-star-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            {% endfor %}
+          </div>
+          <div class="ai-testimonial-quote-{{ ai_gen_id }}">
+            {% if quote != blank %}{{ quote }}{% else %}The wellness consultation was life-changing. I've seen remarkable improvements in my energy levels and overall health. Highly recommend their personalized approach to wellness.{% endif %}
+          </div>
+          <div class="ai-testimonial-author-{{ ai_gen_id }}">
+            {% if author != blank %}{{ author }}{% else %}Patient {{ i }}{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Carousel (desktop if layout=carousel, always mobile) -->
+    <div class="ai-testimonials-carousel-{{ ai_gen_id }}">
+      <div class="ai-testimonials-carousel-track-{{ ai_gen_id }}">
+        {% for i in (1..3) %}
+          {% liquid
+            assign quote_key = 'testimonial_' | append: i | append: '_quote'
+            assign author_key = 'testimonial_' | append: i | append: '_author'
+            assign quote = block.settings[quote_key]
+            assign author = block.settings[author_key]
+          %}
+          <div class="ai-testimonials-carousel-slide-{{ ai_gen_id }}">
+            <div class="ai-testimonial-card-{{ ai_gen_id }}">
+              <div class="ai-testimonial-stars-{{ ai_gen_id }}">
+                {% for star in (1..5) %}
+                  <svg class="ai-testimonial-star-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                {% endfor %}
+              </div>
+              <div class="ai-testimonial-quote-{{ ai_gen_id }}">
+                {% if quote != blank %}{{ quote }}{% else %}The wellness consultation was life-changing. I've seen remarkable improvements in my energy levels and overall health. Highly recommend their personalized approach to wellness.{% endif %}
+              </div>
+              <div class="ai-testimonial-author-{{ ai_gen_id }}">
+                {% if author != blank %}{{ author }}{% else %}Patient {{ i }}{% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="ai-carousel-controls-{{ ai_gen_id }}">
+      <button class="ai-carousel-button-{{ ai_gen_id }} ai-carousel-prev-{{ ai_gen_id }}" aria-label="Previous testimonial">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+      <div class="ai-carousel-dots-{{ ai_gen_id }}">
+        {% for i in (1..3) %}
+          <button class="ai-carousel-dot-{{ ai_gen_id }}" data-index="{{ i | minus: 1 }}" aria-label="Go to testimonial {{ i }}"></button>
+        {% endfor %}
+      </div>
+      <button class="ai-carousel-button-{{ ai_gen_id }} ai-carousel-next-{{ ai_gen_id }}" aria-label="Next testimonial">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+  </div>
+</testimonials-carousel-{{ ai_gen_id }}>
+
+<script>
+(function(){
+  class TestimonialsCarousel{{ ai_gen_id }} extends HTMLElement{
+    constructor(){ super(); this.currentIndex = 0; this.totalSlides = 3; }
+    connectedCallback(){
+      this.track = this.querySelector('.ai-testimonials-carousel-track-{{ ai_gen_id }}');
+      this.prevButton = this.querySelector('.ai-carousel-prev-{{ ai_gen_id }}');
+      this.nextButton = this.querySelector('.ai-carousel-next-{{ ai_gen_id }}');
+      this.dots = this.querySelectorAll('.ai-carousel-dot-{{ ai_gen_id }}');
+      if(!this.track) return;
+      this.setupEventListeners();
+      this.updateCarousel();
+    }
+    setupEventListeners(){
+      this.prevButton?.addEventListener('click',()=>this.goToPrevious());
+      this.nextButton?.addEventListener('click',()=>this.goToNext());
+      this.dots.forEach(dot=>{
+        dot.addEventListener('click',e=>{
+          const i = parseInt(e.currentTarget.dataset.index||'0',10);
+          this.goToSlide(i);
+        });
+      });
+      let startX=0, currentX=0, isDragging=false;
+      this.track.addEventListener('touchstart',e=>{ startX=e.touches[0].clientX; isDragging=true; },{passive:true});
+      this.track.addEventListener('touchmove',e=>{ if(!isDragging) return; currentX=e.touches[0].clientX; },{passive:true});
+      this.track.addEventListener('touchend',()=>{ if(!isDragging) return; isDragging=false; const dx=startX-currentX; if(Math.abs(dx)>50){ dx>0?this.goToNext():this.goToPrevious(); }});
+      window.addEventListener('resize',()=>this.updateCarousel());
+    }
+    goToPrevious(){ if(this.currentIndex>0){ this.currentIndex--; this.updateCarousel(); } }
+    goToNext(){ if(this.currentIndex<this.totalSlides-1){ this.currentIndex++; this.updateCarousel(); } }
+    goToSlide(i){ this.currentIndex = Math.max(0, Math.min(i, this.totalSlides-1)); this.updateCarousel(); }
+    updateCarousel(){
+      const offset = -this.currentIndex * 100;
+      this.track.style.transform = `translateX(${offset}%)`;
+      this.prevButton && (this.prevButton.disabled = this.currentIndex === 0);
+      this.nextButton && (this.nextButton.disabled = this.currentIndex === this.totalSlides - 1);
+      this.dots.forEach((d,i)=>d.classList.toggle('active', i===this.currentIndex));
+    }
+  }
+  customElements.define('testimonials-carousel-{{ ai_gen_id }}', TestimonialsCarousel{{ ai_gen_id }});
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Patient testimonials",
+  "settings": [
+    { "type": "header", "content": "Layout" },
+    {
+      "type": "select", "id": "layout", "label": "Display layout",
+      "options": [
+        { "value": "grid", "label": "Grid (3 cards)" },
+        { "value": "carousel", "label": "Carousel (1 card)" }
+      ],
+      "default": "grid",
+      "info": "Mobile always shows 1 card carousel"
+    },
+
+    { "type": "header", "content": "Heading" },
+    { "type": "inline_richtext", "id": "heading", "label": "Heading", "default": "What Our Patients Say" },
+    { "type": "range", "id": "heading_size", "min": 20, "max": 60, "step": 2, "unit": "px", "label": "Heading size", "default": 36 },
+    { "type": "color", "id": "heading_color", "label": "Heading color", "default": "#2d5f4f" },
+    { "type": "range", "id": "heading_spacing", "min": 20, "max": 80, "step": 4, "unit": "px", "label": "Spacing below heading", "default": 48 },
+
+    { "type": "header", "content": "Testimonial 1" },
+    { "type": "textarea", "id": "testimonial_1_quote", "label": "Quote", "default": "The wellness consultation was life-changing. I've seen remarkable improvements in my energy levels and overall health. Highly recommend their personalized approach to wellness." },
+    { "type": "text", "id": "testimonial_1_author", "label": "Patient name", "default": "Sarah M." },
+
+    { "type": "header", "content": "Testimonial 2" },
+    { "type": "textarea", "id": "testimonial_2_quote", "label": "Quote", "default": "After struggling with chronic fatigue, the personalized health plan helped me regain my vitality. The team truly cares about long-term wellness, not just quick fixes." },
+    { "type": "text", "id": "testimonial_2_author", "label": "Patient name", "default": "Michael T." },
+
+    { "type": "header", "content": "Testimonial 3" },
+    { "type": "textarea", "id": "testimonial_3_quote", "label": "Quote", "default": "The holistic approach to my health concerns exceeded all expectations. I feel healthier, more balanced, and finally have the tools to maintain my wellness journey." },
+    { "type": "text", "id": "testimonial_3_author", "label": "Patient name", "default": "Jennifer L." },
+
+    { "type": "header", "content": "Star rating" },
+    { "type": "range", "id": "star_size", "min": 16, "max": 32, "step": 2, "unit": "px", "label": "Star size", "default": 20 },
+    { "type": "color", "id": "star_color", "label": "Star color", "default": "#D4AF37" },
+
+    { "type": "header", "content": "Carousel controls" },
+    { "type": "color", "id": "carousel_button_bg", "label": "Button background", "default": "#2d5f4f" },
+    { "type": "color", "id": "carousel_button_hover_bg", "label": "Button hover background", "default": "#1f4437" },
+    { "type": "color", "id": "carousel_button_color", "label": "Button icon color", "default": "#ffffff" },
+    { "type": "color", "id": "carousel_dot_color", "label": "Dot color", "default": "#2d5f4f" },
+
+    { "type": "header", "content": "Card style" },
+    { "type": "color", "id": "card_background", "label": "Card background", "default": "#ffffff" },
+    { "type": "range", "id": "card_padding", "min": 20, "max": 60, "step": 4, "unit": "px", "label": "Card padding", "default": 32 },
+    { "type": "range", "id": "card_border_radius", "min": 0, "max": 30, "step": 2, "unit": "px", "label": "Card border radius", "default": 12 },
+    { "type": "range", "id": "card_gap", "min": 16, "max": 48, "step": 4, "unit": "px", "label": "Gap between cards", "default": 24 },
+    { "type": "range", "id": "card_content_gap", "min": 12, "max": 40, "step": 4, "unit": "px", "label": "Gap inside cards", "default": 20 },
+
+    { "type": "header", "content": "Card shadow" },
+    { "type": "range", "id": "shadow_vertical", "min": 0, "max": 20, "step": 2, "unit": "px", "label": "Vertical offset", "default": 4 },
+    { "type": "range", "id": "shadow_blur", "min": 0, "max": 40, "step": 4, "unit": "px", "label": "Blur", "default": 12 },
+    { "type": "range", "id": "shadow_opacity", "min": 0, "max": 0.5, "step": 0.1, "label": "Opacity", "default": 0.1 },
+
+    { "type": "header", "content": "Text style" },
+    { "type": "range", "id": "quote_size", "min": 14, "max": 24, "step": 1, "unit": "px", "label": "Quote size", "default": 16 },
+    { "type": "color", "id": "quote_color", "label": "Quote color", "default": "#4a4a4a" },
+    { "type": "range", "id": "author_size", "min": 12, "max": 20, "step": 1, "unit": "px", "label": "Author size", "default": 14 },
+    { "type": "color", "id": "author_color", "label": "Author color", "default": "#2d5f4f" },
+
+    { "type": "header", "content": "Section style" },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#f5f3ed" },
+    { "type": "range", "id": "container_width", "min": 1000, "max": 1600, "step": 100, "unit": "px", "label": "Container width", "default": 1200 },
+    { "type": "range", "id": "section_padding_top", "min": 40, "max": 120, "step": 8, "unit": "px", "label": "Top padding", "default": 80 },
+    { "type": "range", "id": "section_padding_bottom", "min": 40, "max": 120, "step": 8, "unit": "px", "label": "Bottom padding", "default": 80 }
+  ],
+  "presets": [{ "name": "Patient testimonials" }]
+}
+{% endschema %}

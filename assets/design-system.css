@@ -1,0 +1,448 @@
+/**
+ * LWT (Living Well Today) Design System
+ * Single source for brand look and feel: colors, spacing, typography, layout.
+ * Use these variables in sections for consistency.
+ */
+
+:root {
+  /* Brand palette */
+  --lwt-primary: #4b3f82;
+  --lwt-primary-dark: #3d3268;
+  --lwt-primary-light: #5f4b80;
+  --lwt-accent: #2d5f4f;
+  --lwt-accent-dark: #1f4437;
+
+  /* Surfaces & backgrounds */
+  --lwt-surface: #f8f5ff;
+  --lwt-surface-alt: #fdf2f2;
+  --lwt-surface-white: #ffffff;
+  --lwt-background-dark: #121212;
+
+  /* Text */
+  --lwt-text: #121212;
+  --lwt-text-muted: #5a6c7d;
+  --lwt-text-on-primary: #ffffff;
+  --lwt-text-on-dark: #ffffff;
+
+  /* Borders & dividers */
+  --lwt-border: rgba(18, 18, 18, 0.1);
+  --lwt-border-strong: rgba(18, 18, 18, 0.15);
+
+  /* Spacing scale (used for section padding, gaps) */
+  --lwt-space-xs: 0.5rem;
+  --lwt-space-sm: 1rem;
+  --lwt-space-md: 1.5rem;
+  --lwt-space-lg: 2rem;
+  --lwt-space-xl: 3rem;
+  --lwt-space-2xl: 4rem;
+  --lwt-space-3xl: 5rem;
+  --lwt-section-padding-y: 4rem;
+  --lwt-section-padding-y-mobile: 2.5rem;
+  --lwt-section-padding-x: 2rem;
+  --lwt-section-padding-x-desktop: 3rem;
+  --lwt-content-max-width: 75rem; /* 1200px */
+  --lwt-content-narrow: 52rem;    /* 832px */
+
+  /* Typography scale (sizes relative to base) */
+  --lwt-heading-h1: 3.6rem;
+  --lwt-heading-h2: 2.8rem;
+  --lwt-heading-h3: 2.4rem;
+  --lwt-heading-h4: 1.8rem;
+  --lwt-body: 1.6rem;
+  --lwt-body-sm: 1.4rem;
+  --lwt-caption: 1.2rem;
+  --lwt-line-height-tight: 1.2;
+  --lwt-line-height-body: 1.6;
+  --lwt-line-height-relaxed: 1.75;
+
+  /* Border radius */
+  --lwt-radius-sm: 8px;
+  --lwt-radius-md: 12px;
+  --lwt-radius-lg: 20px;
+  --lwt-radius-xl: 32px;
+  --lwt-radius-button: 40px;
+  --lwt-radius-card: 20px;
+
+  /* Shadows – layered for depth and polish */
+  --lwt-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04);
+  --lwt-shadow-card: 0 8px 32px rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --lwt-shadow-card-hover: 0 16px 48px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --lwt-shadow-button: 0 4px 16px rgba(75, 63, 130, 0.28);
+  --lwt-shadow-button-hover: 0 6px 24px rgba(75, 63, 130, 0.35);
+  --lwt-shadow-focus: 0 0 0 3px rgba(75, 63, 130, 0.25);
+
+  /* Typography refinement */
+  --lwt-heading-letter-spacing: -0.02em;
+  --lwt-caption-letter-spacing: 0.02em;
+
+  /* Transitions */
+  --lwt-transition-fast: 0.15s ease;
+  --lwt-transition-base: 0.25s ease;
+  --lwt-transition-slow: 0.35s ease;
+}
+
+/* Utility: apply design-system section container (padding, max-width, spacing) */
+.lwt-section {
+  padding-top: var(--lwt-section-padding-y-mobile);
+  padding-bottom: var(--lwt-section-padding-y-mobile);
+  padding-left: var(--lwt-section-padding-x);
+  padding-right: var(--lwt-section-padding-x);
+  max-width: var(--lwt-content-max-width);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media screen and (min-width: 750px) {
+  .lwt-section {
+    padding-top: var(--lwt-section-padding-y);
+    padding-bottom: var(--lwt-section-padding-y);
+    padding-left: var(--lwt-section-padding-x-desktop);
+    padding-right: var(--lwt-section-padding-x-desktop);
+  }
+}
+
+/* Card-style block (about cards, feature blocks) */
+.lwt-card {
+  background: var(--lwt-surface);
+  border-radius: var(--lwt-radius-card);
+  box-shadow: var(--lwt-shadow-card);
+  padding: var(--lwt-space-xl) var(--lwt-space-lg);
+  border: 1px solid var(--lwt-border);
+  transition: box-shadow var(--lwt-transition-base), border-color var(--lwt-transition-base);
+}
+
+.lwt-card:hover {
+  box-shadow: var(--lwt-shadow-card-hover);
+  border-color: rgba(75, 63, 130, 0.08);
+}
+
+@media screen and (min-width: 750px) {
+  .lwt-card {
+    padding: var(--lwt-space-2xl) var(--lwt-space-xl);
+  }
+}
+
+/* Primary button look (for consistency with theme buttons) */
+.lwt-button-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--lwt-primary);
+  color: var(--lwt-text-on-primary);
+  border-radius: var(--lwt-radius-button);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.75em 1.5em;
+  box-shadow: var(--lwt-shadow-button);
+  transition: background-color var(--lwt-transition-base), color var(--lwt-transition-base),
+    box-shadow var(--lwt-transition-base), transform var(--lwt-transition-fast);
+}
+
+.lwt-button-primary:hover {
+  background-color: var(--lwt-primary-dark);
+  color: var(--lwt-text-on-primary);
+  box-shadow: var(--lwt-shadow-button-hover);
+  transform: translateY(-1px);
+}
+
+.lwt-button-primary:focus-visible {
+  outline: none;
+  box-shadow: var(--lwt-shadow-focus);
+}
+
+.lwt-button-primary:active {
+  transform: translateY(0);
+}
+
+/* ========== Global typography ========== */
+h1, h2, h3, .h0, .h1, .h2, .h3 {
+  letter-spacing: var(--lwt-heading-letter-spacing);
+}
+
+/* ========== Header (navigation) ========== */
+.header-wrapper {
+  --header-padding-x: var(--lwt-section-padding-x);
+  --header-padding-y: var(--lwt-space-md);
+}
+
+.header-wrapper .list-menu__item--link {
+  transition: color var(--lwt-transition-fast), opacity var(--lwt-transition-fast);
+}
+
+.header-wrapper .list-menu__item--link:hover,
+.header-wrapper .header__icon:hover {
+  opacity: 0.9;
+  color: var(--lwt-primary);
+}
+
+.header-wrapper .header__icon:focus-visible {
+  outline: 2px solid var(--lwt-primary);
+  outline-offset: 2px;
+}
+
+@media screen and (min-width: 990px) {
+  .header-wrapper .list-menu__item--link {
+    padding-left: var(--lwt-space-sm);
+    padding-right: var(--lwt-space-sm);
+  }
+}
+
+/* ========== Footer ========== */
+.footer .footer-block__heading {
+  color: var(--lwt-text);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: var(--lwt-space-sm);
+}
+
+.footer .footer-block__details-content a,
+.footer .link--text {
+  transition: color var(--lwt-transition-fast);
+}
+
+.footer .footer-block__details-content a:hover,
+.footer .link--text:hover {
+  color: var(--lwt-primary);
+}
+
+.footer__content-top.page-width {
+  padding-top: var(--lwt-section-padding-y);
+  padding-bottom: var(--lwt-section-padding-y);
+}
+
+.footer__content-bottom-wrapper {
+  padding-top: var(--lwt-space-lg);
+  padding-bottom: var(--lwt-space-lg);
+}
+
+.footer .policies a:hover {
+  color: var(--lwt-primary);
+}
+
+/* ========== Theme buttons (Dawn .button) ========== */
+.banner__buttons .button,
+.button:not(.button--plain) {
+  transition: background-color var(--lwt-transition-base), color var(--lwt-transition-base),
+    box-shadow var(--lwt-transition-base), transform var(--lwt-transition-fast);
+}
+
+.banner__buttons .button:hover,
+.button:not(.button--plain):hover {
+  transform: translateY(-1px);
+}
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: var(--lwt-shadow-focus);
+}
+
+/* ========== Product and collection cards ========== */
+.card__information .button,
+.product-card-wrapper .button {
+  transition: background-color var(--lwt-transition-base), color var(--lwt-transition-base), box-shadow var(--lwt-transition-base);
+}
+
+.card--card .card__inner,
+.collection-card-wrapper .card {
+  border-radius: var(--lwt-radius-md);
+  transition: box-shadow var(--lwt-transition-base);
+}
+
+.card--card:hover .card__inner,
+.collection-card-wrapper:hover .card {
+  box-shadow: var(--lwt-shadow-card-hover);
+}
+
+@media screen and (max-width: 989px) {
+  .collection-card-wrapper .card {
+    border-radius: var(--lwt-radius-sm);
+  }
+}
+
+/* ========== Mobile behavior ========== */
+@media screen and (max-width: 749px) {
+  .lwt-section,
+  .lwt-card {
+    padding-left: var(--lwt-space-md);
+    padding-right: var(--lwt-space-md);
+  }
+
+  .header .header__heading-link,
+  .header .list-menu__item--link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .footer .footer-block__details-content a,
+  .footer .link--text {
+    padding-top: var(--lwt-space-xs);
+    padding-bottom: var(--lwt-space-xs);
+    display: inline-block;
+  }
+}
+
+@media screen and (max-width: 989px) {
+  .header-wrapper {
+    padding-left: var(--lwt-space-md);
+    padding-right: var(--lwt-space-md);
+  }
+}
+
+/* ========== Body and content readability ========== */
+.rte {
+  line-height: var(--lwt-line-height-relaxed);
+}
+
+.rte p:first-child {
+  margin-top: 0;
+}
+
+/* Paragraph spacing in RTE (product description, page content) to break up walls of text */
+.rte p,
+.rte ul,
+.rte ol {
+  margin-top: 0;
+  margin-bottom: 1em;
+}
+
+.rte p + p,
+.rte ul + p,
+.rte p + ul,
+.rte ol + p,
+.rte p + ol {
+  margin-top: 1em;
+}
+
+.rte > *:last-child {
+  margin-bottom: 0;
+}
+
+.rte ul li,
+.rte ol li {
+  margin-bottom: 0.35em;
+}
+
+.rte h3,
+.rte h4 {
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+}
+
+.rte h3:first-child,
+.rte h4:first-child {
+  margin-top: 0;
+}
+
+/* ========== Search: type filter and findability ========== */
+.template-search__type-list .link--active {
+  border-bottom-color: var(--lwt-primary);
+  color: var(--lwt-primary);
+}
+
+.template-search__type-list .link:hover {
+  color: var(--lwt-primary);
+}
+
+/* ========== Services page (trust, consultant cards, columns) ========== */
+.trust-card-wrapper {
+  border-radius: var(--lwt-radius-card);
+  box-shadow: var(--lwt-shadow-card);
+}
+
+.clickable-columns-section {
+  border-radius: var(--lwt-radius-card);
+  box-shadow: var(--lwt-shadow-soft);
+}
+
+.clickable-columns-section .clickable-tile {
+  border-radius: var(--lwt-radius-md);
+  box-shadow: var(--lwt-shadow-soft);
+  transition: box-shadow var(--lwt-transition-base), transform var(--lwt-transition-fast);
+}
+
+.clickable-columns-section .clickable-tile:hover {
+  box-shadow: var(--lwt-shadow-card-hover);
+  transform: translateY(-2px);
+}
+
+.meet-experts {
+  padding-top: var(--lwt-section-padding-y);
+  padding-bottom: var(--lwt-section-padding-y);
+}
+
+.meet-experts-text {
+  border-radius: var(--lwt-radius-card);
+  box-shadow: var(--lwt-shadow-card);
+}
+
+/* ========== Main blog (article grid cards) ========== */
+.main-blog .blog-articles {
+  gap: var(--lwt-space-lg);
+}
+
+.main-blog .article-card-wrapper .card,
+.main-blog .article-card-wrapper .card__inner {
+  border-radius: var(--lwt-radius-card);
+  box-shadow: var(--lwt-shadow-card);
+  transition: box-shadow var(--lwt-transition-base), border-color var(--lwt-transition-base);
+}
+
+.main-blog .article-card-wrapper:hover .card,
+.main-blog .article-card-wrapper:hover .card__inner {
+  box-shadow: var(--lwt-shadow-card-hover);
+}
+
+.main-blog .title--primary {
+  letter-spacing: var(--lwt-heading-letter-spacing);
+  margin-bottom: var(--lwt-space-xl);
+}
+
+/* Featured carousel (blog) – card consistency */
+.featured-carousel .article-card-wrapper .card,
+.featured-carousel .article-card-wrapper .card__inner {
+  border-radius: var(--lwt-radius-card);
+  box-shadow: var(--lwt-shadow-card);
+  transition: box-shadow var(--lwt-transition-base);
+}
+
+.featured-carousel .article-card-wrapper:hover .card,
+.featured-carousel .article-card-wrapper:hover .card__inner {
+  box-shadow: var(--lwt-shadow-card-hover);
+}
+
+/* ========== Contact page (form + CTA cards) ========== */
+[class*="ai-luxury-cta-card-"]:not([class*="button"]) {
+  border-radius: var(--lwt-radius-card);
+  box-shadow: var(--lwt-shadow-card);
+  transition: box-shadow var(--lwt-transition-base), transform var(--lwt-transition-fast);
+}
+
+[class*="ai-luxury-cta-card-"]:not([class*="button"]):hover {
+  box-shadow: var(--lwt-shadow-card-hover);
+}
+
+[class*="ai-luxury-contact-form-"] input:focus-visible,
+[class*="ai-luxury-contact-form-"] textarea:focus-visible {
+  outline: 2px solid var(--lwt-primary);
+  outline-offset: 2px;
+}
+
+.contact .button,
+[class*="ai-luxury-contact-form-"] button[type="submit"] {
+  transition: box-shadow var(--lwt-transition-base), transform var(--lwt-transition-fast);
+}
+
+.contact .button:focus-visible,
+[class*="ai-luxury-contact-form-"] button[type="submit"]:focus-visible {
+  outline: none;
+  box-shadow: var(--lwt-shadow-focus);
+}
+
+/* ========== Focus visibility (accessibility) ========== */
+a:focus-visible,
+button:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2px solid var(--lwt-primary);
+  outline-offset: 2px;
+}

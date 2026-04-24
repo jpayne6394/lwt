@@ -1,0 +1,1337 @@
+{% doc %}
+  @prompt
+    Create a smooth, professional "see more" or "load more" button with elegant transitions for newsletter highlights. Include mobile-responsive design with smooth animations, proper spacing, and a modern button style that works well on mobile devices. Add fade-in effects for newly loaded content and ensure the button has hover states and loading indicators. one main card and two smaller cards to the right making a square. when see more is click the view transform to on main card and a 2x 4 row of older article cards. use coming soon overlay cards, make more like the theme, have it link one blog and make the button smaller, give the cards a better style that fits the overall theme, make the style better outline the cards rounded corners, make the spacing better with the main ccard and smaller cards, change the style of the cards we need more shadow, hover, and rounded corners, make the whole card hover, add an overly of coming soon like practitioner insights, remove holding card content and place a coming soon card, add the coming soon to the empty article spots, put coming soon on all empty cards including the cards that are holding the place with content, add the ability to link a blog, the see button does not work, fix it like we had it, only put the overlay on the cards that are not linked to an article, incorrect if a blog populates a card then remove the coming soon overlay, in the display before see all is clicked is missing a small card and the the link blog card display a coming soon make it visible, mobile view just show the first card and then see all button, on desktop adjust the main card in see all view to decrease the white space at the bottom, on desktop view decrease the height of the main card to remove white space below the read more button, incorrect go back to the previous code, after see all is activated the main card is to tall, reduce height, remove the button and have the text link that underlines on hover. when see all is activaed the main featured card is to tall reduce height, incorrect go back to the code we had 3 codes ago, use text link that underlines on hove for the read more. show more article subtext, show more description/summary/subtext of the blog, add image space to the header for the logo, add editing capabilites, image is not rendering, logo is not rendering and is broken have the image block hidden unless image is inserted, logo image is broken and not rendering. fix this issue, allow edits of font color of overly, red
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-newsletter-highlights-{{ ai_gen_id }} {
+    max-width: {{ settings.page_width }}px;
+    margin: 0 auto;
+    padding: {{ block.settings.section_padding }}px {{ settings.spacing_grid_horizontal }}px;
+  }
+
+  .ai-newsletter-highlights__header-{{ ai_gen_id }} {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .ai-newsletter-highlights__logo-wrapper-{{ ai_gen_id }} {
+    margin-bottom: {{ block.settings.logo_spacing }}px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .ai-newsletter-highlights__logo-{{ ai_gen_id }} {
+    max-width: {{ block.settings.logo_width }}px;
+    height: auto;
+    border-radius: {{ block.settings.logo_border_radius }}px;
+    transition: transform 0.3s ease;
+    display: block;
+  }
+
+  .ai-newsletter-highlights__logo-{{ ai_gen_id }}:hover {
+    transform: scale(1.05);
+  }
+
+  .ai-newsletter-highlights__title-{{ ai_gen_id }} {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-weight: {{ settings.type_header_font.weight }};
+    font-size: calc({{ block.settings.title_size }}px * {{ settings.heading_scale }} /100);
+    {% if block.settings.title_color != blank %}
+      color: {{ block.settings.title_color }};
+    {% else %}
+      color: #121212;
+    {% endif %}
+    margin: 0 0 16px;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 12px;
+    line-height: 1.3;
+    transition: all 0.3s ease;
+  }
+
+  {% if block.settings.header_divider_thickness > 0 %}
+    .ai-newsletter-highlights__title-{{ ai_gen_id }}::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 60px;
+      height: {{ block.settings.header_divider_thickness }}px;
+      background: {{ block.settings.header_divider_color }};
+      border-radius: {{ block.settings.header_divider_thickness | divided_by: 2 }}px;
+      transition: all 0.3s ease;
+    }
+
+    .ai-newsletter-highlights__title-{{ ai_gen_id }}:hover::after {
+      width: 80px;
+      background: {{ block.settings.header_divider_color }};
+      opacity: 0.8;
+    }
+  {% endif %}
+
+  .ai-newsletter-highlights__subtitle-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-weight: {{ settings.type_body_font.weight }};
+    font-size: calc({{ block.settings.subtitle_size }}px * {{ settings.body_scale }} / 100);
+    {% if block.settings.subtitle_color != blank %}
+      color: {{ block.settings.subtitle_color }};
+    {% else %}
+      color: #121212;
+    {% endif %}
+    margin: 0;
+    opacity: 0.8;
+  }
+
+  .ai-newsletter-grid-{{ ai_gen_id }} {
+    display: grid;
+    gap: {{ settings.spacing_grid_horizontal | times: 0.75 }}px;
+    margin-bottom: 32px;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ai-newsletter-grid-{{ ai_gen_id }}.compact {
+    grid-template-columns: 1.8fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: {{ settings.spacing_grid_horizontal | times: 0.6 }}px;
+  }
+
+  .ai-newsletter-grid-{{ ai_gen_id }}.expanded {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: {{ settings.spacing_grid_horizontal }}px;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }} {
+    position: relative;
+    background: #ffffff;
+    border: none;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(18, 18, 18, 0.12), 0 2px 8px rgba(18, 18, 18, 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: translateY(20px);
+    animation: ai-newsletter-fade-in-{{ ai_gen_id }} 0.6s ease-out forwards;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    {% if settings.card_style == 'card' %}
+      background: #fdf2f2;
+    {% endif %}
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}:hover {
+    transform: translateY(-12px) scale(1.02);
+    box-shadow: 0 20px 60px rgba(18, 18, 18, 0.25), 0 8px 24px rgba(18, 18, 18, 0.15);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.main-card {
+    grid-row: 1 / 3;
+    grid-column: 1;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card {
+    grid-column: 2;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card:nth-child(2) {
+    grid-row: 1;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card:nth-child(3) {
+    grid-row: 2;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.expanded-card {
+    animation-delay: calc(var(--card-index) * 0.1s);
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.coming-soon {
+    cursor: default;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.coming-soon:hover {
+    transform: translateY(-8px) scale(1.01);
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.has-article {
+    cursor: pointer;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.has-article:hover {
+    transform: translateY(-12px) scale(1.02);
+  }
+
+  .ai-newsletter-card__image-wrapper-{{ ai_gen_id }} {
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px 16px 0 0;
+    padding: 8px 8px 0;
+    flex-shrink: 0;
+  }
+
+  .ai-newsletter-card__image-{{ ai_gen_id }} {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+    border-radius: 12px;
+    border: none;
+    display: block;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.main-card .ai-newsletter-card__image-{{ ai_gen_id }} {
+    height: 240px;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__image-{{ ai_gen_id }} {
+    height: 160px;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}:hover .ai-newsletter-card__image-{{ ai_gen_id }} {
+    transform: scale(1.08);
+  }
+
+  .ai-newsletter-card__image-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, rgba(75, 63, 130, 0.06), rgba(75, 63, 130, 0.02));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    border: none;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.main-card .ai-newsletter-card__image-placeholder-{{ ai_gen_id }} {
+    height: 240px;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__image-placeholder-{{ ai_gen_id }} {
+    height: 160px;
+  }
+
+  .ai-newsletter-card__image-placeholder-{{ ai_gen_id }} svg {
+    width: 60px;
+    height: 60px;
+    opacity: 0.3;
+    color: #4b3f82;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__image-placeholder-{{ ai_gen_id }} svg {
+    width: 40px;
+    height: 40px;
+  }
+
+  .ai-newsletter-card__content-{{ ai_gen_id }} {
+    padding: 32px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    {% if settings.card_text_alignment == 'center' %}
+      text-align: center;
+    {% elsif settings.card_text_alignment == 'right' %}
+      text-align: right;
+    {% endif %}
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__content-{{ ai_gen_id }} {
+    padding: 24px;
+  }
+
+  .ai-newsletter-card__badge-{{ ai_gen_id }} {
+    position: absolute;
+    top: 20px;
+    {{ settings.badge_position | split: ' ' | last }}: 20px;
+    background: linear-gradient(135deg, #4b3f82, rgba(75, 63, 130, 0.8));
+    color: #ffffff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    z-index: 2;
+    box-shadow: 0 4px 16px rgba(75, 63, 130, 0.3);
+    backdrop-filter: blur(10px);
+  }
+
+  .ai-newsletter-card__date-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: calc(12px * {{ settings.body_scale }} / 100);
+    color: rgba(18, 18, 18, 0.7);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__date-{{ ai_gen_id }} {
+    font-size: calc(11px * {{ settings.body_scale }} / 100);
+    margin-bottom: 8px;
+  }
+
+  .ai-newsletter-card__title-{{ ai_gen_id }} {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-weight: {{ settings.type_header_font.weight }};
+    font-size: calc(22px * {{ settings.heading_scale }} / 100);
+    color: #121212;
+    margin: 0 0 16px;
+    line-height: 1.3;
+    transition: all 0.3s ease;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 8px;
+  }
+
+  .ai-newsletter-card__title-{{ ai_gen_id }}::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: linear-gradient(135deg, #4b3f82, rgba(75, 63, 130, 0.7));
+    border-radius: 1px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}:hover .ai-newsletter-card__title-{{ ai_gen_id }} {
+    color: #4b3f82;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}:hover .ai-newsletter-card__title-{{ ai_gen_id }}::after {
+    width: 100%;
+    background: linear-gradient(135deg, #4b3f82, #6b5b95);
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__title-{{ ai_gen_id }} {
+    font-size: calc(16px * {{ settings.heading_scale }} / 100);
+    margin-bottom: 10px;
+    line-height: 1.4;
+    padding-bottom: 6px;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__title-{{ ai_gen_id }}::after {
+    height: 1.5px;
+  }
+
+  .ai-newsletter-card__excerpt-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: calc(15px * {{ settings.body_scale }} / 100);
+    color: rgba(18, 18, 18, 0.8);
+    line-height: 1.6;
+    margin: 0 0 18px;
+    flex-grow: 1;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.main-card .ai-newsletter-card__excerpt-{{ ai_gen_id }} {
+    font-size: calc(16px * {{ settings.body_scale }} / 100);
+    margin-bottom: 20px;
+    line-height: 1.7;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__excerpt-{{ ai_gen_id }} {
+    font-size: calc(13px * {{ settings.body_scale }} / 100);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .ai-newsletter-card__summary-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: calc(14px * {{ settings.body_scale }} / 100);
+    color: rgba(18, 18, 18, 0.7);
+    line-height: 1.6;
+    margin: 0 0 18px;
+    font-style: italic;
+    border-left: 3px solid rgba(75, 63, 130, 0.3);
+    padding-left: 16px;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.main-card .ai-newsletter-card__summary-{{ ai_gen_id }} {
+    font-size: calc(15px * {{ settings.body_scale }} / 100);
+    margin-bottom: 20px;
+    padding-left: 20px;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__summary-{{ ai_gen_id }} {
+    font-size: calc(12px * {{ settings.body_scale }} / 100);
+    margin-bottom: 12px;
+    padding-left: 12px;
+  }
+
+  .ai-newsletter-card__read-more-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: calc(14px * {{ settings.body_scale }} / 100);
+    color: #4b3f82;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    margin-top: auto;
+    border-bottom: 1px solid transparent;
+    display: inline-block;
+    padding-bottom: 2px;
+    position: relative;
+    max-width: fit-content;
+  }
+
+  .ai-newsletter-card__read-more-{{ ai_gen_id }}::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background-color: #4b3f82;
+    transition: width 0.3s ease;
+  }
+
+  .ai-newsletter-card-{{ ai_gen_id }}:hover .ai-newsletter-card__read-more-{{ ai_gen_id }}::after {
+    width: 60%;
+  }
+
+  .ai-newsletter-card__overlay-{{ ai_gen_id }} {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, {{ block.settings.overlay_color }}f0, {{ block.settings.overlay_color }}d9);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    {% if block.settings.overlay_text_color != blank %}
+      color: {{ block.settings.overlay_text_color }};
+    {% else %}
+      color: #ffffff;
+    {% endif %}
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-weight: 600;
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    text-align: center;
+    padding: 20px;
+    z-index: 3;
+  }
+
+  .ai-newsletter-card__overlay-icon-{{ ai_gen_id }} {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 16px;
+    opacity: 0.9;
+    {% if block.settings.overlay_text_color != blank %}
+      color: {{ block.settings.overlay_text_color }};
+    {% else %}
+      color: #ffffff;
+    {% endif %}
+  }
+
+  .ai-newsletter-card__overlay-text-{{ ai_gen_id }} {
+    font-size: calc({{ block.settings.overlay_font_size }}px * {{ settings.heading_scale }} / 100);
+    margin-bottom: 8px;
+    {% if block.settings.overlay_text_color != blank %}
+      color: {{ block.settings.overlay_text_color }};
+    {% else %}
+      color: #ffffff;
+    {% endif %}
+  }
+
+  .ai-newsletter-card__overlay-subtext-{{ ai_gen_id }} {
+    font-size: calc({{ block.settings.overlay_subtext_size }}px * {{ settings.body_scale }} / 100);
+    opacity: 0.8;
+    font-weight: 400;
+    {% if block.settings.overlay_text_color != blank %}
+      color: {{ block.settings.overlay_text_color }};
+    {% else %}
+      color: #ffffff;
+    {% endif %}
+  }
+
+  .ai-newsletter-load-more-{{ ai_gen_id }} {
+    display: flex;
+    justify-content: center;
+    margin-top: 24px;
+  }
+
+  .ai-newsletter-load-more__button-{{ ai_gen_id }} {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #4b3f82, rgba(75, 63, 130, 0.9));
+    color: #ffffff;
+    border: none;
+    border-radius: 25px;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: calc(14px * {{ settings.body_scale }} / 100);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 16px rgba(75, 63, 130, 0.3);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-newsletter-load-more__button-{{ ai_gen_id }}:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(75, 63, 130, 0.4);
+    gap: 10px;
+  }
+
+  .ai-newsletter-load-more__button-{{ ai_gen_id }}:active {
+    transform: translateY(0);
+  }
+
+  .ai-newsletter-load-more__button-{{ ai_gen_id }} svg {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+  }
+
+  .ai-newsletter-load-more__button-{{ ai_gen_id }}:hover svg {
+    transform: translateX(2px);
+  }
+
+  .ai-newsletter-load-more__button-{{ ai_gen_id }}.loading {
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .ai-newsletter-load-more__button-{{ ai_gen_id }}.loading svg {
+    animation: ai-newsletter-spin-{{ ai_gen_id }} 1s linear infinite;
+  }
+
+  @keyframes ai-newsletter-fade-in-{{ ai_gen_id }} {
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes ai-newsletter-spin-{{ ai_gen_id }} {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-newsletter-highlights-{{ ai_gen_id }} {
+      padding: {{ block.settings.section_padding | times: 0.6}}px {{ settings.spacing_grid_horizontal | times: 0.5}}px;
+    }
+
+    .ai-newsletter-highlights__logo-{{ ai_gen_id }} {
+      max-width: {{ block.settings.logo_width | times: 0.8 }}px;
+    }
+
+    .ai-newsletter-grid-{{ ai_gen_id }} {
+      gap: {{ settings.spacing_grid_horizontal | times: 0.5 }}px;
+    }
+
+    .ai-newsletter-grid-{{ ai_gen_id }}.compact {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      gap: {{ settings.spacing_grid_horizontal | times: 0.75}}px;
+    }
+
+    .ai-newsletter-card-{{ ai_gen_id }}.main-card {
+      grid-row: auto;
+      grid-column: auto;
+    }
+
+    .ai-newsletter-card-{{ ai_gen_id }}.small-card {
+      grid-column: auto;
+      display: none;
+    }
+
+    .ai-newsletter-grid-{{ ai_gen_id }}.expanded .ai-newsletter-card-{{ ai_gen_id }}.small-card {
+      display: flex;
+    }
+
+    .ai-newsletter-grid-{{ ai_gen_id }}.expanded {
+      grid-template-columns: 1fr;
+    }
+
+    .ai-newsletter-card-{{ ai_gen_id }}:hover {
+      transform: translateY(-8px) scale(1.01);
+    }
+
+    .ai-newsletter-card__image-{{ ai_gen_id }},
+    .ai-newsletter-card__image-placeholder-{{ ai_gen_id }} {
+      height: 180px;
+    }
+
+    .ai-newsletter-card-{{ ai_gen_id }}.main-card .ai-newsletter-card__image-{{ ai_gen_id }},
+    .ai-newsletter-card-{{ ai_gen_id }}.main-card .ai-newsletter-card__image-placeholder-{{ ai_gen_id }} {
+      height: 220px;
+    }
+
+    .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__image-{{ ai_gen_id }},
+    .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__image-placeholder-{{ ai_gen_id }} {
+      height: 180px;
+    }
+
+    .ai-newsletter-card__content-{{ ai_gen_id }} {
+      padding: 24px;
+    }
+
+    .ai-newsletter-card-{{ ai_gen_id }}.small-card .ai-newsletter-card__content-{{ ai_gen_id }} {
+      padding: 20px;
+    }
+
+    .ai-newsletter-card__overlay-icon-{{ ai_gen_id }} {
+      width: 36px;
+      height: 36px;
+      margin-bottom: 12px;
+    }
+
+    .ai-newsletter-card__overlay-text-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.overlay_font_size | times: 0.85 }}px * {{ settings.heading_scale }} / 100);
+    }
+
+    .ai-newsletter-card__overlay-subtext-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.overlay_subtext_size | times: 0.9 }}px * {{ settings.body_scale }} / 100);
+    }
+
+    .ai-newsletter-load-more__button-{{ ai_gen_id }} {
+      padding: 10px 24px;
+      font-size: calc(13px * {{ settings.body_scale }} / 100);
+    }
+  }
+
+  {% if settings.animations_reveal_on_scroll %}
+    @media (prefers-reduced-motion: no-preference) {
+      .ai-newsletter-card-{{ ai_gen_id }} {
+        opacity: 0;
+        transform: translateY(40px);
+      }
+      
+      .ai-newsletter-card-{{ ai_gen_id }}.animate {
+        animation: ai-newsletter-fade-in-{{ ai_gen_id }} 0.6s ease-out forwards;
+      }
+    }
+  {% endif %}
+{% endstyle %}
+
+<newsletter-highlights-{{ ai_gen_id }}
+  class="ai-newsletter-highlights-{{ ai_gen_id }} color-{{ block.settings.color_scheme }}"
+  {{ block.shopify_attributes }}
+>
+  <div class="ai-newsletter-highlights__header-{{ ai_gen_id }}">
+    {% if block.settings.header_logo != blank %}
+      <div class="ai-newsletter-highlights__logo-wrapper-{{ ai_gen_id }}">
+        <img
+          src="{{ block.settings.header_logo | image_url: width: block.settings.logo_width, height: block.settings.logo_width }}"
+          alt="{{ block.settings.header_logo.alt | default: 'Newsletter logo' | escape }}"
+          class="ai-newsletter-highlights__logo-{{ ai_gen_id }}"
+          loading="lazy"
+          width="{{ block.settings.logo_width }}"
+          height="{{ block.settings.logo_width }}"
+        >
+      </div>
+    {% endif %}
+
+    {% if block.settings.title != blank %}
+      <h2 class="ai-newsletter-highlights__title-{{ ai_gen_id }}">{{ block.settings.title }}</h2>
+    {% endif %}
+    {% if block.settings.subtitle != blank %}
+      <p class="ai-newsletter-highlights__subtitle-{{ ai_gen_id }}">{{ block.settings.subtitle }}</p>
+    {% endif %}
+  </div>
+
+  <div class="ai-newsletter-grid-{{ ai_gen_id }} compact" id="ai-newsletter-grid-{{ ai_gen_id }}">
+    {% if block.settings.featured_blog != blank and block.settings.featured_blog.articles.size > 0 %}
+      {% assign featured_article = block.settings.featured_blog.articles.first %}
+      <a href="{{ featured_article.url }}" class="ai-newsletter-card-{{ ai_gen_id }} main-card has-article">
+        <div class="ai-newsletter-card__image-wrapper-{{ ai_gen_id }}">
+          {% if featured_article.image %}
+            <img
+              src="{{ featured_article.image | image_url: width: 800 }}"
+              alt="{{ featured_article.image.alt | escape }}"
+              class="ai-newsletter-card__image-{{ ai_gen_id }}"
+              loading="lazy"
+              width="800"
+              height="600"
+            >
+          {% else %}
+            <div class="ai-newsletter-card__image-placeholder-{{ ai_gen_id }}">
+              {{ 'image' | placeholder_svg_tag }}
+            </div>
+          {% endif %}
+        </div>
+        <div class="ai-newsletter-card__content-{{ ai_gen_id }}">
+          <div class="ai-newsletter-card__date-{{ ai_gen_id }}">{{ featured_article.published_at | date: '%B %d, %Y' }}</div>
+          <h3 class="ai-newsletter-card__title-{{ ai_gen_id }}">{{ featured_article.title }}</h3>
+          {% if featured_article.summary != blank %}
+            <div class="ai-newsletter-card__summary-{{ ai_gen_id }}">{{ featured_article.summary | strip_html | truncate: 180 }}</div>
+          {% endif %}
+          <p class="ai-newsletter-card__excerpt-{{ ai_gen_id }}">
+            {% if featured_article.excerpt != blank %}
+              {{ featured_article.excerpt | strip_html | truncate: 200 }}
+            {% else %}
+              {{ featured_article.content | strip_html | truncate: 200 }}
+            {% endif %}
+          </p>
+          <span class="ai-newsletter-card__read-more-{{ ai_gen_id }}">Read more</span>
+        </div>
+      </a>
+    {% else %}
+      <div class="ai-newsletter-card-{{ ai_gen_id }} main-card coming-soon">
+        <div class="ai-newsletter-card__image-wrapper-{{ ai_gen_id }}">
+          <div class="ai-newsletter-card__image-placeholder-{{ ai_gen_id }}">
+            {{ 'image' | placeholder_svg_tag }}
+          </div>
+        </div>
+        <div class="ai-newsletter-card__content-{{ ai_gen_id }}">
+          <div class="ai-newsletter-card__date-{{ ai_gen_id }}">Coming Soon</div>
+          <h3 class="ai-newsletter-card__title-{{ ai_gen_id }}">{{ block.settings.coming_soon_title }}</h3>
+          <div class="ai-newsletter-card__summary-{{ ai_gen_id }}">{{ block.settings.coming_soon_summary }}</div>
+          <p class="ai-newsletter-card__excerpt-{{ ai_gen_id }}">
+            {{ block.settings.coming_soon_description }}
+          </p>
+        </div>
+        <div class="ai-newsletter-card__overlay-{{ ai_gen_id }}">
+          <svg class="ai-newsletter-card__overlay-icon-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12,6 12,12 16,14"/>
+          </svg>
+          <div class="ai-newsletter-card__overlay-text-{{ ai_gen_id }}">Coming Soon</div>
+          <div class="ai-newsletter-card__overlay-subtext-{{ ai_gen_id }}">{{ block.settings.coming_soon_subtitle }}</div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if block.settings.featured_blog != blank and block.settings.featured_blog.articles.size > 1 %}
+      {% assign second_article = block.settings.featured_blog.articles[1] %}
+      <a href="{{ second_article.url }}" class="ai-newsletter-card-{{ ai_gen_id }} small-card has-article">
+        <div class="ai-newsletter-card__image-wrapper-{{ ai_gen_id }}">
+          {% if second_article.image %}
+            <img
+              src="{{ second_article.image | image_url: width: 400 }}"
+              alt="{{ second_article.image.alt | escape }}"
+              class="ai-newsletter-card__image-{{ ai_gen_id }}"
+              loading="lazy"
+              width="400"
+              height="300"
+            >
+          {% else %}
+            <div class="ai-newsletter-card__image-placeholder-{{ ai_gen_id }}">
+              {{ 'image' | placeholder_svg_tag }}
+            </div>
+          {% endif %}
+        </div>
+        <div class="ai-newsletter-card__content-{{ ai_gen_id }}">
+          <div class="ai-newsletter-card__date-{{ ai_gen_id }}">{{ second_article.published_at | date: '%B %d, %Y' }}</div>
+          <h3 class="ai-newsletter-card__title-{{ ai_gen_id }}">{{ second_article.title }}</h3>
+          {% if second_article.summary != blank %}
+            <div class="ai-newsletter-card__summary-{{ ai_gen_id }}">{{ second_article.summary | strip_html | truncate: 120 }}</div>
+          {% endif %}
+          <p class="ai-newsletter-card__excerpt-{{ ai_gen_id }}">
+            {% if second_article.excerpt != blank %}
+              {{ second_article.excerpt | strip_html | truncate: 120 }}
+            {% else %}
+              {{ second_article.content | strip_html | truncate: 120 }}
+            {% endif %}
+          </p>
+          <span class="ai-newsletter-card__read-more-{{ ai_gen_id }}">Read more</span>
+        </div>
+      </a>
+    {% else %}
+      <div class="ai-newsletter-card-{{ ai_gen_id }} small-card coming-soon">
+        <div class="ai-newsletter-card__image-wrapper-{{ ai_gen_id }}">
+          <div class="ai-newsletter-card__image-placeholder-{{ ai_gen_id }}">
+            {{ 'image' | placeholder_svg_tag }}
+          </div>
+        </div>
+        <div class="ai-newsletter-card__content-{{ ai_gen_id }}">
+          <div class="ai-newsletter-card__date-{{ ai_gen_id }}">Coming Soon</div>
+          <h3 class="ai-newsletter-card__title-{{ ai_gen_id }}">{{ block.settings.coming_soon_title_2 }}</h3>
+          <div class="ai-newsletter-card__summary-{{ ai_gen_id }}">{{ block.settings.coming_soon_summary_2 }}</div>
+          <p class="ai-newsletter-card__excerpt-{{ ai_gen_id }}">
+            {{ block.settings.coming_soon_description_2 }}
+          </p>
+        </div>
+        <div class="ai-newsletter-card__overlay-{{ ai_gen_id }}">
+          <svg class="ai-newsletter-card__overlay-icon-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12,6 12,12 16,14"/>
+          </svg>
+          <div class="ai-newsletter-card__overlay-text-{{ ai_gen_id }}">Coming Soon</div>
+          <div class="ai-newsletter-card__overlay-subtext-{{ ai_gen_id }}">{{ block.settings.coming_soon_subtitle }}</div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if block.settings.featured_blog != blank and block.settings.featured_blog.articles.size > 2 %}
+      {% assign third_article = block.settings.featured_blog.articles[2] %}
+      <a href="{{ third_article.url }}" class="ai-newsletter-card-{{ ai_gen_id }} small-card has-article">
+        <div class="ai-newsletter-card__image-wrapper-{{ ai_gen_id }}">
+          {% if third_article.image %}
+            <img
+              src="{{ third_article.image | image_url: width: 400 }}"
+              alt="{{ third_article.image.alt | escape }}"
+              class="ai-newsletter-card__image-{{ ai_gen_id }}"
+              loading="lazy"
+              width="400"
+              height="300"
+            >
+          {% else %}
+            <div class="ai-newsletter-card__image-placeholder-{{ ai_gen_id }}">
+              {{ 'image' | placeholder_svg_tag }}
+            </div>
+          {% endif %}
+        </div>
+        <div class="ai-newsletter-card__content-{{ ai_gen_id }}">
+          <div class="ai-newsletter-card__date-{{ ai_gen_id }}">{{ third_article.published_at | date: '%B %d, %Y' }}</div>
+          <h3 class="ai-newsletter-card__title-{{ ai_gen_id }}">{{ third_article.title }}</h3>
+          {% if third_article.summary != blank %}
+            <div class="ai-newsletter-card__summary-{{ ai_gen_id }}">{{ third_article.summary | strip_html | truncate: 120 }}</div>
+          {% endif %}
+          <p class="ai-newsletter-card__excerpt-{{ ai_gen_id }}">
+            {% if third_article.excerpt != blank %}
+              {{ third_article.excerpt | strip_html | truncate: 120 }}
+            {% else %}
+              {{ third_article.content | strip_html | truncate: 120 }}
+            {% endif %}
+          </p>
+          <span class="ai-newsletter-card__read-more-{{ ai_gen_id }}">Read more</span>
+        </div>
+      </a>
+    {% else %}
+      <div class="ai-newsletter-card-{{ ai_gen_id }} small-card coming-soon">
+        <div class="ai-newsletter-card__image-wrapper-{{ ai_gen_id }}">
+          <div class="ai-newsletter-card__image-placeholder-{{ ai_gen_id }}">
+            {{ 'image' | placeholder_svg_tag }}
+          </div>
+        </div>
+        <div class="ai-newsletter-card__content-{{ ai_gen_id }}">
+          <div class="ai-newsletter-card__date-{{ ai_gen_id }}">Coming Soon</div>
+          <h3 class="ai-newsletter-card__title-{{ ai_gen_id }}">{{ block.settings.coming_soon_title_3 }}</h3>
+          <div class="ai-newsletter-card__summary-{{ ai_gen_id }}">{{ block.settings.coming_soon_summary_3 }}</div>
+          <p class="ai-newsletter-card__excerpt-{{ ai_gen_id }}">
+            {{ block.settings.coming_soon_description_3 }}
+          </p>
+        </div>
+        <div class="ai-newsletter-card__overlay-{{ ai_gen_id }}">
+          <svg class="ai-newsletter-card__overlay-icon-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12,6 12,12 16,14"/>
+          </svg>
+          <div class="ai-newsletter-card__overlay-text-{{ ai_gen_id }}">Coming Soon</div>
+          <div class="ai-newsletter-card__overlay-subtext-{{ ai_gen_id }}">{{ block.settings.coming_soon_subtitle }}</div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="ai-newsletter-load-more-{{ ai_gen_id }}">
+    <button
+      class="ai-newsletter-load-more__button-{{ ai_gen_id }}"
+      id="ai-newsletter-load-more-button-{{ ai_gen_id }}"
+      aria-label="Load more newsletter articles"
+    >
+      <span>{{ block.settings.button_text }}</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6,9 12,15 18,9"></polyline>
+      </svg>
+    </button>
+  </div>
+</newsletter-highlights-{{ ai_gen_id }}>
+
+<script>
+(function() {
+  class NewsletterHighlights{{ ai_gen_id }} extends HTMLElement {
+    constructor() {
+      super();
+      this.isExpanded = false;
+      this.isLoading = false;
+    }
+
+    connectedCallback() {
+      this.grid = this.querySelector('#ai-newsletter-grid-{{ ai_gen_id }}');
+      this.button = this.querySelector('#ai-newsletter-load-more-button-{{ ai_gen_id }}');
+      
+      this.button.addEventListener('click', () => {
+        this.handleLoadMore();
+      });
+
+      {% if settings.animations_reveal_on_scroll %}
+        this.setupScrollAnimations();
+      {% endif %}
+    }
+
+    {% if settings.animations_reveal_on_scroll %}
+    setupScrollAnimations() {
+      const cards = this.querySelectorAll('.ai-newsletter-card-{{ ai_gen_id }}');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('animate');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1 });
+
+      cards.forEach((card) => observer.observe(card));
+    }
+    {% endif %}
+
+    handleLoadMore() {
+      if (this.isLoading) return;
+
+      if (!this.isExpanded) {
+        this.expandView();
+      } else {
+        this.collapseView();
+      }
+    }
+
+    expandView() {
+      this.isLoading = true;
+      this.button.classList.add('loading');
+      this.button.querySelector('span').textContent = 'Loading...';
+
+      setTimeout(() => {
+        this.grid.classList.remove('compact');
+        this.grid.classList.add('expanded');
+        
+        this.createExpandedCards();
+        this.button.querySelector('span').textContent = 'Show less';
+        this.button.classList.remove('loading');
+        this.isExpanded = true;
+        this.isLoading = false;
+      }, 800);
+    }
+
+    collapseView() {
+      this.grid.classList.remove('expanded');
+      this.grid.classList.add('compact');
+      
+      this.removeExpandedCards();
+      this.button.querySelector('span').textContent = '{{ block.settings.button_text }}';
+      this.isExpanded = false;
+    }
+
+    createExpandedCards() {
+      const blogArticles = [];
+      {% if block.settings.featured_blog != blank %}
+        {% for article in block.settings.featured_blog.articles offset: 3 limit: 5 %}
+          blogArticles.push({
+            title: {{ article.title | json }},
+            url: {{ article.url | json }},
+            published_at: {{ article.published_at | date: '%B %d, %Y' | json }},
+            summary: {% if article.summary != blank %}{{ article.summary | strip_html | truncate: 120 | json }}{% else %}null{% endif %},
+            excerpt: {% if article.excerpt != blank %}{{ article.excerpt | strip_html | truncate: 120 | json }}{% else %}{{ article.content | strip_html | truncate: 120 | json }}{% endif %},
+            featured_image: {% if article.image %}{{ article.image | image_url: width: 400 | json }}{% else %}null{% endif %},
+            comingSoon: false
+          });
+        {% endfor %}
+      {% endif %}
+      
+      const placeholderCards = [
+        { 
+          title: 'Summer Collection Launch', 
+          date: 'Coming Soon', 
+          summary: 'Exclusive preview of our upcoming summer line',
+          excerpt: 'Discover our latest summer styles featuring breathable fabrics and vibrant colors perfect for the season ahead.', 
+          comingSoon: true, 
+          url: null 
+        },
+        { 
+          title: 'Sustainability Report 2024', 
+          date: 'Coming Soon', 
+          summary: 'Our environmental impact and future commitments',
+          excerpt: 'Our commitment to sustainable fashion continues with new eco-friendly materials and ethical production practices.', 
+          comingSoon: true, 
+          url: null 
+        },
+        { 
+          title: 'Customer Spotlight: Sarah M.', 
+          date: 'Coming Soon', 
+          summary: 'Featured customer stories and style inspiration',
+          excerpt: 'Meet Sarah, a loyal customer who shares her favorite pieces and styling tips from our collection.', 
+          comingSoon: true, 
+          url: null 
+        },
+        { 
+          title: 'Behind the Scenes: Design Process', 
+          date: 'Coming Soon', 
+          summary: 'Inside look at our creative design journey',
+          excerpt: 'Take a peek into our design studio and learn about the creative process behind our latest collection.', 
+          comingSoon: true, 
+          url: null 
+        },
+        { 
+          title: 'Fall Preview Collection', 
+          date: 'Coming Soon', 
+          summary: 'Sneak peek at autumn fashion trends',
+          excerpt: 'Get ready for autumn with our upcoming fall collection featuring cozy knits and rich textures.', 
+          comingSoon: true, 
+          url: null 
+        },
+        { 
+          title: 'Exclusive Member Benefits', 
+          date: 'Coming Soon', 
+          summary: 'New perks for newsletter subscribers',
+          excerpt: 'New perks and exclusive access for our newsletter subscribers. Stay tuned for exciting announcements.', 
+          comingSoon: true, 
+          url: null 
+        },
+        { 
+          title: 'Holiday Gift Guide 2024', 
+          date: 'Coming Soon', 
+          summary: 'Curated gift selections for the holidays',
+          excerpt: 'The perfect gifts for everyone on your list. Our curated selection will make holiday shopping effortless.', 
+          comingSoon: true, 
+          url: null 
+        },
+        { 
+          title: 'Year-End Sale Preview', 
+          date: 'Coming Soon', 
+          summary: 'Early access to our biggest sale event',
+          excerpt: 'Early access to our biggest sale of the year. Mark your calendars for exclusive deals and discounts.', 
+          comingSoon: true, 
+          url: null 
+        }
+      ];
+
+      const allCards = [...blogArticles, ...placeholderCards].slice(0, 8);
+
+      allCards.forEach((card, index) => {
+        const cardElement = this.createCardElement(card, index);
+        this.grid.appendChild(cardElement);
+      });
+    }
+
+    createCardElement(cardData, index) {
+      const card = document.createElement(cardData.url ? 'a' : 'div');
+      card.className = `ai-newsletter-card-{{ ai_gen_id }} expanded-card ${cardData.comingSoon ? 'coming-soon' : 'has-article'}`;
+      card.style.setProperty('--card-index', index);
+      if (cardData.url) {
+        card.href = cardData.url;
+      }
+
+      const imageContent = cardData.featured_image
+        ? `<img src="${cardData.featured_image}" alt="${cardData.title}" class="ai-newsletter-card__image-{{ ai_gen_id }}" loading="lazy" width="400" height="300">`
+        : `<div class="ai-newsletter-card__image-placeholder-{{ ai_gen_id }}"><svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21,15 16,10 5,21"/></svg></div>`;
+
+      const summaryContent = cardData.summary && !cardData.comingSoon ? `
+        <div class="ai-newsletter-card__summary-{{ ai_gen_id }}">${cardData.summary}</div>
+      ` : '';
+
+      const readMoreContent = !cardData.comingSoon ? `
+        <span class="ai-newsletter-card__read-more-{{ ai_gen_id }}">Read more</span>
+      ` : '';
+
+      const overlayContent = cardData.comingSoon ? `
+        <div class="ai-newsletter-card__overlay-{{ ai_gen_id }}">
+          <svg class="ai-newsletter-card__overlay-icon-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12,6 12,12 16,14"/>
+          </svg>
+          <div class="ai-newsletter-card__overlay-text-{{ ai_gen_id }}">Coming Soon</div>
+          <div class="ai-newsletter-card__overlay-subtext-{{ ai_gen_id }}">Stay tuned for updates</div>
+        </div>
+      ` : '';
+
+      card.innerHTML = `
+        <div class="ai-newsletter-card__image-wrapper-{{ ai_gen_id }}">
+          ${imageContent}
+        </div>
+        <div class="ai-newsletter-card__content-{{ ai_gen_id }}">
+          <div class="ai-newsletter-card__date-{{ ai_gen_id }}">${cardData.published_at || cardData.date}</div>
+          <h3 class="ai-newsletter-card__title-{{ ai_gen_id }}">${cardData.title}</h3>
+          ${summaryContent}
+          <p class="ai-newsletter-card__excerpt-{{ ai_gen_id }}">${cardData.excerpt}</p>
+          ${readMoreContent}
+        </div>
+        ${overlayContent}
+      `;
+
+      return card;
+    }
+
+    removeExpandedCards() {
+      const expandedCards = this.grid.querySelectorAll('.expanded-card');
+      expandedCards.forEach(card => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          if (card.parentNode) {
+            card.parentNode.removeChild(card);
+          }
+        }, 300);
+      });
+    }
+  }
+
+  customElements.define('newsletter-highlights-{{ ai_gen_id }}', NewsletterHighlights{{ ai_gen_id }});
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Newsletter highlights",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Header"
+    },
+    {
+      "type": "image_picker",
+      "id": "header_logo",
+      "label": "Header logo"
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "min": 80,
+      "max": 300,
+      "step": 10,
+      "unit": "px",
+      "label": "Logo width",
+      "default": 150
+    },
+    {
+      "type": "range",
+      "id": "logo_spacing",
+      "min": 0,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "label": "Logo bottom spacing",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "logo_border_radius",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Logo border radius",
+      "default": 8
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Section title",
+      "default": "Newsletter Highlights"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Section subtitle",
+      "default": "Stay updated with our latest news and stories"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Load more button text",
+      "default": "See all"
+    },
+    {
+      "type": "header",
+      "content": "Header divider"
+    },
+    {
+      "type": "color",
+      "id": "header_divider_color",
+      "label": "Divider color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "range",
+      "id": "header_divider_thickness",
+      "min": 0,
+      "max": 8,
+      "step": 1,
+      "unit": "px",
+      "label": "Divider thickness",
+      "default": 3
+    },
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "blog",
+      "id": "featured_blog",
+      "label": "Featured blog"
+    },
+    {
+      "type": "header",
+      "content": "Coming soon cards"
+    },
+    {
+      "type": "text",
+      "id": "coming_soon_title",
+      "label": "First coming soon title",
+      "default": "Practitioner Insights"
+    },
+    {
+      "type": "text",
+      "id": "coming_soon_summary",
+      "label": "First coming soon summary",
+      "default": "Expert guidance from certified professionals"
+    },
+    {
+      "type": "text",
+      "id": "coming_soon_description",
+      "label": "First coming soon description",
+      "default": "Expert insights and professional guidance from certified practitioners in the field."
+    },
+    {
+      "type": "text",
+      "id": "coming_soon_title_2",
+      "label": "Second coming soon title",
+      "default": "Research Updates"
+    },
+    {
+      "type": "text",
+      "id": "coming_soon_summary_2",
+      "label": "Second coming soon summary",
+      "default": "Latest scientific breakthroughs and findings"
+    },
+    {
+      "type": "text",
+      "id": "coming_soon_description_2",
+      "label": "Second coming soon description",
+      "default": "Latest research findings and scientific breakthroughs in our industry."
+    },
+    {
+      "type": "text",
+      "id": "coming_soon_title_3",
+      "label": "Third coming soon title",
+      "default": "Community Stories"
+    },
+    {
+      "type": "text",
+      "id": "coming_soon_summary_3",
+      "label": "Third coming soon summary",
+      "default": "Inspiring experiences from our community"
+    },
+    {
+      "type": "text",
+      "id": "coming_soon_description_3",
+      "label": "Third coming soon description",
+      "default": "Inspiring stories and experiences shared by our community members."
+    },
+    {
+      "type": "text",
+      "id": "coming_soon_subtitle",
+      "label": "Coming soon overlay subtitle",
+      "default": "Stay tuned for updates"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Title color"
+    },
+    {
+      "type": "color",
+      "id": "subtitle_color",
+      "label": "Subtitle color"
+    },
+    {
+      "type": "color",
+      "id": "overlay_color",
+      "label": "Coming soon overlay background",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "overlay_text_color",
+      "label": "Coming soon overlay text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "min": 20,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Title size",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size",
+      "min": 14,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Subtitle size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "overlay_font_size",
+      "min": 12,
+      "max": 28,
+      "step": 2,
+      "unit": "px",
+      "label": "Overlay text size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "overlay_subtext_size",
+      "min": 10,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Overlay subtext size",
+      "default": 12
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "min": 20,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Section padding",
+      "default": 40
+    }
+  ],
+  "presets": [
+    {
+      "name": "Newsletter highlights"
+    }
+  ],
+  "tag": null
+}
+{% endschema %}

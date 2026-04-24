@@ -1,0 +1,250 @@
+{% schema %}
+{
+  "name": "Promo Featured Block",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Banner Settings"
+    },
+    { 
+      "type": "image_picker", 
+      "id": "banner_image", 
+      "label": "Banner Image",
+      "info": "Recommended size: 1600x400px"
+    },
+    { 
+      "type": "text", 
+      "id": "heading", 
+      "label": "Banner Heading", 
+      "default": "Seasonal Favorites" 
+    },
+    { 
+      "type": "textarea", 
+      "id": "subheading", 
+      "label": "Banner Subheading", 
+      "default": "Explore our hand-picked favorites for the season." 
+    },
+    { 
+      "type": "select", 
+      "id": "banner_position", 
+      "label": "Banner Position", 
+      "default": "top",
+      "options": [
+        { "value": "top", "label": "Above Products" },
+        { "value": "bottom", "label": "Below Products" }
+      ]
+    },
+    {
+      "type": "header",
+      "content": "Call to Action"
+    },
+    { 
+      "type": "checkbox", 
+      "id": "show_cta", 
+      "label": "Show CTA", 
+      "default": true 
+    },
+    { 
+      "type": "select", 
+      "id": "cta_display_mode", 
+      "label": "CTA Display Location", 
+      "default": "banner",
+      "options": [
+        { "value": "banner", "label": "In banner (button)" },
+        { "value": "below", "label": "Below products (text link)" },
+        { "value": "none", "label": "No CTA" }
+      ]
+    },
+    { 
+      "type": "url", 
+      "id": "cta_button_link", 
+      "label": "CTA Link", 
+      "default": "/collections/all" 
+    },
+    { 
+      "type": "text", 
+      "id": "cta_button_text", 
+      "label": "CTA Button Text", 
+      "default": "Shop All" 
+    },
+    {
+      "type": "header",
+      "content": "Banner Colors"
+    },
+    { 
+      "type": "color", 
+      "id": "banner_heading_color", 
+      "label": "Banner Heading Color", 
+      "default": "#ffffff" 
+    },
+    { 
+      "type": "color", 
+      "id": "banner_subheading_color", 
+      "label": "Banner Subheading Color", 
+      "default": "#ffffff" 
+    },
+    { 
+      "type": "color", 
+      "id": "banner_btn_bg", 
+      "label": "Banner Button Background", 
+      "default": "#ffffff" 
+    },
+    { 
+      "type": "color", 
+      "id": "banner_btn_text", 
+      "label": "Banner Button Text", 
+      "default": "#3e2764" 
+    },
+    { 
+      "type": "color", 
+      "id": "banner_btn_hover", 
+      "label": "Banner Button Hover", 
+      "default": "#f1f1f1" 
+    },
+    { 
+      "type": "color", 
+      "id": "banner_overlay_color", 
+      "label": "Banner Overlay Color", 
+      "default": "#000000" 
+    },
+    { 
+      "type": "range", 
+      "id": "banner_overlay_opacity", 
+      "label": "Banner Overlay Opacity (%)", 
+      "min": 0, 
+      "max": 90, 
+      "step": 5, 
+      "default": 40 
+    },
+    {
+      "type": "header",
+      "content": "Product Card Colors"
+    },
+    { 
+      "type": "color", 
+      "id": "product_title_color", 
+      "label": "Product Title Color", 
+      "default": "#1a1a1a" 
+    },
+    { 
+      "type": "color", 
+      "id": "product_button_bg", 
+      "label": "Product Button Background", 
+      "default": "#3e2764" 
+    },
+    { 
+      "type": "color", 
+      "id": "product_button_text", 
+      "label": "Product Button Text", 
+      "default": "#ffffff" 
+    },
+    { 
+      "type": "color", 
+      "id": "product_button_hover", 
+      "label": "Product Button Hover", 
+      "default": "#281946" 
+    },
+    {
+      "type": "header",
+      "content": "Product Card Border"
+    },
+    { 
+      "type": "color", 
+      "id": "card_border_color", 
+      "label": "Card Border Color", 
+      "default": "#f0f0f0" 
+    },
+    { 
+      "type": "range", 
+      "id": "card_border_width", 
+      "label": "Card Border Width (Desktop)", 
+      "min": 0, 
+      "max": 6, 
+      "step": 1, 
+      "default": 0,
+      "unit": "px"
+    },
+    { 
+      "type": "range", 
+      "id": "card_border_width_mobile", 
+      "label": "Card Border Width (Mobile)", 
+      "min": 0, 
+      "max": 6, 
+      "step": 1, 
+      "default": 1,
+      "unit": "px"
+    },
+    {
+      "type": "header",
+      "content": "Sale Badge"
+    },
+    { 
+      "type": "color", 
+      "id": "sale_badge_bg", 
+      "label": "Sale Badge Background", 
+      "default": "#e11d48" 
+    },
+    { 
+      "type": "color", 
+      "id": "sale_badge_text", 
+      "label": "Sale Badge Text", 
+      "default": "#ffffff" 
+    },
+    {
+      "type": "header",
+      "content": "Below Products CTA"
+    },
+    { 
+      "type": "color", 
+      "id": "below_link_color", 
+      "label": "Below-CTA Link Color", 
+      "default": "#3e2764" 
+    },
+    { 
+      "type": "color", 
+      "id": "below_link_hover", 
+      "label": "Below-CTA Link Hover", 
+      "default": "#281946" 
+    },
+    {
+      "type": "header",
+      "content": "Product Source"
+    },
+    { 
+      "type": "collection", 
+      "id": "collection", 
+      "label": "Fallback Collection",
+      "info": "Products from this collection will display if no product blocks are added below. Limit: 12 products."
+    },
+    { 
+      "type": "select", 
+      "id": "theme", 
+      "label": "Theme Style", 
+      "default": "light",
+      "options": [
+        { "value": "light", "label": "Light" },
+        { "value": "dark", "label": "Dark" }
+      ]
+    }
+  ],
+  "blocks": [
+    {
+      "type": "product",
+      "name": "Product",
+      "settings": [
+        { 
+          "type": "product", 
+          "id": "product", 
+          "label": "Select Product" 
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Promo Featured Block",
+      "category": "Products"
+    }
+  ]
+}
+{% endschema %}

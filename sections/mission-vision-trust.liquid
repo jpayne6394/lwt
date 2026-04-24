@@ -1,0 +1,293 @@
+<section class="trust-card-wrapper mission-vision-trust">
+  {% if section.settings.logo %}
+    <div class="trust-card-logo-circle">
+      <img src="{{ section.settings.logo | image_url: width: 120 }}" alt="LWT Logo" />
+    </div>
+  {% endif %}
+
+  <h2 class="trust-card-heading">{{ section.settings.heading }}</h2>
+  <p class="trust-card-text">{{ section.settings.paragraph }}</p>
+
+  <div class="trust-card-button">
+    <a href="{{ section.settings.button_link }}">{{ section.settings.button_label }}</a>
+  </div>
+</section>
+
+<div class="mv-card-container-overlap">
+  <div class="mv-card">
+    <div class="mv-card-flex">
+      <div class="mv-card-icon-title">
+        {% if section.settings.mission_icon %}
+          <img src="{{ section.settings.mission_icon | image_url: width: 160 }}" alt="Mission Icon" class="mv-icon">
+        {% endif %}
+        <h3 class="mv-card-title">Our Mission</h3>
+      </div>
+      <p class="mv-card-text">
+        Empower individuals to achieve vibrant, lasting health through personalized, science-backed wellness solutions that honor the body’s innate wisdom and address root causes — transforming lives one data-driven protocol at a time.
+      </p>
+    </div>
+  </div>
+
+  <div class="mv-card">
+    <div class="mv-card-flex">
+      <div class="mv-card-icon-title">
+        {% if section.settings.vision_icon %}
+          <img src="{{ section.settings.vision_icon | image_url: width: 160 }}" alt="Vision Icon" class="mv-icon">
+        {% endif %}
+        <h3 class="mv-card-title">Our Vision</h3>
+      </div>
+      <p class="mv-card-text">
+        To pioneer a future where personalized wellness is the standard — leveraging innovative biofeedback technology and holistic expertise to foster resilient thriving lives — a community united in proactive health and lasting vitality.
+      </p>
+    </div>
+  </div>
+</div>
+
+<style>
+.mission-vision-trust {
+  position: relative;
+  z-index: 1;
+  max-width: 1680px;
+  margin: 10rem auto 0;
+  /* richer multi-stop gradient with subtle highlight overlay */
+  background: radial-gradient(ellipse at top, rgba(255,255,255,0.4) 0%, transparent 50%),
+              linear-gradient(135deg, #fdf2f2, #fbe1e1, #fcdede);
+  background-blend-mode: overlay;
+  background-image: repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 8px),
+                    radial-gradient(ellipse at top, rgba(255,255,255,0.35) 0%, transparent 60%),
+                    linear-gradient(135deg, #fdf2f2, #fbe1e1, #fcdede);
+  border-radius: 20px;
+  padding: 6rem 2rem 6rem;
+  text-align: center;
+  box-shadow: 0 25px 70px rgba(0,0,0,0.20);
+}
+
+
+.trust-card-logo-circle {
+  position: absolute;
+  top: -45px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #FCECEC;
+  border-radius: 50%;
+  width: 95px;
+  height: 95px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+
+.trust-card-logo-circle img {
+  width: 115px;
+  height: 115px;
+  object-fit: contain;
+}
+
+.trust-card-heading {
+  font-size: clamp(1.4rem, 5.2vw, 3.4rem);
+  font-weight: 700;
+  color: #2c1e4a;
+  margin-bottom: 1.3rem;
+}
+
+.trust-card-text {
+  font-size: clamp(1.3rem, 2.2vw, 1.7rem);
+  color: #3e3e3e;
+  max-width: 820px;
+  margin: 0 auto 2.8rem;
+  line-height: 1.85;
+  letter-spacing: 0.015em;
+  text-align: center;
+}
+
+.trust-card-button a {
+  display: inline-block;
+  background: #4A3C84;
+  color: #fff;
+  padding: 1.3rem 3.1rem;
+  font-size: 1.5rem;
+  font-weight: 600; /* slightly bolder */
+  letter-spacing: 0.06em; /* more modern spacing */
+  line-height: 1.2; /* tighter line height */
+  border-radius: 9999px;
+  text-decoration: none;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 
+    0 8px 15px rgba(0,0,0,0.15),
+    0 2px 6px rgba(0,0,0,0.15);
+  -webkit-font-smoothing: antialiased;
+  transition: all 0.3s ease;
+}
+
+.trust-card-button a:hover {
+  background: #3A2F6E;
+  box-shadow: 
+    0 12px 28px rgba(0,0,0,0.13),
+    0 4px 8px rgba(0,0,0,0.13);
+  transform: translateY(-2px);
+}
+
+
+
+.trust-to-mv-wave {
+  position: relative;
+  margin-top: -1px; /* smooth join */
+  overflow: hidden;
+  line-height: 0;
+}
+
+.trust-to-mv-wave svg {
+  display: block;
+  width: 100%;
+  height: 80px;
+}
+
+
+/* Mission / Vision card container with slight negative margin to overlap */
+.mv-card-container-overlap {
+  display: flex;
+  justify-content: center;
+  gap: 6rem;
+  flex-wrap: wrap;
+  max-width: 1400px;
+  margin: 5rem auto 1rem auto;
+  padding: 0 2rem;
+  position: relative;
+  z-index: 1;
+}
+
+
+/* Cards themselves */
+.mv-card {
+  background: linear-gradient(135deg, #ffffff, #faf6ff);
+  border: 1px solid rgba(74, 60, 132, 0.06); /* super subtle brand border */
+  border-radius: 20px;
+  box-shadow:
+    inset 0 6px 12px rgba(0,0,0,0.08),
+    inset 0 -4px 8px rgba(0,0,0,0.05);
+  padding: 4rem 3rem;
+  max-width: 600px;
+  flex: 1 1 380px;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow 0.3s ease;
+}
+
+
+.mv-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(74,60,132,0.015) 0 1px,
+    transparent 1px 8px
+  );
+  opacity: 0.5;
+  pointer-events: none;
+  border-radius: 20px;
+}
+.mv-card-flex {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  align-items: center;
+  width: 100%;
+}
+
+.mv-card-icon-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 160px;
+  flex-shrink: 0;
+}
+
+.mv-icon {
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  margin-bottom: -2rem;
+}
+
+.mv-card-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #2c1e4a;
+  letter-spacing: 0.02em;
+}
+.mv-card-text {
+  font-size: 1.35rem;
+  color: #555;
+  line-height: 1.9;
+  flex: 1;
+  letter-spacing: 0.01em;
+}
+
+/* Responsive adjustments and alternate flip */
+@media (max-width: 900px) {
+  .mv-card-container-overlap {
+    flex-direction: column;
+    gap: 2.25rem;
+    transform: translateY(-3rem);
+    padding: 0 1rem;
+  }
+
+  /* Key: alternate horizontal layout on mobile */
+  .mv-card-flex {
+    flex-direction: row;
+    justify-content: center;
+    gap: 1.5rem;
+    align-items: center;
+    text-align: left;
+  }
+
+  /* For even cards, flip the order to have text left, icon right */
+  .mv-card:nth-child(even) .mv-card-flex {
+    flex-direction: row-reverse;
+  }
+
+  /* Adjust icon & text sizing on mobile */
+  .mv-card-icon-title {
+    width: 100px;
+  }
+
+  .mv-icon {
+    width: 100px;
+    height: 100px;
+  }
+
+  .mv-card-title {
+    font-size: 1.4rem;
+    text-align: center;
+  }
+
+  .mv-card-text {
+    font-size: 1.15rem;
+    line-height: 1.6;
+    text-align: left;
+  }
+}
+
+</style>
+
+
+{% schema %}
+{
+  "name": "Mission Vision Trust",
+  "settings": [
+    { "type": "image_picker", "id": "logo", "label": "Top Logo (Floating Circle)" },
+    { "type": "text", "id": "heading", "label": "Headline", "default": "Trusted Wellness, Personalized Care, Proven Protocols." },
+    { "type": "textarea", "id": "paragraph", "label": "Body Text", "default": "Living Well Today is a virtual functional medicine clinic offering expert-led consultations, curated supplement protocols, and professional training." },
+    { "type": "text", "id": "button_label", "label": "Button Label", "default": "Book a Consult" },
+    { "type": "url", "id": "button_link", "label": "Button Link" },
+    { "type": "image_picker", "id": "mission_icon", "label": "Mission Icon" },
+    { "type": "image_picker", "id": "vision_icon", "label": "Vision Icon" }
+  ],
+  "presets": [ { "name": "Mission Vision Trust" } ]
+}
+{% endschema %}

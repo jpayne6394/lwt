@@ -1,0 +1,258 @@
+{% comment %}
+  Services page: two consultants with expertise and pricing.
+  High-converting: clear CTAs, design system styling.
+{% endcomment %}
+
+{{ 'component-card.css' | asset_url | stylesheet_tag }}
+
+<section class="services-consultant-cards lwt-section" id="consultant-cards-{{ section.id }}">
+  <style>
+    .services-consultant-cards {
+      padding-top: var(--lwt-section-padding-y);
+      padding-bottom: var(--lwt-section-padding-y);
+      background: var(--lwt-surface);
+    }
+    .services-consultant-cards__inner {
+      max-width: var(--lwt-content-max-width);
+      margin: 0 auto;
+      padding: 0 var(--lwt-section-padding-x);
+    }
+    .services-consultant-cards__header {
+      text-align: center;
+      margin-bottom: var(--lwt-space-2xl);
+      max-width: 36em;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .services-consultant-cards__heading {
+      margin: 0 0 var(--lwt-space-sm);
+      font-size: clamp(1.75rem, 3vw, 2.25rem);
+      color: var(--lwt-primary);
+      font-weight: 700;
+      letter-spacing: var(--lwt-heading-letter-spacing);
+      line-height: var(--lwt-line-height-tight);
+    }
+    .services-consultant-cards__subheading {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--lwt-text-muted);
+      line-height: var(--lwt-line-height-body);
+    }
+    .services-consultant-cards__grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--lwt-space-xl);
+      align-items: stretch;
+    }
+    @media (max-width: 749px) {
+      .services-consultant-cards__grid {
+        grid-template-columns: 1fr;
+        gap: var(--lwt-space-lg);
+      }
+    }
+    .services-consultant-card {
+      background: var(--lwt-surface-white);
+      border-radius: var(--lwt-radius-card);
+      padding: var(--lwt-space-xl);
+      box-shadow: var(--lwt-shadow-card);
+      border: 1px solid var(--lwt-border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      transition: box-shadow var(--lwt-transition-base), border-color var(--lwt-transition-base), transform var(--lwt-transition-fast);
+    }
+    .services-consultant-card:hover {
+      box-shadow: var(--lwt-shadow-card-hover);
+      border-color: rgba(75, 63, 130, 0.12);
+      transform: translateY(-2px);
+    }
+    .services-consultant-card__image {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      overflow: hidden;
+      margin-bottom: var(--lwt-space-md);
+      flex-shrink: 0;
+      border: 3px solid var(--lwt-surface);
+      box-shadow: var(--lwt-shadow-soft);
+    }
+    .services-consultant-card__image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .services-consultant-card__name {
+      margin: 0 0 var(--lwt-space-xs);
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--lwt-text);
+      letter-spacing: var(--lwt-heading-letter-spacing);
+    }
+    .services-consultant-card__credentials {
+      margin: 0 0 var(--lwt-space-sm);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--lwt-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .services-consultant-card__expertise {
+      margin: 0 0 var(--lwt-space-md);
+      font-size: 1rem;
+      line-height: var(--lwt-line-height-body);
+      color: var(--lwt-text-muted);
+      flex-grow: 1;
+    }
+    .services-consultant-card__pricing {
+      margin: 0 0 var(--lwt-space-md);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--lwt-primary);
+    }
+    .services-consultant-card__cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.7em 1.5em;
+      background: var(--lwt-primary);
+      color: var(--lwt-text-on-primary);
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      border-radius: var(--lwt-radius-button);
+      box-shadow: var(--lwt-shadow-button);
+      transition: background-color var(--lwt-transition-base), box-shadow var(--lwt-transition-base), transform var(--lwt-transition-fast);
+      margin-top: auto;
+    }
+    .services-consultant-card__cta:hover {
+      background: var(--lwt-primary-dark);
+      box-shadow: var(--lwt-shadow-button-hover);
+      transform: translateY(-1px);
+      color: var(--lwt-text-on-primary);
+    }
+    .services-consultant-card__cta:focus-visible {
+      outline: none;
+      box-shadow: var(--lwt-shadow-focus);
+    }
+  </style>
+
+  <div class="services-consultant-cards__inner">
+    <header class="services-consultant-cards__header">
+      {%- if section.settings.heading != blank -%}
+        <h2 class="services-consultant-cards__heading">{{ section.settings.heading }}</h2>
+      {%- endif -%}
+      {%- if section.settings.subheading != blank -%}
+        <p class="services-consultant-cards__subheading">{{ section.settings.subheading }}</p>
+      {%- endif -%}
+    </header>
+
+    <div class="services-consultant-cards__grid">
+      {%- for block in section.blocks -%}
+        {%- case block.type -%}
+          {%- when 'consultant' -%}
+            <div class="services-consultant-card" {{ block.shopify_attributes }}>
+              {%- if block.settings.image != blank -%}
+                <div class="services-consultant-card__image">
+                  <img src="{{ block.settings.image | image_url: width: 280 }}" alt="{{ block.settings.name | escape }}" loading="lazy" width="140" height="140">
+                </div>
+              {%- endif -%}
+              {%- if block.settings.name != blank -%}
+                <h3 class="services-consultant-card__name">{{ block.settings.name }}</h3>
+              {%- endif -%}
+              {%- if block.settings.credentials != blank -%}
+                <p class="services-consultant-card__credentials">{{ block.settings.credentials }}</p>
+              {%- endif -%}
+              {%- if block.settings.expertise != blank -%}
+                <p class="services-consultant-card__expertise">{{ block.settings.expertise }}</p>
+              {%- endif -%}
+              {%- if block.settings.pricing != blank -%}
+                <p class="services-consultant-card__pricing">{{ block.settings.pricing }}</p>
+              {%- endif -%}
+              {%- if block.settings.button_label != blank and block.settings.button_link != blank -%}
+                <a href="{{ block.settings.button_link }}" class="services-consultant-card__cta">{{ block.settings.button_label }}</a>
+              {%- elsif section.settings.fallback_button_label != blank and section.settings.fallback_button_link != blank -%}
+                <a href="{{ section.settings.fallback_button_link }}" class="services-consultant-card__cta">{{ section.settings.fallback_button_label }}</a>
+              {%- endif -%}
+            </div>
+        {%- endcase -%}
+      {%- endfor -%}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Consultant cards",
+  "tag": "section",
+  "class": "section",
+  "disabled_on": { "groups": ["header", "footer"] },
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Choose Your Practitioner"
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Two experts, different focus and session lengths. Book the consult that fits your goals."
+    },
+    {
+      "type": "text",
+      "id": "fallback_button_label",
+      "label": "Default button label (if block has no link)",
+      "default": "Book a consult"
+    },
+    {
+      "type": "url",
+      "id": "fallback_button_link",
+      "label": "Default button URL"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "consultant",
+      "name": "Consultant",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Photo" },
+        { "type": "text", "id": "name", "label": "Name", "default": "Practitioner Name" },
+        { "type": "text", "id": "credentials", "label": "Credentials", "default": "MS, CRC, CNS" },
+        { "type": "textarea", "id": "expertise", "label": "Expertise / specialty", "default": "Complex health, autoimmune, neurodegenerative. 25+ years." },
+        { "type": "text", "id": "pricing", "label": "Pricing line", "default": "Sessions from $250" },
+        { "type": "text", "id": "button_label", "label": "Button label", "default": "Book with [Name]" },
+        { "type": "url", "id": "button_link", "label": "Button URL" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Consultant cards",
+      "blocks": [
+        {
+          "type": "consultant",
+          "settings": {
+            "name": "Michael Payne",
+            "credentials": "MS, CRC, CNS",
+            "expertise": "Complex health, autoimmune, neurodegenerative. 25+ years. Advanced Case Consults.",
+            "pricing": "Advanced Case from $450",
+            "button_label": "Book with Michael"
+          }
+        },
+        {
+          "type": "consultant",
+          "settings": {
+            "name": "Aaron Payne",
+            "credentials": "N.D., C.H.P.",
+            "expertise": "General wellness, neurofeedback, focused goals. 15+ years. Core Wellness Consults.",
+            "pricing": "Core Wellness from $250",
+            "button_label": "Book with Aaron"
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

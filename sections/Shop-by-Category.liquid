@@ -1,0 +1,189 @@
+{% schema %}
+{
+  "name": "Shop by Category",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "show_heading",
+      "label": "Show heading",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "heading_text",
+      "label": "Heading text",
+      "default": "Shop by Category"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "category",
+      "name": "Category",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Category Image"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Category Title"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Category Link"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 8,
+  "presets": [
+    {
+      "name": "Shop by Category Grid",
+      "category": "Custom"
+    }
+  ]
+}
+{% endschema %}
+
+{% stylesheet %}
+.shop-by-category {
+  background-color: #fefaf8;
+  padding: 60px 0;
+  padding-top: 1%;
+  margin: 2rem auto;
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  max-width: 1800px;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.category-heading {
+  text-align: center;
+  font-size: 3rem; /* Adjust size */
+  font-weight: 680; /* Make it bold */
+  margin-bottom: 7rem; /* Add spacing below */
+  color: #1a1a1a; /* Text color */
+  font-family: 'Montserrat', sans-serif; /* Optional custom font */
+}
+
+.shop-by-category-inner {
+  background-color: #ffffff;
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 4rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2.5rem;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.category-card {
+  text-align: center;
+  border-radius: 16px;
+  transition: box-shadow 0.25s ease;
+}
+
+.category-card:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+
+.category-image {
+  width: 100%;
+  aspect-ratio: 1/1;
+  object-fit: cover;
+  border-radius: 16px;
+  transition: transform 0.2s ease;
+}
+
+.category-image:hover {
+  transform: scale(1.03);
+}
+
+.category-title {
+  margin-top: 12px;
+  font-weight: 600;
+  font-size: 1.2rem;
+}
+
+.category-card-link {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: transform 0.2s ease;
+}
+
+.category-card-link:hover .category-image {
+  transform: scale(1.03);
+}
+
+.category-link {
+  font-size: 1.2rem;
+  color: #5c4b8b;
+  text-decoration: none;
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+.category-card:hover .category-link {
+  text-decoration: underline;
+}
+
+/* ====== Mobile View Fixes ====== */
+@media screen and (max-width: 768px) {
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    padding: 0 1rem;
+  }
+
+  .category-heading {
+    font-size: 1.8rem;
+    margin: 2rem 0 2.5rem;
+  }
+
+  .category-title {
+    font-size: 0.95rem;
+    margin-top: 4px;
+  }
+
+  .category-link {
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+  }
+
+  .category-image {
+    object-fit: contain;
+  }
+}
+{% endstylesheet %}
+
+<div class="shop-by-category">
+  {% if section.settings.show_heading and section.settings.heading_text != blank %}
+    <h2 class="category-heading">{{ section.settings.heading_text }}</h2>
+  {% endif %}
+
+  <div class="category-grid">
+    {% for block in section.blocks %}
+      <div class="category-card">
+        <a href="{{ block.settings.link }}" class="category-card-link">
+          <img
+            src="{{ block.settings.image | image_url: width: 400 }}"
+            alt="{{ block.settings.title }}"
+            class="category-image">
+          <div class="category-title">{{ block.settings.title }}</div>
+        </a>
+        <a href="{{ block.settings.link }}" class="category-link">Explore &gt;</a>
+      </div>
+    {% endfor %}
+  </div>
+</div>

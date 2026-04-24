@@ -1,0 +1,326 @@
+<style>
+  .newsletter-cta {
+    display: flex;
+    flex-direction: row;
+    margin: 0 auto;
+    padding: 2rem 0 0 0;
+    background: #4B3F82;
+    border-radius: 24px 24px 0 0;
+    max-width: 100vw;
+    width: 100vw;
+    min-width: 100vw;
+    align-items: stretch;
+    position: relative;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .newsletter-cta-inner {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    max-width: 1700px;
+    margin: 0 auto;
+    padding: 0 3.2rem;   /* Even gutter left & right */
+    box-sizing: border-box;
+    align-items: stretch;
+  }
+
+  .newsletter-cta .image-panel,
+  .newsletter-cta .signup-panel {
+    flex: 1 1 50%;
+    min-height: 320px;
+    max-width: 50%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+  }
+
+  .newsletter-cta .image-panel {
+    position: relative;
+    background: #4B3F82;
+    border-radius: 24px 0 0 0;
+    overflow: hidden;
+    align-items: stretch;
+  }
+  .newsletter-cta .image-panel .slide {
+    position: absolute; inset: 0;
+    opacity: 0;
+    transition: opacity 1s ease-in-out;
+    pointer-events: none;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .newsletter-cta .image-panel .slide.is-active {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 1;
+  }
+  .newsletter-cta .slide-link {
+    display: block;
+    width: 100%; height: 100%;
+    position: relative;
+    text-decoration: none;
+  }
+  .newsletter-cta .slide-link img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    border-radius: 24px 0 0 0;
+  }
+  .newsletter-cta .slide-link .overlay {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 18%;
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    padding: 1rem 0.7rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    text-align: center;
+    transition: height .4s ease;
+    font-size: 1.1rem;
+  }
+  .newsletter-cta .slide-link:hover .overlay {
+    height: 100%;
+    justify-content: center;
+    align-items: center;
+    background: rgba(30,10,40,0.82);
+  }
+  .newsletter-cta .slide-link .overlay p,
+  .newsletter-cta .slide-link .overlay .read-more {
+    display: none;
+  }
+  .newsletter-cta .slide-link:hover .overlay p,
+  .newsletter-cta .slide-link:hover .overlay .read-more {
+    display: block;
+  }
+  .newsletter-cta .slide-link .overlay h3 {
+    margin: 0 0 .5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .newsletter-cta .slide-link .overlay .read-more {
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: underline;
+  }
+
+  .newsletter-cta .signup-panel {
+    background: #fff;
+    border-radius: 0 24px 0 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+  .newsletter-cta .signup-panel h2 {
+    font-size: 2rem;
+    color: #4B3F82;
+    margin-bottom: 1rem;
+    font-weight: 700;
+  }
+  .newsletter-cta .signup-panel p {
+    color: #555;
+    font-size: 1.13rem;
+    margin-bottom: 2rem;
+  }
+  .newsletter-cta .newsletter-form {
+    max-width: 460px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .newsletter-cta .newsletter-form input[type="email"] {
+    width: 100%;
+    max-width: 440px;
+    min-width: 240px;
+    font-size: 1.18rem;
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    margin: 0 auto;
+  }
+  .newsletter-cta .signup-btn {
+    background-color: #4B3F82;
+    color: #fff;
+    padding: .85rem 1.5rem;
+    border: none;
+    border-radius: 100px;
+    font-size: 1.13rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .3s ease;
+  }
+  .newsletter-cta .signup-btn:hover {
+    background-color: #3e2764;
+  }
+
+  /* --- Desktop and tablet shared mobile tweaks up to 900px --- */
+  @media (max-width: 900px) {
+    .newsletter-cta-inner {
+      padding: 0 0.5rem;
+    }
+    .newsletter-cta .image-panel,
+    .newsletter-cta .signup-panel {
+      max-width: 50vw;
+      flex: 1 1 50%;
+      border-radius: 0;    /* square in the center */
+    }
+    .newsletter-cta .slide-link,
+    .newsletter-cta .slide-link img {
+      object-fit: cover;
+    }
+    .newsletter-cta .signup-panel {
+      box-shadow: none;
+      padding: 2rem .5rem;
+    }
+    .newsletter-cta .signup-panel h2 { font-size: 1.1rem; }
+    .newsletter-cta .signup-panel p  { font-size: 0.97rem; }
+    .newsletter-cta .newsletter-form input[type="email"] {
+      font-size: 0.97rem;
+      padding: .7rem .8rem;
+      border-radius: 7px;
+    }
+    .newsletter-cta .signup-btn {
+      font-size: 1rem;
+      padding: .7rem 1.1rem;
+      border-radius: 18px;
+    }
+  }
+
+  /* ───────── Mobile‐only (up to 768px) ───────── */
+  @media (max-width: 768px) {
+    .newsletter-cta-inner {
+      flex-direction: column;  /* stack panels */
+      padding: 0 1rem;         /* normal page gutter */
+    }
+    .newsletter-cta .image-panel {
+      max-width: 100%;         /* full width */
+      border-radius: 24px 24px 0 0;
+    }
+    .newsletter-cta .signup-panel {
+      max-width: 100%;
+      border-radius: 0 0 24px 24px;
+    }
+  }
+
+  /* Remove gap below on footer for full-bleed look */
+  .newsletter-section,
+  .newsletter-cta {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+  .footer,
+  .site-footer,
+  #shopify-section-footer {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+</style>
+
+
+<div class="newsletter-cta">
+  <div class="newsletter-cta-inner">
+    <!-- Left: Carousel -->
+    <div class="image-panel">
+      {% for block in section.blocks %}
+        <div class="slide{% if forloop.first %} is-active{% endif %}">
+          <a href="{{ block.settings.link | default: '#' }}" class="slide-link">
+            <img
+              src="{{ block.settings.image | img_url: '800x' }}"
+              alt="{{ block.settings.alt | escape }}"
+            >
+            <div class="overlay">
+              <h3>{{ block.settings.custom_title }}</h3>
+              {% if block.settings.description %}
+                <p>{{ block.settings.description }}</p>
+              {% endif %}
+              <span class="read-more">Read more →</span>
+            </div>
+          </a>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Right: Signup Form -->
+    <div class="signup-panel">
+      <h2>{{ section.settings.heading }}</h2>
+      <p>{{ section.settings.subheading }}</p>
+      {% form 'customer', id: 'NewsletterForm' %}
+        <div class="newsletter-form">
+          <input
+            type="email"
+            name="contact[email]"
+            id="NewsletterForm--{{ section.id }}"
+            placeholder="Enter your email"
+            required
+          >
+          <button type="submit" class="signup-btn">
+            {{ section.settings.button_label | default: 'Subscribe' }}
+          </button>
+        </div>
+        {% if form.posted_successfully? %}
+          <p class="news-cta__msg news-cta__msg--success">
+            Thanks for signing up! Please check your inbox.
+          </p>
+        {% elsif form.errors %}
+          {% assign email_error = form.errors.messages.email | first %}
+          <p class="news-cta__msg news-cta__msg--error">
+            {% if email_error contains 'taken' or email_error contains 'already' %}
+              You’re already subscribed!
+            {% else %}
+              {{ email_error | default: 'Oops, something went wrong. Please try again.' }}
+            {% endif %}
+          </p>
+        {% endif %}
+      {% endform %}
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const slides = Array.from(document.querySelectorAll('.newsletter-cta .slide'));
+    if (slides.length < 2) return;
+    let idx = 0;
+    setInterval(() => {
+      slides[idx].classList.remove('is-active');
+      idx = (idx + 1) % slides.length;
+      slides[idx].classList.add('is-active');
+    }, 4000);
+  });
+</script>
+
+
+{% schema %}
+{
+  "name": "Newsletter / Blog CTA",
+  "settings": [
+    { "type": "image_picker", "id": "image", "label": "Fallback image (if no slides)" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Stay in the Loop" },
+    { "type": "textarea", "id": "subheading", "label": "Sub-copy", "default": "Fresh articles and exclusive offers — straight to your inbox." },
+    { "type": "text", "id": "button_label", "label": "Button label", "default": "Subscribe" }
+  ],
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "Manual slide",
+      "settings": [
+        { "type": "image_picker", "id": "image", "label": "Slide image" },
+        { "type": "text", "id": "custom_title", "label": "Overlay title" },
+        { "type": "textarea", "id": "description", "label": "Short description (optional)" },
+        { "type": "text", "id": "alt", "label": "Alt text", "default": "Carousel image" },
+        { "type": "url", "id": "link", "label": "Slide link URL (optional)", "default": "/" }
+      ]
+    }
+  ],
+  "max_blocks": 4,
+  "presets": [ { "name": "Newsletter / Blog CTA" } ]
+}
+{% endschema %}

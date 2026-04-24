@@ -1,0 +1,49 @@
+<form method="post"
+      action="/cart/add"
+      id="product-form-{{ section.id }}-block"
+      accept-charset="UTF-8"
+      enctype="multipart/form-data"
+      class="product-form"
+      data-type="add-to-cart-form">
+  <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+
+  {% if product.selling_plan_groups.size > 0 %}
+    <div class="pf-options" role="radiogroup" aria-label="Purchase options">
+      <label>
+        <input type="radio" name="purchase_option" value="one_time" checked onchange="toggleSellingPlan(false)">
+        One‑time
+      </label>
+      <label>
+        <input type="radio" name="purchase_option" value="subscription" onchange="toggleSellingPlan(true)">
+        10% off, Monthly Order
+      </label>
+    </div>
+  {% endif %}
+
+  <div class="pf-qty" aria-label="Quantity selector">
+    <button type="button" class="pf-qty-btn" onclick="var q=this.nextElementSibling;if(q.value>1){q.value--;}">−</button>
+    <input type="number" name="quantity" min="1" max="99" value="1">
+    <button type="button" class="pf-qty-btn" onclick="var q=this.previousElementSibling;if(q.value<99){q.value++;}">+</button>
+  </div>
+
+  <div class="pf-btn-row">
+    {% if product.selected_or_first_available_variant.available %}
+      <button type="submit" name="add" class="pf-add">Add to Cart</button>
+      <button type="submit" name="checkout" class="pf-buy-now">Buy Now</button>
+    {% else %}
+      <button type="button" class="pf-add" disabled style="opacity:0.6;cursor:not-allowed;">Sold Out</button>
+    {% endif %}
+  </div>
+</form>
+
+{% assign variant = product.selected_or_first_available_variant %}
+{% if variant.available %}
+  <div class="pf-btn-row">
+    <button type="submit" name="add" class="pf-add">Add to Cart</button>
+    <button type="submit" name="checkout" class="pf-buy-now">Buy Now</button>
+  </div>
+{% else %}
+  <div class="pf-btn-row">
+    <button type="button" class="pf-add" disabled style="opacity:0.6;cursor:not-allowed;">Sold Out</button>
+  </div>
+{% endif %}

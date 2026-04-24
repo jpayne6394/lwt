@@ -1,0 +1,246 @@
+<style>
+.square-clickable-columns-section {
+    background-color: #FDF2F2;
+    padding: 30px 20px 30px;
+    margin: 25px auto 50px auto; /* center section horizontally */
+    max-width: 1800px; /* limit pink background width */
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+
+  .square-clickable-columns-wrapper {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr); /* FORCE 2 columns */
+    gap: 3rem;
+    align-items: stretch;
+    max-width: 1375px;
+    margin: 0 auto;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 1024px) {
+    .square-clickable-columns-wrapper {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .square-clickable-columns-wrapper {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .clickable-tile {
+    position: relative;
+    cursor: pointer;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 2rem 2.5rem;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .clickable-tile:hover {
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.15);
+    transform: translateY(-4px) scale(1.02);
+  }
+
+  .clickable-tile::after {
+    content: '';
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    width: 24px;
+    height: 24px;
+    background-image: url("data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%238e4ec6' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='5' y1='12' x2='19' y2='12'/%3E%3Cpolyline points='12 5 19 12 12 19'/%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0;
+    transform: translateX(-5px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    pointer-events: none;
+  }
+
+  .clickable-tile:hover::after {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  .clickable-tile .tile-image {
+    margin: 0 auto 1.5rem;
+  }
+
+  .tile-image img {
+    object-fit: cover;
+    height: auto;
+    width: 100%;
+    max-width: 100px;
+    aspect-ratio: 1 / 1;
+    border-radius: 0;
+  }
+
+  .clickable-tile h3 {
+    font-size: 1.375rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+
+  .clickable-tile p {
+    font-size: 1.125rem;
+    line-height: 1.7;
+    color: #333;
+    max-width: 90%;
+    margin: 0 auto;
+  }
+
+  .square-clickable-columns-section .section-heading {
+    text-align: center;
+    margin-top: -3.5rem;
+    margin-bottom: 1rem;
+    min-height: 4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .square-clickable-columns-section .section-heading:empty {
+    min-height: 2rem;
+    margin-bottom: 4rem;
+  }
+
+  .square-clickable-columns-section .section-heading h2 {
+    font-size: 4rem;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+
+  .square-clickable-columns-section .section-subheading {
+    text-align: center;
+    font-size: 1.25rem;
+    color: #555;
+    max-width: 750px;
+    margin: 0 auto 3rem;
+  }
+</style>
+
+<section class="square-clickable-columns-section section">
+  
+  <div class="section-heading">
+    {% if section.settings.heading != blank %}
+      <h2>{{ section.settings.heading }}</h2>
+    {% endif %}
+  </div>
+
+  {% if section.settings.subheading != blank %}
+    <div class="section-subheading">
+      {{ section.settings.subheading }}
+    </div>
+  {% endif %}
+
+  <div class="square-clickable-columns-wrapper">
+    {% for block in section.blocks %}
+      {% assign image = block.settings.image %}
+      {% assign title = block.settings.title %}
+      {% assign text = block.settings.text %}
+      {% assign link = block.settings.link %}
+      
+      {% if link != blank %}
+        <a href="{{ link }}" class="clickable-tile" {{ block.shopify_attributes }}>
+      {% else %}
+        <div class="clickable-tile" {{ block.shopify_attributes }}>
+      {% endif %}
+
+          {% if image != blank %}
+            <div class="tile-image">
+              <img src="{{ image | image_url: width: 300 }}" alt="{{ title | escape }}">
+            </div>
+          {% endif %}
+
+          {% if title != blank %}
+            <h3>{{ title }}</h3>
+          {% endif %}
+
+          {% if text != blank %}
+            <p>{{ text }}</p>
+          {% endif %}
+
+      {% if link != blank %}
+        </a>
+      {% else %}
+        </div>
+      {% endif %}
+
+    {% endfor %}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Square Clickable Columns",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Section Heading",
+      "default": "Targeted Wellness Protocols"
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Tagline / Subheading",
+      "default": "Clinician-designed protocols to help you achieve lasting health. Work with our team or explore curated supplement bundles."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "column",
+      "name": "Column",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "image",
+          "label": "Icon image"
+        },
+        {
+          "type": "text",
+          "id": "title",
+          "label": "Heading",
+          "default": "Column title"
+        },
+        {
+          "type": "textarea",
+          "id": "text",
+          "label": "Description",
+          "default": "Column description goes here."
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Link"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Square Clickable Columns",
+      "blocks": [
+        { "type": "column" },
+        { "type": "column" },
+        { "type": "column" },
+        { "type": "column" },
+        { "type": "column" }
+      ]
+    }
+  ]
+}
+{% endschema %}

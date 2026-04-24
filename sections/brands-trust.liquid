@@ -1,0 +1,492 @@
+{% stylesheet %}
+.brands-trust-section {
+  padding: 60px 20px;
+  background-color: #ffffff;
+}
+.brands-trust-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 4rem;
+  max-width: 1700px;
+  margin: 0 auto;
+}
+.brand-logos {
+  flex: 1;
+  min-width: 280px;
+}
+.brand-logos h3 {
+  font-size: 2.5rem;
+  margin-bottom: 2.5rem;
+  font-weight: 700;
+}
+
+.logo-scroll-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  padding: 0 40px;
+}
+.logo-scroll-container {
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+.logo-scroll-container::before,
+.logo-scroll-container::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 40px;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+.logo-scroll-container::before {
+  left: 0;
+  background: linear-gradient(to right, #fff 0%, rgba(255, 255, 255, 0) 100%);
+}
+.logo-scroll-container::after {
+  right: 0;
+  background: linear-gradient(to left, #fff 0%, rgba(255, 255, 255, 0) 100%);
+}
+.scroll-arrow {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background 0.3s ease, border-color 0.3s ease;
+  z-index: 3;
+}
+.scroll-arrow:hover {
+  border-color: #3e2764;
+  background-color: #f3eefb;
+}
+.scroll-arrow.hidden {
+  display: none;
+}
+.scroll-arrow.left {
+  position: absolute;
+  left: 0;
+}
+.scroll-arrow.right {
+  position: absolute;
+  right: 0;
+}
+
+.logo-scroll-track {
+  display: flex;
+  scroll-behavior: smooth;
+  gap: 1.2rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  flex: 1;
+  padding: 0.5rem 0;
+  scrollbar-width: none;
+}
+.logo-scroll-track::-webkit-scrollbar {
+  display: none;
+}
+.brand-logo-link {
+  flex: 0 0 auto;
+  width: 160px;
+  height: 160px;
+  scroll-snap-align: start;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #e2e2e2;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+.brand-logo-link:hover {
+  transform: scale(1.05);
+  border-color: #3e2764;
+  box-shadow: 0 4px 12px rgba(62, 39, 100, 0.1);
+}
+.brand-logo-link img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 0.5rem;
+}
+.brands-cta {
+  text-align: center;
+  margin-top: 3rem;
+  padding-left: 0px;
+}
+.brands-cta .goal-cta {
+  font-size: 1.2rem;
+  padding: 1rem 2rem;
+  background-color: #4c3371;
+  color: #fff;
+  border-radius: 100px;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 0 6px 10px rgba(0, 0, 0, 0.25);
+  transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.brands-cta .goal-cta:hover {
+  background-color: #3e2764;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 16px rgba(0, 0, 0, 0.25);
+}
+
+.trust-card {
+  flex: 1;
+  max-width: 800px;
+  background-color: #fefaf8;
+  border-radius: 16px;
+  padding: .65rem 2.5rem 7.75rem 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  margin-top: 0rem;
+  align-self: flex-start;
+}
+
+.trust-card h3 {
+  font-size: 2.5rem;
+  margin-bottom: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+}
+.trust-card ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 3rem;
+  padding-left: 0;
+  margin: 0;
+}
+.trust-card ul li {
+  width: calc(50% - 1.5rem);
+  list-style: none;
+  font-size: 1.6rem;
+  display: flex;
+  align-items: center;
+}
+.trust-card ul li::before {
+  content: "✔";
+  color: #3e2764;
+  margin-right: 8px;
+}
+
+/* === MOBILE STYLES ONLY === */
+@media screen and (max-width: 768px) {
+  .brand-logos h3 {
+    text-align: center;
+    font-size: 2rem;
+  }
+
+  .logo-scroll-wrapper {
+    padding: 0;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .logo-scroll-container {
+    width: 100%;
+  }
+
+  .logo-scroll-track {
+    justify-content: flex-start;
+    padding: 1rem 1rem;
+  }
+
+  .scroll-arrow {
+    display: none !important;
+  }
+
+  .brands-cta {
+    padding-left: 0;
+    text-align: center;
+    margin-top: 1.5rem;
+  }
+
+  .swipe-indicators {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+    gap: 0.5rem;
+  }
+
+  .dot {
+    height: 8px;
+    width: 8px;
+    background-color: #ccc;
+    border-radius: 50%;
+    display: inline-block;
+    transition: background-color 0.3s ease;
+  }
+
+  .dot.active {
+    background-color: #5c4b8b;
+  }
+} /* ✅ Proper closing brace added here */
+
+@media screen and (max-width: 768px) {
+  .trust-card h3 {
+    font-size: 2rem;
+  }
+
+  .trust-card ul li {
+    font-size: 1.25rem;
+  }
+}
+
+{% endstylesheet %}
+
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const wrapper = document.querySelector(".logo-scroll-wrapper");
+    const track = wrapper.querySelector(".logo-scroll-track");
+    const leftArrow = wrapper.querySelector(".scroll-arrow.left");
+    const rightArrow = wrapper.querySelector(".scroll-arrow.right");
+    const dots = wrapper.querySelectorAll(".dot");
+
+    // === Scroll Arrows ===
+    const updateArrows = () => {
+      if (!leftArrow || !rightArrow || !track) return;
+      leftArrow.classList.toggle("hidden", track.scrollLeft <= 0);
+      rightArrow.classList.toggle("hidden", track.scrollLeft + track.clientWidth >= track.scrollWidth - 1);
+    };
+
+    // === Auto Scroll ===
+    let autoScrollInterval;
+    let userInteracted = false;
+
+    const startAutoScroll = () => {
+  let pauseAtEnd = false;
+
+  autoScrollInterval = setInterval(() => {
+    if (!userInteracted) {
+      const atEnd = track.scrollLeft + track.clientWidth >= track.scrollWidth - 1;
+
+      if (atEnd && !pauseAtEnd) {
+        pauseAtEnd = true;
+
+        // Pause for 2 seconds before resetting to start
+        setTimeout(() => {
+          track.scrollTo({ left: 0, behavior: 'smooth' });
+          pauseAtEnd = false;
+        }, 2000); // <-- adjust pause duration here
+
+      } else if (!pauseAtEnd) {
+        track.scrollBy({ left: 2, behavior: 'smooth' });
+      }
+
+      updateArrows();
+    }
+  }, 1800); // <-- adjust scroll speed here
+};
+
+
+    const stopAutoScroll = () => {
+      userInteracted = true;
+      clearInterval(autoScrollInterval);
+    };
+
+    track.addEventListener('touchstart', stopAutoScroll);
+    track.addEventListener('mousedown', stopAutoScroll);
+    leftArrow?.addEventListener('click', stopAutoScroll);
+    rightArrow?.addEventListener('click', stopAutoScroll);
+
+    startAutoScroll();
+
+    // === Dots ===
+    const updateDots = () => {
+      const tiles = wrapper.querySelectorAll('.brand-logo-link');
+      let activeIndex = 0;
+
+      for (let i = 0; i < tiles.length; i++) {
+        const tile = tiles[i];
+        if (tile.offsetLeft - track.scrollLeft >= -tile.offsetWidth / 2) {
+          activeIndex = i;
+          break;
+        }
+      }
+
+      dots.forEach((dot, idx) => {
+        dot.classList.toggle('active', idx === activeIndex);
+      });
+    };
+
+    // === Manual Scroll Controls ===
+    leftArrow?.addEventListener("click", () => {
+      track.scrollBy({ left: -track.clientWidth, behavior: "smooth" });
+    });
+
+    rightArrow?.addEventListener("click", () => {
+      track.scrollBy({ left: track.clientWidth, behavior: "smooth" });
+    });
+
+    // === Initial Scroll to Fourth Tile ===
+    const scrollToFourthTile = () => {
+      const fourthTile = track.querySelectorAll('.brand-logo-link')[3];
+      if (fourthTile) {
+        track.scrollLeft = fourthTile.offsetLeft;
+        updateArrows();
+        updateDots();
+      }
+    };
+
+    track.addEventListener("scroll", () => {
+      updateArrows();
+      updateDots();
+    });
+
+    setTimeout(() => {
+      scrollToFourthTile();
+      updateDots();
+    }, 250);
+  });
+</script>
+
+
+
+<div class="brands-trust-section">
+  <div class="brands-trust-wrapper">
+    <div class="brand-logos">
+      <h3>{{ section.settings.brand_heading }}</h3>
+      <div class="logo-scroll-wrapper">
+        <div class="scroll-arrow left hidden">‹</div>
+
+        <div class="logo-scroll-container">
+          <div class="logo-scroll-track">
+            {% for block in section.blocks %}
+              {% assign collection = block.settings.brand_collection %}
+              {% if collection != blank and collection.image %}
+                <a class="brand-logo-link" href="{{ collection.url }}">
+                  <img src="{{ collection.image | image_url: width: 300 }}" alt="{{ collection.title | escape }}" loading="lazy">
+                </a>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Swipe Indicators -->
+        <div class="swipe-indicators">
+          {% for block in section.blocks %}
+            {% if forloop.index0 < 10 %}
+              <span class="dot{% if forloop.index == 4 %} active{% endif %}"></span>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <div class="scroll-arrow right">›</div>
+      </div>
+
+      {% if section.settings.button_label != blank and section.settings.button_link != blank %}
+        <div class="brands-cta">
+          <a href="{{ section.settings.button_link }}" class="goal-cta">{{ section.settings.button_label }}</a>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="trust-card">
+      <h3>{{ section.settings.trust_heading }}</h3>
+      <ul>
+        {% for i in (1..5) %}
+          {% capture trust_key %}trust_{{ i }}{% endcapture %}
+          {% assign trust_line = section.settings[trust_key] %}
+          {% if trust_line != blank %}
+            <li>{{ trust_line }}</li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Brands + Trust Card",
+  "settings": [
+    {
+      "type": "text",
+      "id": "brand_heading",
+      "label": "Brand Heading",
+      "default": "Top Brands"
+    },
+    {
+      "type": "text",
+      "id": "trust_heading",
+      "label": "Trust Card Heading",
+      "default": "Why Choose Living Well Today?"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "View All Brands Link"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button Label",
+      "default": "View All Brands"
+    },
+    {
+      "type": "text",
+      "id": "trust_1",
+      "label": "Trust Bullet 1",
+      "default": "Family-owned & practitioner-guided"
+    },
+    {
+      "type": "text",
+      "id": "trust_2",
+      "label": "Trust Bullet 2",
+      "default": "Clinical quality—never third-party fulfilled"
+    },
+    {
+      "type": "text",
+      "id": "trust_3",
+      "label": "Trust Bullet 3",
+      "default": "Cold storage and climate control"
+    },
+    {
+      "type": "text",
+      "id": "trust_4",
+      "label": "Trust Bullet 4",
+      "default": "25+ years of experience"
+    },
+    {
+      "type": "text",
+      "id": "trust_5",
+      "label": "Trust Bullet 5",
+      "default": "Personalized support available"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "brand_logo",
+      "name": "Brand Collection",
+      "settings": [
+        {
+          "type": "collection",
+          "id": "brand_collection",
+          "label": "Brand Collection"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 10,
+  "presets": [
+    {
+      "name": "Brands + Trust",
+      "category": "Custom"
+    }
+  ]
+}
+{% endschema %}

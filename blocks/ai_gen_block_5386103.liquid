@@ -1,0 +1,800 @@
+{% doc %}
+  @prompt
+    Create a luxury wellness Book Consult CTA section with elegant spa-like design, premium colors (soft golds, sage greens, warm whites), sophisticated typography, and refined styling that conveys high-end wellness services. Include customizable heading lines, subheading, two buttons, and image/GIF options with a serene, upscale aesthetic., more like the rest of the theme match font color and buttons, add button size controls, make the heading like the luxury wellness bio, just do wellness as the different, add more luxury style, no image zoom, add font controls
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-wellness-cta-{{ ai_gen_id }} {
+    background: linear-gradient(135deg, {{ block.settings.background_color_1 }} 0%, {{ block.settings.background_color_2 }} 100%);
+    padding: {{ block.settings.section_padding }}px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-wellness-cta-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(160, 149, 107, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(139, 115, 85, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .ai-wellness-cta-container-{{ ai_gen_id }} {
+    max-width: {{ settings.page_width }}px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .ai-wellness-cta-content-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    position: relative;
+  }
+
+  .ai-wellness-cta-content-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: -30px;
+    width: 120px;
+    height: 2px;
+    background: linear-gradient(90deg, {{ block.settings.heading_accent_color_1 }} 0%, transparent 100%);
+    opacity: 0.4;
+  }
+
+  .ai-wellness-cta-heading-{{ ai_gen_id }} {
+    font-family: {{ block.settings.heading_font.family }}, {{ block.settings.heading_font.fallback_families }};
+    font-weight: {{ block.settings.heading_font.weight }};
+    font-style: {{ block.settings.heading_font.style }};
+    color: {{ block.settings.heading_color }};
+    font-size: calc({{ block.settings.heading_size }}px * {{ settings.heading_scale | default: 100 | divided_by: 100.0 }});
+    line-height: 1.1;
+    margin: 0;
+    letter-spacing: -0.03em;
+    position: relative;
+  }
+
+  .ai-wellness-cta-heading-line-{{ ai_gen_id }} {
+    display: block;
+    position: relative;
+  }
+
+  .ai-wellness-cta-heading-line-{{ ai_gen_id }}:first-child {
+    font-weight: 200;
+    opacity: 0.85;
+    font-style: italic;
+    margin-bottom: -0.05em;
+  }
+
+  .ai-wellness-cta-heading-line-{{ ai_gen_id }}:last-child {
+    font-weight: 700;
+    background: linear-gradient(135deg, {{ block.settings.heading_accent_color_1 }} 0%, {{ block.settings.heading_accent_color_2 }} 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
+    text-shadow: 0 0 30px rgba(160, 149, 107, 0.3);
+  }
+
+  .ai-wellness-cta-heading-line-{{ ai_gen_id }}:last-child::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 0;
+    width: 60px;
+    height: 1px;
+    background: linear-gradient(90deg, {{ block.settings.heading_accent_color_1 }} 0%, transparent 100%);
+    opacity: 0.6;
+  }
+
+  .ai-wellness-cta-subheading-{{ ai_gen_id }} {
+    font-family: {{ block.settings.subheading_font.family }}, {{ block.settings.subheading_font.fallback_families }};
+    font-weight: {{ block.settings.subheading_font.weight }};
+    font-style: {{ block.settings.subheading_font.style }};
+    color: {{ block.settings.subheading_color }};
+    font-size: calc({{ block.settings.subheading_size }}px * {{ settings.body_scale | default: 100 | divided_by: 100.0 }});
+    line-height: 1.7;
+    margin: 0;
+    opacity: 0.9;
+    letter-spacing: 0.3px;
+  }
+
+  .ai-wellness-cta-buttons-{{ ai_gen_id }} {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .ai-wellness-cta-button-{{ ai_gen_id }} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border-radius: {{ settings.buttons_radius }}px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    border: {{ settings.buttons_border_thickness }}px solid;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    box-shadow: 
+      {% if settings.buttons_shadow_opacity > 0 %}
+        {{ settings.buttons_shadow_horizontal_offset }}px 
+        {{ settings.buttons_shadow_vertical_offset }}px 
+        {{ settings.buttons_shadow_blur }}px 
+        rgba({{ settings.shadow.red }}, {{ settings.shadow.green }}, {{ settings.shadow.blue }}, {{ settings.buttons_shadow_opacity | divided_by: 100.0 }}),
+        0 8px 32px rgba(75, 63, 130, 0.15)
+      {% else %}
+        0 8px 32px rgba(75, 63, 130, 0.15)
+      {% endif %};
+  }
+
+  .ai-wellness-cta-button-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s ease;
+  }
+
+  .ai-wellness-cta-button-{{ ai_gen_id }}:hover::before {
+    left: 100%;
+  }
+
+  .ai-wellness-cta-button-primary-{{ ai_gen_id }} {
+    background: linear-gradient(135deg, {{ block.settings.primary_button_bg }} 0%, {{ block.settings.primary_button_bg_end }} 100%);
+    color: {{ block.settings.primary_button_text_color }};
+    border-color: {{ block.settings.primary_button_bg }};
+    padding: {{ block.settings.primary_button_padding_vertical }}px {{ block.settings.primary_button_padding_horizontal }}px;
+    font-size: calc({{ block.settings.primary_button_font_size }}px * {{ settings.body_scale | default: 100 | divided_by: 100.0 }});
+    font-family: {{ block.settings.primary_button_font.family }}, {{ block.settings.primary_button_font.fallback_families }};
+    font-weight: {{ block.settings.primary_button_font.weight }};
+    font-style: {{ block.settings.primary_button_font.style }};
+    position: relative;
+  }
+
+  .ai-wellness-cta-button-primary-{{ ai_gen_id }}::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, {{ block.settings.primary_button_hover_bg }} 0%, {{ block.settings.primary_button_hover_bg_end }} 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    border-radius: inherit;
+  }
+
+  .ai-wellness-cta-button-primary-{{ ai_gen_id }}:hover::after {
+    opacity: 1;
+  }
+
+  .ai-wellness-cta-button-primary-{{ ai_gen_id }}:hover {
+    transform: translateY(-3px);
+    box-shadow: 
+      0 12px 40px rgba(75, 63, 130, 0.25),
+      0 4px 16px rgba(160, 149, 107, 0.2);
+  }
+
+  .ai-wellness-cta-button-primary-{{ ai_gen_id }} span {
+    position: relative;
+    z-index: 1;
+  }
+
+  .ai-wellness-cta-button-secondary-{{ ai_gen_id }} {
+    background: rgba(255, 255, 255, 0.05);
+    color: {{ block.settings.secondary_button_text_color }};
+    border-color: {{ block.settings.secondary_button_border }};
+    padding: {{ block.settings.secondary_button_padding_vertical }}px {{ block.settings.secondary_button_padding_horizontal }}px;
+    font-size: calc({{ block.settings.secondary_button_font_size }}px * {{ settings.body_scale | default: 100 | divided_by: 100.0 }});
+    font-family: {{ block.settings.secondary_button_font.family }}, {{ block.settings.secondary_button_font.fallback_families }};
+    font-weight: {{ block.settings.secondary_button_font.weight }};
+    font-style: {{ block.settings.secondary_button_font.style }};
+    backdrop-filter: blur(20px);
+    position: relative;
+  }
+
+  .ai-wellness-cta-button-secondary-{{ ai_gen_id }}::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: {{ block.settings.secondary_button_hover_bg }};
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    border-radius: inherit;
+  }
+
+  .ai-wellness-cta-button-secondary-{{ ai_gen_id }}:hover::after {
+    opacity: 1;
+  }
+
+  .ai-wellness-cta-button-secondary-{{ ai_gen_id }}:hover {
+    color: {{ block.settings.secondary_button_hover_text }};
+    transform: translateY(-3px);
+    box-shadow: 
+      0 12px 40px rgba(75, 63, 130, 0.2),
+      0 4px 16px rgba(160, 149, 107, 0.15);
+  }
+
+  .ai-wellness-cta-button-secondary-{{ ai_gen_id }} span {
+    position: relative;
+    z-index: 1;
+  }
+
+  .ai-wellness-cta-media-{{ ai_gen_id }} {
+    position: relative;
+    border-radius: {{ settings.media_radius }}px;
+    overflow: hidden;
+    border: {{ settings.media_border_thickness }}px solid rgba({{ settings.text.red }}, {{ settings.text.green }}, {{ settings.text.blue }}, {{ settings.media_border_opacity | divided_by: 100.0 }});
+    box-shadow: 
+      {% if settings.media_shadow_opacity > 0 %}
+        {{ settings.media_shadow_horizontal_offset }}px 
+        {{ settings.media_shadow_vertical_offset }}px 
+        {{ settings.media_shadow_blur }}px 
+        rgba({{ settings.shadow.red }}, {{ settings.shadow.green }}, {{ settings.shadow.blue }}, {{ settings.media_shadow_opacity | divided_by: 100.0 }}),
+        0 25px 50px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.1)
+      {% else %}
+        0 25px 50px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(255, 255, 255, 0.1)
+      {% endif %};
+  }
+
+  .ai-wellness-cta-media-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(160, 149, 107, 0.1) 0%, transparent 50%, rgba(139, 115, 85, 0.05) 100%);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .ai-wellness-cta-image-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .ai-wellness-cta-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    min-height: 500px;
+    background: linear-gradient(135deg, #f8f6f3 0%, #ede8e1 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .ai-wellness-cta-placeholder-{{ ai_gen_id }} svg {
+    width: 100px;
+    height: 100px;
+    opacity: 0.2;
+    color: #a0956b;
+  }
+
+  .ai-wellness-cta-empty-state-{{ ai_gen_id }} {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #8b7355;
+    font-size: 14px;
+    text-align: center;
+    opacity: 0.6;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-weight: 300;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .ai-wellness-cta-decorative-element-{{ ai_gen_id }} {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    border: 1px solid rgba(160, 149, 107, 0.1);
+    border-radius: 50%;
+    top: 20%;
+    right: -100px;
+    z-index: 1;
+  }
+
+  .ai-wellness-cta-decorative-element-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    border: 1px solid rgba(139, 115, 85, 0.08);
+    border-radius: 50%;
+    top: 25px;
+    left: 25px;
+  }
+
+  @media screen and (max-width: 768px) {
+    .ai-wellness-cta-container-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: 50px;
+      text-align: center;
+    }
+
+    .ai-wellness-cta-{{ ai_gen_id }} {
+      padding: {{ block.settings.section_padding | times: 0.7 }}px 16px;
+    }
+
+    .ai-wellness-cta-content-{{ ai_gen_id }}::before {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .ai-wellness-cta-heading-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.heading_size | times: 0.75 }}px * {{ settings.heading_scale | default: 100 | divided_by: 100.0 }});
+    }
+
+    .ai-wellness-cta-subheading-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.subheading_size | times: 0.9 }}px * {{ settings.body_scale | default: 100 | divided_by: 100.0 }});
+    }
+
+    .ai-wellness-cta-buttons-{{ ai_gen_id }} {
+      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .ai-wellness-cta-button-{{ ai_gen_id }} {
+      width: 100%;
+      max-width: 280px;
+    }
+
+    .ai-wellness-cta-decorative-element-{{ ai_gen_id }} {
+      display: none;
+    }
+
+    .ai-wellness-cta-placeholder-{{ ai_gen_id }} {
+      min-height: 400px;
+    }
+  }
+
+  {% if block.settings.layout == 'image_left' %}
+    .ai-wellness-cta-container-{{ ai_gen_id }} {
+      grid-template-columns: 1fr 1fr;
+    }
+    .ai-wellness-cta-media-{{ ai_gen_id }} {
+      order: -1;
+    }
+    .ai-wellness-cta-decorative-element-{{ ai_gen_id }} {
+      right: auto;
+      left: -100px;
+    }
+  {% endif %}
+
+  {% if block.settings.layout == 'content_only' %}
+    .ai-wellness-cta-container-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      text-align: center;
+      max-width: 900px;
+    }
+    
+    .ai-wellness-cta-media-{{ ai_gen_id }} {
+      display: none;
+    }
+
+    .ai-wellness-cta-content-{{ ai_gen_id }}::before {
+      left: 50%;
+      transform: translateX(-50%);
+    }
+  {% endif %}
+{% endstyle %}
+
+<div class="ai-wellness-cta-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-wellness-cta-decorative-element-{{ ai_gen_id }}"></div>
+  
+  <div class="ai-wellness-cta-container-{{ ai_gen_id }}">
+    <div class="ai-wellness-cta-content-{{ ai_gen_id }}">
+      {% if block.settings.heading_line_1 != blank or block.settings.heading_line_2 != blank %}
+        <h2 class="ai-wellness-cta-heading-{{ ai_gen_id }}">
+          {% if block.settings.heading_line_1 != blank %}<span class="ai-wellness-cta-heading-line-{{ ai_gen_id }}">{{ block.settings.heading_line_1 }}</span>{% endif %}
+          {% if block.settings.heading_line_2 != blank %}<span class="ai-wellness-cta-heading-line-{{ ai_gen_id }}">{{ block.settings.heading_line_2 }}</span>{% endif %}
+        </h2>
+      {% endif %}
+
+      {% if block.settings.subheading != blank %}
+        <div class="ai-wellness-cta-subheading-{{ ai_gen_id }}">
+          {{ block.settings.subheading }}
+        </div>
+      {% endif %}
+
+      <div class="ai-wellness-cta-buttons-{{ ai_gen_id }}">
+        {% if block.settings.primary_button_label != blank %}
+          <a 
+            href="{{ block.settings.primary_button_link }}" 
+            class="ai-wellness-cta-button-{{ ai_gen_id }} ai-wellness-cta-button-primary-{{ ai_gen_id }}"
+          >
+            <span>{{ block.settings.primary_button_label }}</span>
+          </a>
+        {% endif %}
+
+        {% if block.settings.secondary_button_label != blank %}
+          <a 
+            href="{{ block.settings.secondary_button_link }}" 
+            class="ai-wellness-cta-button-{{ ai_gen_id }} ai-wellness-cta-button-secondary-{{ ai_gen_id }}"
+          >
+            <span>{{ block.settings.secondary_button_label }}</span>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if block.settings.layout != 'content_only' %}
+      <div class="ai-wellness-cta-media-{{ ai_gen_id }}">
+        {% if block.settings.media_image %}
+          <img
+            src="{{ block.settings.media_image | image_url: width: 800}}"
+            alt="{{ block.settings.media_image.alt | escape }}"
+            class="ai-wellness-cta-image-{{ ai_gen_id }}"
+            loading="lazy"
+            width="{{ block.settings.media_image.width }}"
+            height="{{ block.settings.media_image.height }}"
+          >
+        {% else %}
+          <div class="ai-wellness-cta-placeholder-{{ ai_gen_id }}">
+            {{ 'image' | placeholder_svg_tag }}
+            <div class="ai-wellness-cta-empty-state-{{ ai_gen_id }}">
+              Add a serene wellness image
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Luxury wellness CTA",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "layout",
+      "label": "Layout style",
+      "options": [
+        {
+          "value": "image_right",
+          "label": "Content left, image right"
+        },
+        {
+          "value": "image_left", 
+          "label": "Image left, content right"
+        },
+        {
+          "value": "content_only",
+          "label": "Content only"
+        }
+      ],
+      "default": "image_right"
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "min": 60,
+      "max": 160,
+      "step": 10,
+      "unit": "px",
+      "label": "Section padding",
+      "default": 100
+    },
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "text",
+      "id": "heading_line_1",
+      "label": "Heading line 1",
+      "default": "Elevate Your"
+    },
+    {
+      "type": "text", 
+      "id": "heading_line_2",
+      "label": "Heading line 2",
+      "default": "Wellness"
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Discover transformative wellness experiences crafted exclusively for discerning individuals seeking the pinnacle of holistic luxury and personalized care."
+    },
+    {
+      "type": "header",
+      "content": "Primary button"
+    },
+    {
+      "type": "text",
+      "id": "primary_button_label",
+      "label": "Button text",
+      "default": "Book Consultation"
+    },
+    {
+      "type": "url",
+      "id": "primary_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "range",
+      "id": "primary_button_font_size",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "primary_button_padding_vertical",
+      "min": 12,
+      "max": 28,
+      "step": 2,
+      "unit": "px",
+      "label": "Vertical padding",
+      "default": 18
+    },
+    {
+      "type": "range",
+      "id": "primary_button_padding_horizontal",
+      "min": 24,
+      "max": 56,
+      "step": 4,
+      "unit": "px",
+      "label": "Horizontal padding",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Secondary button"
+    },
+    {
+      "type": "text",
+      "id": "secondary_button_label", 
+      "label": "Button text",
+      "default": "Explore Services"
+    },
+    {
+      "type": "url",
+      "id": "secondary_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "range",
+      "id": "secondary_button_font_size",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "secondary_button_padding_vertical",
+      "min": 12,
+      "max": 28,
+      "step": 2,
+      "unit": "px",
+      "label": "Vertical padding",
+      "default": 18
+    },
+    {
+      "type": "range",
+      "id": "secondary_button_padding_horizontal",
+      "min": 24,
+      "max": 56,
+      "step": 4,
+      "unit": "px",
+      "label": "Horizontal padding",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Media"
+    },
+    {
+      "type": "image_picker",
+      "id": "media_image",
+      "label": "Image"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "font_picker",
+      "id": "heading_font",
+      "label": "Heading font",
+      "default": "montserrat_n4"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "min": 32,
+      "max": 84,
+      "step": 2,
+      "unit": "px",
+      "label": "Heading size",
+      "default": 56
+    },
+    {
+      "type": "font_picker",
+      "id": "subheading_font",
+      "label": "Subheading font",
+      "default": "montserrat_n4"
+    },
+    {
+      "type": "range",
+      "id": "subheading_size",
+      "min": 16,
+      "max": 28,
+      "step": 1,
+      "unit": "px",
+      "label": "Subheading size",
+      "default": 20
+    },
+    {
+      "type": "font_picker",
+      "id": "primary_button_font",
+      "label": "Primary button font",
+      "default": "montserrat_n4"
+    },
+    {
+      "type": "font_picker",
+      "id": "secondary_button_font",
+      "label": "Secondary button font",
+      "default": "montserrat_n4"
+    },
+    {
+      "type": "header",
+      "content": "Background colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color_1",
+      "label": "Background gradient start",
+      "default": "#fdfcfa"
+    },
+    {
+      "type": "color",
+      "id": "background_color_2", 
+      "label": "Background gradient end",
+      "default": "#f5f1eb"
+    },
+    {
+      "type": "header",
+      "content": "Text colors"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color",
+      "default": "#2c2420"
+    },
+    {
+      "type": "color",
+      "id": "heading_accent_color_1",
+      "label": "Heading accent start",
+      "default": "#d4af37"
+    },
+    {
+      "type": "color",
+      "id": "heading_accent_color_2",
+      "label": "Heading accent end",
+      "default": "#b8941f"
+    },
+    {
+      "type": "color",
+      "id": "subheading_color",
+      "label": "Subheading color", 
+      "default": "#5a4f47"
+    },
+    {
+      "type": "header",
+      "content": "Primary button colors"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_bg",
+      "label": "Background start",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_bg_end",
+      "label": "Background end",
+      "default": "#6b5b95"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_text_color",
+      "label": "Text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_hover_bg",
+      "label": "Hover background start",
+      "default": "#3d3269"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_hover_bg_end",
+      "label": "Hover background end",
+      "default": "#5a4a7a"
+    },
+    {
+      "type": "header",
+      "content": "Secondary button colors"
+    },
+    {
+      "type": "color",
+      "id": "secondary_button_text_color",
+      "label": "Text color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "secondary_button_border",
+      "label": "Border color",
+      "default": "#d4af37"
+    },
+    {
+      "type": "color",
+      "id": "secondary_button_hover_bg",
+      "label": "Hover background",
+      "default": "#d4af37"
+    },
+    {
+      "type": "color",
+      "id": "secondary_button_hover_text",
+      "label": "Hover text color",
+      "default": "#2c2420"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Luxury wellness CTA"
+    }
+  ],
+  "tag": null,
+  "class": "luxury-wellness-cta-block"
+}
+{% endschema %}

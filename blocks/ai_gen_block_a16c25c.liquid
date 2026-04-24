@@ -1,0 +1,1076 @@
+{% doc %}
+  @prompt
+    Create a comprehensive company bio section with mission and vision statements that seamlessly integrates with the existing site theme. Include customizable fields for company description, mission statement, vision statement, founding story, and team highlights. Add style controls for background colors, text alignment, spacing, and typography. Include image upload capabilities for company photos, team images, or brand visuals. Provide layout options (single column, two column, card-based) and color scheme controls that match the site's existing design system. Make it fully responsive with smooth animations and professional styling., add better style that fits theme, make more luxury saas feel, close but give more wellness as a service, lets do a horzontail main card and trust and vision smaller under, remove badge
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-company-bio-{{ ai_gen_id }} {
+    padding: {{ block.settings.section_padding_top }}px 0 {{ block.settings.section_padding_bottom }}px;
+    background: {{ block.settings.background_gradient }};
+    background-color: {{ block.settings.background_color }};
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-company-bio-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(circle at 20% 80%, rgba(139, 195, 74, 0.15) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(76, 175, 80, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(102, 187, 106, 0.08) 0%, transparent 50%);
+    pointer-events: none;z-index: 0;
+  }
+
+  .ai-company-bio-container-{{ ai_gen_id }} {
+    max-width: {{ settings.page_width }}px;
+    margin: 0 auto;
+    padding: 0 {{ settings.spacing_grid_horizontal }}px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .ai-company-bio-main-card-{{ ai_gen_id }} {
+    background: linear-gradient(145deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: {{ block.settings.main_card_padding }}px;
+    border-radius: {{ block.settings.main_card_border_radius }}px;
+    border: 1px solid rgba(139, 195, 74, 0.2);
+    box-shadow: 
+      0 12px 48px rgba(76, 175, 80, 0.12),
+      0 4px 16px rgba(139, 195, 74, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: {{ block.settings.cards_spacing }}px;
+  }
+
+  .ai-company-bio-main-card-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+      transparent 0%, 
+      rgba(139, 195, 74, 0.1) 50%, 
+      transparent 100%
+    );
+    transition: left 0.8s ease;
+    z-index: 0;
+  }
+
+  .ai-company-bio-main-card-{{ ai_gen_id }}:hover::before {
+    left: 100%;
+  }
+
+  .ai-company-bio-main-card-{{ ai_gen_id }}:hover {
+    transform: translateY(-4px);
+    box-shadow: 
+      0 20px 60px rgba(76, 175, 80, 0.15),
+      0 8px 24px rgba(139, 195, 74, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border-color: rgba(139, 195, 74, 0.3);
+  }
+
+  .ai-company-bio-main-content-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: {{ block.settings.main_card_gap }}px;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .ai-company-bio-main-text-{{ ai_gen_id }} {
+    color: {{ block.settings.text_color }};
+  }
+
+  .ai-company-bio-main-image-wrapper-{{ ai_gen_id }} {
+    border-radius: {{ block.settings.image_border_radius }}px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 
+      0 8px 32px rgba(76, 175, 80, 0.1),
+      0 2px 8px rgba(139, 195, 74, 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ai-company-bio-main-image-wrapper-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+      rgba(139, 195, 74, 0.08) 0%, 
+      transparent 50%
+    );
+    z-index: 1;
+    transition: opacity 0.3s ease;
+  }
+
+  .ai-company-bio-main-image-wrapper-{{ ai_gen_id }}:hover::before {
+    opacity: 0;
+  }
+
+  .ai-company-bio-main-image-wrapper-{{ ai_gen_id }}:hover {
+    transform: scale(1.02);
+    box-shadow: 
+      0 16px 48px rgba(76, 175, 80, 0.15),
+      0 4px 16px rgba(139, 195, 74, 0.12);
+  }
+
+  .ai-company-bio-main-image-{{ ai_gen_id }} {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .ai-company-bio-main-image-wrapper-{{ ai_gen_id }}:hover .ai-company-bio-main-image-{{ ai_gen_id }} {
+    transform: scale(1.05);
+  }
+
+  .ai-company-bio-main-image-placeholder-{{ ai_gen_id }} {
+    position: relative;
+    background: linear-gradient(135deg, 
+      rgba(139, 195, 74, 0.08) 0%, 
+      rgba(76, 175, 80, 0.05) 100%
+    );
+    border-radius: {{ block.settings.image_border_radius }}px;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(139, 195, 74, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  .ai-company-bio-empty-state-{{ ai_gen_id }} {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    background: linear-gradient(135deg, 
+      {{ block.settings.accent_color }} 0%, 
+      {{ block.settings.accent_color | color_darken: 10 }} 100%
+    );
+    border-radius: 20px;
+    font-size: 13px;
+    color: #ffffff;
+    text-align: center;
+    pointer-events: none;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-weight:500;
+    letter-spacing: 0.01em;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);box-shadow: 0 4px 16px rgba({{ block.settings.accent_color | color_extract: 'red' }}, {{ block.settings.accent_color | color_extract: 'green' }}, {{ block.settings.accent_color | color_extract: 'blue' }}, 0.3);
+  }
+
+  .ai-company-bio-main-image-placeholder-{{ ai_gen_id }} svg {
+    width: 100%;
+    height: 100%;
+    max-width: 180px;
+    max-height: 120px;
+    opacity: 0.4;
+    color: {{ block.settings.accent_color }};
+  }
+
+  .ai-company-bio-heading-{{ ai_gen_id }} {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-weight: 600;
+    font-size: calc({{ block.settings.main_heading_size }}px * {{ settings.heading_scale | divided_by: 100.0 }});
+    color: {{ block.settings.heading_color }};
+    margin:0 0 {{ block.settings.heading_margin }}px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, {{ block.settings.heading_color }} 0%, {{ block.settings.accent_color }} 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;}
+
+  .ai-company-bio-text-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-weight: 400;
+    font-size: calc({{ block.settings.body_text_size }}px * {{ settings.body_scale | divided_by: 100.0 }});
+    color: {{ block.settings.text_color }};
+    line-height: 1.7;
+    margin: 0 0 {{ block.settings.text_margin }}px;
+    opacity: 0.9;
+  }
+
+  .ai-company-bio-text-{{ ai_gen_id }}:last-child {
+    margin-bottom: 0;
+  }
+
+  .ai-company-bio-wellness-icon-{{ ai_gen_id }} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, {{ block.settings.accent_color | color_lighten: 40 }} 0%, {{ block.settings.accent_color | color_lighten: 20 }} 100%);
+    border-radius: 50%;
+    margin-right: 8px;
+    font-size: 12px;
+  }
+
+  .ai-company-bio-wellness-feature-{{ ai_gen_id }} {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 16px 0;
+    padding: 16px;
+    background: linear-gradient(135deg,
+      rgba(139, 195, 74, 0.05) 0%, 
+      rgba(76, 175, 80, 0.03) 100%
+    );
+    border-radius: 12px;
+    border-left: 3px solid {{ block.settings.accent_color }};
+  }
+
+  .ai-company-bio-wellness-feature-{{ ai_gen_id }}::before {
+    content: '✓';
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: {{ block.settings.accent_color }};
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;margin-top: 2px;
+  }
+
+  .ai-company-bio-secondary-cards-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: {{ block.settings.secondary_cards_gap }}px;}
+
+  .ai-company-bio-secondary-card-{{ ai_gen_id }} {
+    background: linear-gradient(145deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    padding: {{ block.settings.secondary_card_padding }}px;
+    border-radius: {{ block.settings.secondary_card_border_radius }}px;
+    border: 1px solid rgba(139, 195, 74, 0.2);
+    box-shadow: 
+      0 8px 32px rgba(76, 175, 80, 0.08),
+      0 2px 8px rgba(139, 195, 74, 0.05),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    text-align: {{ block.settings.text_alignment }};
+  }
+
+  .ai-company-bio-secondary-card-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+      transparent 0%, 
+      rgba(139, 195, 74, 0.1) 50%, 
+      transparent 100%
+    );
+    transition: left 0.6s ease;
+    z-index: 0;
+  }
+
+  .ai-company-bio-secondary-card-{{ ai_gen_id }}:hover::before {
+    left: 100%;
+  }
+
+  .ai-company-bio-secondary-card-{{ ai_gen_id }}:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 
+      0 16px 48px rgba(76, 175, 80, 0.12),
+      0 6px 20px rgba(139, 195, 74, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    border-color: rgba(139, 195, 74, 0.3);
+  }
+
+  .ai-company-bio-secondary-card-{{ ai_gen_id }} > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .ai-company-bio-subheading-{{ ai_gen_id }} {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-weight: 500;
+    font-size: calc({{ block.settings.subheading_size }}px * {{ settings.heading_scale | divided_by: 100.0 }});
+    color: {{ block.settings.subheading_color }};
+    margin: 0 0 {{ block.settings.text_margin }}px;
+    line-height: 1.3;
+    letter-spacing: -0.005em;
+    position: relative;
+  }
+
+  .ai-company-bio-subheading-{{ ai_gen_id }}::after {
+    content: '';
+    position: absolute;
+    bottom: -12px;
+    left: {% if block.settings.text_alignment == 'center' %}50%{% elsif block.settings.text_alignment == 'right' %}100%{% else %}0{% endif %};
+    {% if block.settings.text_alignment == 'center' %}transform: translateX(-50%);{% elsif block.settings.text_alignment == 'right' %}transform: translateX(-100%);{% endif %}
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(90deg, {{ block.settings.accent_color }} 0%, {{ block.settings.accent_color | color_lighten: 20 }} 100%);
+    border-radius: 2px;
+  }
+
+  .ai-company-bio-stats-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: {{ settings.spacing_grid_horizontal }}px;
+    margin-top: {{ settings.spacing_sections | times: 1.5 }}px;
+    text-align: center;
+  }
+
+  .ai-company-bio-stat-{{ ai_gen_id }} {
+    padding: {{ settings.spacing_grid_vertical | times: 1.5 }}px {{ settings.spacing_grid_horizontal | times: 0.8 }}px;
+    background: linear-gradient(145deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.9) 100%
+    );
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: {{ block.settings.stat_border_radius }}px;
+    border: 1px solid rgba(139, 195, 74, 0.2);
+    box-shadow: 
+      0 6px 24px rgba(76, 175, 80, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-company-bio-stat-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left:0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, {{ block.settings.accent_color }} 0%, {{ block.settings.accent_color | color_lighten: 20 }} 100%);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+  }
+
+  .ai-company-bio-stat-{{ ai_gen_id }}:hover::before {
+    transform: scaleX(1);
+  }
+
+  .ai-company-bio-stat-{{ ai_gen_id }}:hover {
+    transform: translateY(-3px);
+    box-shadow: 
+      0 10px 32px rgba(76, 175, 80, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  }
+
+  .ai-company-bio-stat-number-{{ ai_gen_id }} {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-weight: 600;
+    font-size: calc({{ block.settings.main_heading_size | times: 1.1 }}px * {{ settings.heading_scale | divided_by: 100.0 }});
+    background: linear-gradient(135deg, {{ block.settings.accent_color }} 0%, {{ block.settings.accent_color | color_lighten: 15 }} 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+    line-height: 1;letter-spacing: -0.01em;
+  }
+
+  .ai-company-bio-stat-label-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: calc({{ block.settings.body_text_size | times: 0.85 }}px * {{ settings.body_scale | divided_by: 100.0 }});
+    color: {{ block.settings.text_color }};
+    line-height: 1.4;font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    opacity: 0.8;
+  }
+
+  {% if settings.animations_reveal_on_scroll %}
+    .ai-company-bio-animate-{{ ai_gen_id }} {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .ai-company-bio-animate-{{ ai_gen_id }}.animate-in {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  {% endif %}
+
+  @media screen and (max-width: 990px) {
+    .ai-company-bio-main-content-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: {{ block.settings.main_card_gap | times: 0.7 }}px;
+    }
+
+    .ai-company-bio-secondary-cards-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;gap: {{ block.settings.secondary_cards_gap | times: 0.8 }}px;
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-company-bio-container-{{ ai_gen_id }} {
+      padding: 0 {{ settings.spacing_grid_horizontal | divided_by: 2 }}px;
+    }
+
+    .ai-company-bio-heading-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.main_heading_size | times: 0.8 }}px * {{ settings.heading_scale | divided_by: 100.0 }});
+    }
+
+    .ai-company-bio-subheading-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.subheading_size | times: 0.9 }}px * {{ settings.heading_scale | divided_by: 100.0 }});
+    }
+
+    .ai-company-bio-{{ ai_gen_id }} {
+      padding: {{ block.settings.section_padding_top | times: 0.7 }}px 0 {{ block.settings.section_padding_bottom | times: 0.7 }}px;
+    }
+
+    .ai-company-bio-main-card-{{ ai_gen_id }} {
+      padding: {{ block.settings.main_card_padding | times: 0.75 }}px;
+    }
+
+    .ai-company-bio-secondary-card-{{ ai_gen_id }} {
+      padding: {{ block.settings.secondary_card_padding | times: 0.75 }}px;
+    }
+
+    .ai-company-bio-stats-{{ ai_gen_id }} {
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: {{ settings.spacing_grid_horizontal | divided_by: 2 }}px;
+    }
+
+    .ai-company-bio-main-image-placeholder-{{ ai_gen_id }} {
+      min-height: 220px;
+    }
+  }
+{% endstyle %}<company-bio-{{ ai_gen_id }}
+  class="ai-company-bio-{{ ai_gen_id }} color-{{ block.settings.color_scheme }}"
+  {{ block.shopify_attributes }}
+>
+  <div class="ai-company-bio-container-{{ ai_gen_id }}">
+    <div class="ai-company-bio-main-card-{{ ai_gen_id }} {% if settings.animations_reveal_on_scroll %}ai-company-bio-animate-{{ ai_gen_id }}{% endif %}">
+      <div class="ai-company-bio-main-content-{{ ai_gen_id }}">
+        <div class="ai-company-bio-main-text-{{ ai_gen_id }}">
+          {% if block.settings.company_heading != blank %}
+            <h2 class="ai-company-bio-heading-{{ ai_gen_id }}"><span class="ai-company-bio-wellness-icon-{{ ai_gen_id }}">🌿</span>
+              {{ block.settings.company_heading }}
+            </h2>
+          {% endif %}
+          {% if block.settings.company_description != blank %}
+            <div class="ai-company-bio-text-{{ ai_gen_id }}">{{ block.settings.company_description }}</div>
+          {% endif %}
+
+          {% if block.settings.founding_story != blank %}
+            <div class="ai-company-bio-text-{{ ai_gen_id }}">{{ block.settings.founding_story }}</div>
+          {% endif %}
+
+          {% if block.settings.show_wellness_features %}
+            <div class="ai-company-bio-wellness-feature-{{ ai_gen_id }}">
+              <div>{{ block.settings.wellness_feature_1 }}</div>
+            </div>
+            <div class="ai-company-bio-wellness-feature-{{ ai_gen_id }}">
+              <div>{{ block.settings.wellness_feature_2 }}</div>
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="ai-company-bio-main-image-side-{{ ai_gen_id }}">
+          {% if block.settings.company_image %}
+            <div class="ai-company-bio-main-image-wrapper-{{ ai_gen_id }}">
+              <img
+                src="{{ block.settings.company_image | image_url: width: 800}}"
+                alt="{{ block.settings.company_image.alt | escape }}"
+                class="ai-company-bio-main-image-{{ ai_gen_id }}"loading="lazy"
+                width="{{ block.settings.company_image.width }}"
+                height="{{ block.settings.company_image.height }}"
+              >
+            </div>
+          {% else %}
+            <div class="ai-company-bio-main-image-placeholder-{{ ai_gen_id }}">
+              {{'image' | placeholder_svg_tag }}<div class="ai-company-bio-empty-state-{{ ai_gen_id }}">
+                Add wellness center image
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if block.settings.mission_statement != blank or block.settings.vision_statement != blank %}
+      <div class="ai-company-bio-secondary-cards-{{ ai_gen_id }}">
+        {% if block.settings.mission_statement != blank %}
+          <div class="ai-company-bio-secondary-card-{{ ai_gen_id }} {% if settings.animations_reveal_on_scroll %}ai-company-bio-animate-{{ ai_gen_id }}{% endif %}">
+            <h3 class="ai-company-bio-subheading-{{ ai_gen_id }}">
+              <span class="ai-company-bio-wellness-icon-{{ ai_gen_id }}">🎯</span>
+              {{ block.settings.mission_heading }}
+            </h3>
+            <div class="ai-company-bio-text-{{ ai_gen_id }}">{{ block.settings.mission_statement }}</div>
+            {% if block.settings.show_wellness_features %}
+              <div class="ai-company-bio-wellness-feature-{{ ai_gen_id }}">
+                <div>{{ block.settings.wellness_feature_3 }}</div>
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if block.settings.vision_statement != blank %}
+          <div class="ai-company-bio-secondary-card-{{ ai_gen_id }} {% if settings.animations_reveal_on_scroll %}ai-company-bio-animate-{{ ai_gen_id }}{% endif %}">
+            <h3 class="ai-company-bio-subheading-{{ ai_gen_id }}">
+              <span class="ai-company-bio-wellness-icon-{{ ai_gen_id }}">🌟</span>
+              {{ block.settings.vision_heading }}
+            </h3>
+            <div class="ai-company-bio-text-{{ ai_gen_id }}">{{ block.settings.vision_statement }}</div>
+            {% if block.settings.show_wellness_features %}
+              <div class="ai-company-bio-wellness-feature-{{ ai_gen_id }}">
+                <div>{{ block.settings.wellness_feature_4 }}</div>
+              </div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if block.settings.show_stats %}
+      <div class="ai-company-bio-stats-{{ ai_gen_id }} {% if settings.animations_reveal_on_scroll %}ai-company-bio-animate-{{ ai_gen_id }}{% endif %}">
+        {% if block.settings.stat_1_number != blank %}
+          <div class="ai-company-bio-stat-{{ ai_gen_id }}">
+            <div class="ai-company-bio-stat-number-{{ ai_gen_id }}">{{ block.settings.stat_1_number }}</div>
+            <div class="ai-company-bio-stat-label-{{ ai_gen_id }}">{{ block.settings.stat_1_label }}</div>
+          </div>
+        {% endif %}
+
+        {% if block.settings.stat_2_number != blank %}
+          <div class="ai-company-bio-stat-{{ ai_gen_id }}">
+            <div class="ai-company-bio-stat-number-{{ ai_gen_id }}">{{ block.settings.stat_2_number }}</div>
+            <div class="ai-company-bio-stat-label-{{ ai_gen_id }}">{{ block.settings.stat_2_label }}</div>
+          </div>
+        {% endif %}
+
+        {% if block.settings.stat_3_number != blank %}
+          <div class="ai-company-bio-stat-{{ ai_gen_id }}">
+            <div class="ai-company-bio-stat-number-{{ ai_gen_id }}">{{ block.settings.stat_3_number }}</div>
+            <div class="ai-company-bio-stat-label-{{ ai_gen_id }}">{{ block.settings.stat_3_label }}</div>
+          </div>
+        {% endif %}
+
+        {% if block.settings.stat_4_number != blank %}
+          <div class="ai-company-bio-stat-{{ ai_gen_id }}">
+            <div class="ai-company-bio-stat-number-{{ ai_gen_id }}">{{ block.settings.stat_4_number }}</div>
+            <div class="ai-company-bio-stat-label-{{ ai_gen_id }}">{{ block.settings.stat_4_label }}</div>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</company-bio-{{ ai_gen_id }}>
+
+<script>
+  (function() {
+    class CompanyBio{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+      }
+
+      connectedCallback() {
+        {% if settings.animations_reveal_on_scroll %}
+          this.setupScrollAnimations();
+        {% endif %}this.setupWellnessEffects();
+      }
+
+      {% if settings.animations_reveal_on_scroll %}
+        setupScrollAnimations() {
+          const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('animate-in');
+              }
+            });
+          }, {
+            threshold: 0.1,rootMargin: '0px 0px -30px 0px'
+          });
+
+          const animatedElements = this.querySelectorAll('.ai-company-bio-animate-{{ ai_gen_id }}');
+          animatedElements.forEach((element, index) => {
+            element.style.transitionDelay = `${index * 0.15}s`;
+            observer.observe(element);
+          });
+        }
+      {% endif %}
+
+      setupWellnessEffects() {
+        const mainCard = this.querySelector('.ai-company-bio-main-card-{{ ai_gen_id }}');
+        const secondaryCards = this.querySelectorAll('.ai-company-bio-secondary-card-{{ ai_gen_id }}');
+        const stats = this.querySelectorAll('.ai-company-bio-stat-{{ ai_gen_id }}');
+
+        if (mainCard) {
+          mainCard.addEventListener('mouseenter', () => {
+            mainCard.style.borderColor = 'rgba(139, 195, 74, 0.4)';
+          });
+          
+          mainCard.addEventListener('mouseleave', () => {
+            mainCard.style.borderColor = 'rgba(139, 195, 74, 0.2)';
+          });
+        }
+
+        secondaryCards.forEach((card) => {
+          card.addEventListener('mouseenter', () => {
+            card.style.borderColor = 'rgba(139, 195, 74, 0.4)';
+          });
+          
+          card.addEventListener('mouseleave', () => {
+            card.style.borderColor = 'rgba(139, 195, 74, 0.2)';
+          });
+        });
+
+        stats.forEach((stat) => {
+          stat.addEventListener('mouseenter', () => {
+            stat.style.borderColor = 'rgba(139, 195, 74, 0.3)';
+          });
+          
+          stat.addEventListener('mouseleave', () => {
+            stat.style.borderColor = 'rgba(139, 195, 74, 0.2)';
+          });
+        });
+      }
+    }
+
+    customElements.define('company-bio-{{ ai_gen_id }}', CompanyBio{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Wellness company bio",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "text_alignment",
+      "label": "Text alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "header",
+      "content": "Wellness features"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_wellness_features",
+      "label": "Show wellness features",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Company information"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "company_heading",
+      "label": "Company heading",
+      "default": "Transforming wellness through technology"
+    },
+    {
+      "type": "richtext",
+      "id": "company_description",
+      "label": "Company description",
+      "default": "<p>We provide comprehensive wellness solutions that integrate seamlessly into your lifestyle, offering personalized health insights, mindfulness programs, and holistic wellness services designed for the modern world.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "company_image",
+      "label": "Company image"
+    },
+    {
+      "type": "richtext",
+      "id": "founding_story",
+      "label": "Founding story",
+      "default": "<p>Born from the recognition that traditional healthcare often treats symptoms rather than promoting holistic wellness, our platform was created by wellness experts, technologists, and healthcare professionals united by a common vision of preventive, personalized care.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Mission statement"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "mission_heading",
+      "label": "Mission heading",
+      "default": "Our wellness mission"
+    },
+    {
+      "type": "richtext",
+      "id": "mission_statement",
+      "label": "Mission statement",
+      "default": "<p>To democratize wellness by making personalized health and mindfulness solutions accessible to everyone, empowering individuals to achieve optimal well-being through innovative technology and evidence-based practices.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Vision statement"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "vision_heading",
+      "label": "Vision heading",
+      "default": "Our wellness vision"
+    },
+    {
+      "type": "richtext",
+      "id": "vision_statement",
+      "label": "Vision statement",
+      "default": "<p>To create a world where wellness is not a luxury but a fundamental right, where every individual has access to the tools, knowledge, and support needed to live their healthiest, most fulfilling life.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Wellness features"
+    },
+    {
+      "type": "text",
+      "id": "wellness_feature_1",
+      "label": "Wellness feature 1",
+      "default": "Personalized wellness plans based on your unique health profile"
+    },
+    {
+      "type": "text",
+      "id": "wellness_feature_2",
+      "label": "Wellness feature 2",
+      "default": "24/7 access to certified wellness coaches and health experts"
+    },
+    {
+      "type": "text",
+      "id": "wellness_feature_3",
+      "label": "Wellness feature 3",
+      "default": "Evidence-based programs for stress management and mental clarity"
+    },
+    {
+      "type": "text",
+      "id": "wellness_feature_4",
+      "label": "Wellness feature 4",
+      "default": "Comprehensive tracking and insights for holistic health monitoring"
+    },
+    {
+      "type": "header",
+      "content": "Wellness statistics"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_stats",
+      "label": "Show statistics",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "stat_1_number",
+      "label": "Statistic 1 number",
+      "default": "10,000+"
+    },
+    {
+      "type": "text",
+      "id": "stat_1_label",
+      "label": "Statistic 1 label",
+      "default": "Lives transformed"
+    },
+    {
+      "type": "text",
+      "id": "stat_2_number",
+      "label": "Statistic 2 number",
+      "default": "95%"
+    },
+    {
+      "type": "text",
+      "id": "stat_2_label",
+      "label": "Statistic 2 label",
+      "default": "User satisfaction"
+    },
+    {
+      "type": "text",
+      "id": "stat_3_number",
+      "label": "Statistic 3 number",
+      "default": "50+"
+    },
+    {
+      "type": "text",
+      "id": "stat_3_label",
+      "label": "Statistic 3 label",
+      "default": "Wellness programs"
+    },
+    {
+      "type": "text",
+      "id": "stat_4_number",
+      "label": "Statistic 4 number",
+      "default": "24/7"
+    },
+    {
+      "type": "text",
+      "id": "stat_4_label",
+      "label": "Statistic 4 label",
+      "default": "Wellness support"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#f1f8e9"
+    },
+    {
+      "type": "color_background",
+      "id": "background_gradient",
+      "label": "Background gradient"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#2e7d32"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color",
+      "default": "#1b5e20"
+    },
+    {
+      "type": "color",
+      "id": "subheading_color",
+      "label": "Subheading color",
+      "default": "#2e7d32"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#4caf50"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "main_heading_size",
+      "min": 28,
+      "max": 72,
+      "step": 2,
+      "unit": "px",
+      "label": "Main heading size",
+      "default": 42
+    },
+    {
+      "type": "range",
+      "id": "subheading_size",
+      "min": 18,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Subheading size",
+      "default": 22
+    },
+    {
+      "type": "range",
+      "id": "body_text_size",
+      "min": 14,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Body text size",
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Spacing"
+    },
+    {
+      "type": "range",
+      "id": "section_padding_top",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Section padding top",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "section_padding_bottom",
+      "min": 0,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Section padding bottom",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "cards_spacing",
+      "min": 20,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Spacing between main and secondary cards",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "main_card_gap",
+      "min": 20,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Main card content gap",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "secondary_cards_gap",
+      "min": 16,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "label": "Secondary cards gap",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "heading_margin",
+      "min": 8,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Heading margin bottom",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "text_margin",
+      "min": 8,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Text margin bottom",
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Card style"
+    },
+    {
+      "type": "range",
+      "id": "main_card_padding",
+      "min": 24,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Main card padding",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "main_card_border_radius",
+      "min": 8,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Main card border radius",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "secondary_card_padding",
+      "min": 20,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "label": "Secondary card padding",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "secondary_card_border_radius",
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Secondary card border radius",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "image_border_radius",
+      "min": 4,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Image border radius",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "stat_border_radius",
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Statistic border radius",
+      "default": 14
+    }
+  ],
+  "presets": [
+    {
+      "name": "Wellness company bio"
+    }
+  ]
+}
+{% endschema %}

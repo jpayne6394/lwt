@@ -1,0 +1,233 @@
+{% stylesheet %}
+/* --- Section Wavy Divider --- */
+.trust-card-wave {
+  width: 100%;
+  min-height: 42px;
+  margin-bottom: -32px;
+  pointer-events: none;
+  z-index: 2;
+  position: relative;
+}
+.trust-card-wrapper {
+  background: #fff9f5;
+  border-radius: 36px;
+  padding: 7.5rem 3vw 5.2rem;
+  max-width: 1100px;
+  margin: 7rem auto 0;
+  text-align: center;
+  box-shadow: 0 32px 98px 0 rgba(74,60,132,0.10), 0 1.5px 12px rgba(74,60,132,0.06);
+  position: relative;
+  overflow: visible;
+  /* Soft linen grid pattern + gradient */
+  background-image:
+    url('data:image/svg+xml;utf8,<svg width="12" height="12" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="12" height="12" fill="rgba(255,255,255,0.02)"/><path d="M0 6h12M6 0v12" stroke="rgba(74,60,132,0.03)" stroke-width="0.5"/></svg>'),
+    linear-gradient(128deg, #fff9f5 60%, #f5e6fa 120%);
+}
+.trust-card-logo-circle {
+  position: absolute;
+  top: -68px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fff;
+  border-radius: 50%;
+  width: 110px;
+  height: 110px;
+  box-shadow: 0 7px 28px rgba(74,60,132,0.13), 0 1.5px 12px rgba(74,60,132,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #e0cfa3;
+  z-index: 3;
+}
+.trust-card-logo-circle img {
+  width: 88px; height: 88px; object-fit: contain;
+}
+
+.trust-card-script {
+  font-family: 'Dancing Script', cursive;
+  font-size: 1.68rem;
+  color: #a0875d;
+  opacity: 0.92;
+  margin-bottom: 1.25rem; /* increased for more space */
+  margin-top: 0.1rem;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+}
+
+.trust-card-heading {
+  font-size: clamp(2.3rem, 4.6vw, 2.8rem);
+  font-weight: 800;
+  color: #3e2764;
+  margin-bottom: 1.3rem;
+  margin-top: 0.3rem;
+  line-height: 1.16;
+}
+
+/* ---- Underline motif for headline ---- */
+.heading-underline-motif {
+  margin: -0.5rem auto 1.6rem auto;
+  display: flex;
+  justify-content: center;
+  opacity: 0.88;
+  pointer-events: none;
+}
+.heading-underline-motif svg {
+  display: block;
+}
+
+.trust-card-text {
+  font-size: clamp(1.35rem, 2.5vw, 1.5rem); /* increased min and max font size */
+  color: #463858;
+  max-width: 690px;
+  margin: 0 auto 2.9rem;
+  line-height: 1.88; /* slightly increased for easier reading */
+  letter-spacing: 0.013em;
+  text-align: center;
+  opacity: 0.99;
+}
+
+.trust-card-button a {
+  display: inline-block;
+  background: #fff;
+  color: #6b519b;
+  border: 2px solid #e0cfa3;
+  padding: 1.1rem 2.8rem;
+  font-size: 1.23rem;
+  font-weight: 700;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: all 0.22s;
+  box-shadow: 0 1px 7px 0 rgba(190,150,130,0.07);
+  letter-spacing: 0.03em;
+  position: relative;
+}
+.trust-card-button a:hover {
+  background: #f7f1ff;
+  color: #3e2764;
+  border-color: #ccb26c;
+  box-shadow: 0 4px 16px 0 rgba(160,120,90,0.10);
+  transform: translateY(-1px) scale(1.03);
+}
+/* --- Micro motif: e.g. leaf, abstract bg element (optional) --- */
+.trust-card-motif {
+  position: absolute;
+  bottom: -22px; right: -38px;
+  z-index: 1;
+  opacity: 0.11;
+  width: 110px;
+  pointer-events: none;
+}
+@media (max-width: 900px) {
+  .trust-card-wrapper {padding: 5rem 0.6rem 3.5rem; max-width: 98vw;}
+  .trust-card-logo-circle {width: 76px; height: 76px; top: -36px;}
+  .trust-card-logo-circle img {width: 52px; height: 52px;}
+  .trust-card-script {font-size: 1.28rem;}
+  .trust-card-text {font-size: 1.09rem;}
+}
+@media (max-width: 600px) {
+  .trust-card-wrapper {padding: 3.2rem 0.2rem 2.2rem;}
+  .trust-card-logo-circle {
+    width: 72px;
+    height: 72px;
+    top: -28px;
+  }
+  .trust-card-logo-circle img {
+    width: 50px;
+    height: 50px;
+  }
+  .trust-card-script {font-size: 1.15rem;}
+  .trust-card-heading {font-size: 1.25rem;}
+}
+  .trust-card-script {
+    margin-top: 1.3rem;  /* Add or increase this value */
+    margin-bottom: 0.7rem;
+  }
+}
+
+{% endstylesheet %}
+
+<!-- Wavy divider SVG accent -->
+<div class="trust-card-wave" aria-hidden="true">
+  <svg width="100%" height="48" viewBox="0 0 1400 48" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <path d="M0,40 C180,70 300,10 700,32 C1100,52 1220,5 1400,40 V48 H0 Z" fill="#fffaf7"/>
+    <path d="M0,38 C210,64 380,12 700,29 C1020,44 1190,4 1400,38" stroke="#e0cfa3" stroke-opacity="0.14" stroke-width="5"/>
+  </svg>
+</div>
+
+<section class="trust-card-wrapper">
+  {% if section.settings.logo %}
+    <div class="trust-card-logo-circle">
+      <img src="{{ section.settings.logo | image_url: width: 120 }}" alt="LWT Logo" />
+    </div>
+  {% endif %}
+  
+  {% if section.settings.script_text %}
+    <div class="trust-card-script">{{ section.settings.script_text }}</div>
+  {% endif %}
+  <h2 class="trust-card-heading">{{ section.settings.heading }}</h2>
+  <div class="heading-underline-motif">
+    <svg width="64" height="9" viewBox="0 0 64 9" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="32" cy="4.5" rx="30" ry="2.5" fill="#e0cfa3" fill-opacity="0.22"/>
+    </svg>
+  </div>
+  <p class="trust-card-text">{{ section.settings.paragraph }}</p>
+
+  <div class="trust-card-button">
+    <a href="{{ section.settings.button_link }}">{{ section.settings.button_label }}</a>
+  </div>
+  <!-- Optional motif
+  <div class="trust-card-motif">
+    <svg viewBox="0 0 70 60"><ellipse cx="40" cy="30" rx="30" ry="14" fill="#e0cfa3"/></svg>
+  </div>
+  -->
+</section>
+
+<!-- Google Fonts for script font -->
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500;600&display=swap" rel="stylesheet">
+
+{% schema %}
+{
+  "name": "Trust Card",
+  "settings": [
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Top Logo (Floating Circle)"
+    },
+    {
+      "type": "text",
+      "id": "script_text",
+      "label": "Script/Handwritten Text",
+      "default": "Welcome to Living Well Today"
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Headline",
+      "default": "Personalized. Preventive. Primary."
+    },
+    {
+      "type": "textarea",
+      "id": "paragraph",
+      "label": "Body Text",
+      "default": "For 25 years, Living Well Today has helped thousands find answers, clarity, and real solutions when conventional care fell short. Book a consult, shop premium protocols, or just ask a question—this is true personalized care, for you."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Button Label",
+      "default": "About Us!"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button Link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Trust Card"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,236 @@
+<div class="how-meet-section">
+  <div class="how-it-works">
+    <div class="how-it-works-header">{{ section.settings.how_heading }}</div>
+    <div class="dropdown-list">
+      {% for block in section.blocks %}
+        <div class="dropdown-item">
+          <div class="dropdown-title">{{ block.settings.step_title }} <span>+</span></div>
+          <div class="dropdown-content">{{ block.settings.step_description }}</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="book-cta-tile" style="background-image: url('{{ section.settings.book_image | image_url }}');">
+      <div class="cta-overlay">
+        <h3>{{ section.settings.book_heading }}</h3>
+        <p>{{ section.settings.book_text }}</p>
+        <a href="{{ section.settings.book_link }}" class="btn-pill-light">{{ section.settings.book_button_label }}</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="meet-the-experts">
+    <img src="{{ section.settings.experts_image | image_url }}" alt="Meet the Experts">
+    <div class="meet-experts-content">
+      <h3 class="purple-header">{{ section.settings.experts_heading }}</h3>
+      <p>{{ section.settings.experts_text }}</p>
+      <a href="{{ section.settings.experts_link }}" class="btn-pill">{{ section.settings.experts_button_label }}</a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .how-meet-section {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 3rem 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .how-it-works, .meet-the-experts {
+    flex: 1;
+    background: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dropdown-list {
+    margin: 3rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .dropdown-item {
+    border-bottom: 1px solid #eee;
+  }
+
+  .dropdown-title {
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    background: #f9f7ff;
+    font-weight: 600;
+    color: #3e2764;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .dropdown-content {
+    padding: 1rem 1.5rem;
+    display: none;
+    color: #444;
+  }
+
+  .dropdown-item.active .dropdown-content {
+    display: block;
+  }
+
+  .how-it-works-header {
+    padding: 1.5rem;
+    background: #3e2764;
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  .book-cta-tile {
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    border-radius: 12px;
+    overflow: hidden;
+    flex: 1;
+    min-height: 350px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+  }
+
+  .cta-overlay {
+    background: rgba(62,39,100,0.5);
+    color: #fff;
+    padding: 2rem;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .cta-overlay h3 {
+    color: #fff;
+    margin-top: .1rem;
+    margin-bottom: .8rem;
+  }
+
+  .cta-overlay p, .meet-experts-content p {
+    margin-bottom: 1.5rem;
+    max-width: 85%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .meet-the-experts img {
+    width: 100%;
+    height: auto;
+    display: block;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+
+  .meet-experts-content {
+    padding: 2rem;
+    text-align: center;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .meet-experts-content h3, .purple-header {
+    color: #3e2764;
+    margin-bottom: 1rem;
+    font-size: 1.8rem;
+    margin-top: 0.5rem;
+}
+
+  .btn-pill-light {
+    background: #fff;
+    color: #3e2764;
+    padding: 0.75rem 2rem;
+    border-radius: 999px;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  .btn-pill-light:hover {
+    background: #e4d8f3;
+    color: #3e2764;
+  }
+
+  .btn-pill {
+    background: #3e2764;
+    color: #fff;
+    padding: 0.75rem 2rem;
+    border-radius: 999px;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.3s;
+  }
+
+  .btn-pill:hover {
+    background: #291954;
+  }
+
+  @media (max-width: 768px) {
+    .how-meet-section {
+      flex-direction: column;
+    }
+    .book-cta-tile {
+      align-items: center;
+    }
+    .cta-overlay {
+      justify-content: center;
+    }
+  }
+</style>
+
+<script>
+  document.querySelectorAll('.dropdown-title').forEach(item => {
+    item.addEventListener('click', () => {
+      item.parentElement.classList.toggle('active');
+    });
+  });
+</script>
+
+
+
+
+
+{% schema %}
+{
+  "name": "How & Meet Experts",
+  "settings": [
+    {"type": "text", "id": "how_heading", "label": "How It Works Heading", "default": "How It Works"},
+    {"type": "image_picker", "id": "experts_image", "label": "Experts Image"},
+    {"type": "text", "id": "experts_heading", "label": "Experts Heading", "default": "Meet Our Experts"},
+    {"type": "textarea", "id": "experts_text", "label": "Experts Text", "default": "Our dedicated team is ready to guide you."},
+    {"type": "url", "id": "experts_link", "label": "Experts Page Link"},
+    {"type": "text", "id": "experts_button_label", "label": "Experts Button Label", "default": "Meet the Team"},
+    {"type": "image_picker", "id": "book_image", "label": "Book Now Image"},
+    {"type": "text", "id": "book_heading", "label": "Book CTA Heading", "default": "Ready to Begin?"},
+    {"type": "textarea", "id": "book_text", "label": "Book CTA Text", "default": "Book your initial consultation today and start your journey to better health."},
+    {"type": "url", "id": "book_link", "label": "Book CTA Link"},
+    {"type": "text", "id": "book_button_label", "label": "Book Button Label", "default": "Book Now"}
+  ],
+  "blocks": [
+    {"type": "step", "name": "Step", "settings": [
+      {"type": "text", "id": "step_title", "label": "Step Title", "default": "Step 1"},
+      {"type": "textarea", "id": "step_description", "label": "Step Description", "default": "Description of the step."}
+    ]}
+  ],
+  "presets": [
+    {"name": "How & Meet Experts", "blocks": [{"type": "step"}, {"type": "step"}, {"type": "step"}]}
+  ]
+}
+{% endschema %}

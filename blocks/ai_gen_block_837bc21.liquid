@@ -1,0 +1,459 @@
+{% doc %}
+  @prompt
+    Convert the collection ticker from a block to a standalone section format while keeping all CSS, HTML, and functionality exactly the same. Apply the JavaScript fixes for custom element registration conflicts, error handling, variable definitions, event listeners, and router conflicts. Make this appear in the "Add section" menu as a complete section with all the same styling, markup, settings, and fixed JavaScript functionality.
+
+{% enddoc %}
+{% assign ai_gen_id = section.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-collection-ticker-{{ ai_gen_id }} {
+    width: 100%;
+    overflow: hidden;
+    background-color: {{ section.settings.background_color }};
+    padding: {{ section.settings.padding_top }}px 0 {{ section.settings.padding_bottom }}px;
+  }
+
+  .ai-collection-ticker-container-{{ ai_gen_id }} {
+    position: relative;
+    width: 100%;
+    height: {{ section.settings.ticker_height }}px;}
+
+  .ai-collection-ticker-track-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    height: 100%;animation: ai-collection-ticker-scroll-{{ ai_gen_id }} {{ section.settings.scroll_speed }}s linear infinite;will-change: transform;
+  }
+
+  .ai-collection-ticker-track-{{ ai_gen_id }}:hover {
+    animation-play-state: {{ section.settings.pause_on_hover | default: true | ternary: 'paused', 'running' }};
+  }
+
+  .ai-collection-ticker-item-{{ ai_gen_id }} {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: {{ section.settings.item_spacing }}px;
+    margin-right: {{ section.settings.item_spacing }}px;
+    white-space: nowrap;
+  }
+
+  .ai-collection-ticker-image-{{ ai_gen_id }} {
+    width: {{ section.settings.image_size }}px;
+    height: {{ section.settings.image_size }}px;
+    border-radius: {{ section.settings.image_border_radius }}px;
+    object-fit: cover;flex-shrink: 0;
+  }
+
+  .ai-collection-ticker-image-placeholder-{{ ai_gen_id }} {
+    width: {{ section.settings.image_size }}px;
+    height: {{ section.settings.image_size }}px;
+    border-radius: {{ section.settings.image_border_radius }}px;
+    background-color: #f4f4f4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .ai-collection-ticker-image-placeholder-{{ ai_gen_id }} svg {
+    width: 60%;
+    height: 60%;
+    opacity: 0.5;
+  }
+
+  .ai-collection-ticker-text-{{ ai_gen_id }} {
+    color: {{ section.settings.text_color }};
+    font-size: {{ section.settings.font_size }}px;
+    font-weight: {{ section.settings.font_weight }};
+    text-decoration: none;
+  }
+
+  .ai-collection-ticker-text-{{ ai_gen_id }}:hover {
+    color: {{ section.settings.text_hover_color }};
+  }
+
+  .ai-collection-ticker-separator-{{ ai_gen_id }} {
+    color: {{ section.settings.separator_color }};
+    font-size: {{ section.settings.font_size }}px;
+    margin: 0 {{ section.settings.item_spacing }}px;
+  }
+
+  @keyframes ai-collection-ticker-scroll-{{ ai_gen_id }} {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-collection-ticker-{{ ai_gen_id }} {
+      padding: {{ section.settings.padding_top | times: 0.7 }}px 0 {{ section.settings.padding_bottom | times: 0.7 }}px;
+    }
+
+    .ai-collection-ticker-container-{{ ai_gen_id }} {
+      height: {{ section.settings.ticker_height | times: 0.8 }}px;
+    }
+
+    .ai-collection-ticker-image-{{ ai_gen_id }},
+    .ai-collection-ticker-image-placeholder-{{ ai_gen_id }} {
+      width: {{ section.settings.image_size | times: 0.8 }}px;
+      height: {{ section.settings.image_size | times: 0.8 }}px;
+    }
+
+    .ai-collection-ticker-text-{{ ai_gen_id }} {
+      font-size: {{ section.settings.font_size | times: 0.9 }}px;
+    }
+  }
+{% endstyle %}
+
+<collection-ticker-{{ ai_gen_id }} class="ai-collection-ticker-{{ ai_gen_id }}">
+  <div class="ai-collection-ticker-container-{{ ai_gen_id }}">
+    <div class="ai-collection-ticker-track-{{ ai_gen_id }}">
+      {% liquid
+        assign collections_to_show = section.settings.collections
+        if collections_to_show.size == 0
+          assign collections_to_show = collections
+        endif
+      %}
+
+      {% for collection in collections_to_show limit: 20 %}
+        <div class="ai-collection-ticker-item-{{ ai_gen_id }}">
+          {% if section.settings.show_images %}
+            {% if collection.featured_image %}
+              <img
+                src="{{ collection.featured_image | image_url: width: 100}}"
+                alt="{{ collection.featured_image.alt | escape }}"
+                class="ai-collection-ticker-image-{{ ai_gen_id }}"
+                loading="lazy"width="100"
+                height="100"
+              >
+            {% else %}
+              <div class="ai-collection-ticker-image-placeholder-{{ ai_gen_id }}">
+                {{ 'collection-1' | placeholder_svg_tag }}
+              </div>
+            {% endif %}
+          {% endif %}<a href="{{ collection.url }}" class="ai-collection-ticker-text-{{ ai_gen_id }}">
+            {{ collection.title }}
+          </a></div>
+
+        {% unless forloop.last %}
+          <span class="ai-collection-ticker-separator-{{ ai_gen_id }}">{{ section.settings.separator }}</span>
+        {% endunless %}
+      {% endfor %}
+
+      {% for collection in collections_to_show limit: 20 %}
+        <div class="ai-collection-ticker-item-{{ ai_gen_id }}">
+          {% if section.settings.show_images %}
+            {% if collection.featured_image %}
+              <img
+                src="{{ collection.featured_image | image_url: width: 100 }}"
+                alt="{{ collection.featured_image.alt | escape }}"
+                class="ai-collection-ticker-image-{{ ai_gen_id }}"
+                loading="lazy"
+                width="100"
+                height="100"
+              >
+            {% else %}
+              <div class="ai-collection-ticker-image-placeholder-{{ ai_gen_id }}">
+                {{ 'collection-1' | placeholder_svg_tag }}
+              </div>
+            {% endif %}
+          {% endif %}
+
+          <a href="{{ collection.url }}" class="ai-collection-ticker-text-{{ ai_gen_id }}">
+            {{ collection.title }}
+          </a>
+        </div>
+
+        {% unless forloop.last %}
+          <span class="ai-collection-ticker-separator-{{ ai_gen_id }}">{{ section.settings.separator }}</span>
+        {% endunless %}
+      {% endfor %}
+    </div>
+  </div>
+</collection-ticker-{{ ai_gen_id }}><script>
+  (function() {
+    'use strict';
+    const elementName = 'collection-ticker-{{ ai_gen_id }}';
+    
+    if (customElements.get(elementName)) {
+      return;
+    }
+
+    class CollectionTicker{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+        this.isConnected = false;
+        this.resizeObserver = null;
+        this.track = null;
+      }
+
+      connectedCallback() {
+        if (this.isConnected) return;
+        this.isConnected = true;
+        
+        try {
+          this.init();
+        } catch (error) {
+          console.warn('Collection ticker initialization failed:', error);
+        }
+      }
+
+      disconnectedCallback() {
+        this.isConnected = false;
+        this.cleanup();
+      }
+
+      init() {
+        this.track = this.querySelector('.ai-collection-ticker-track-{{ ai_gen_id }}');
+        if (!this.track) return;
+
+        this.setupAnimation();
+        this.setupResizeObserver();}
+
+      setupAnimation() {
+        if (!this.track) return;
+        
+        const items = this.track.children;
+        if (items.length === 0) return;
+
+        let totalWidth = 0;
+        Array.from(items).forEach(item => {
+          totalWidth += item.offsetWidth;
+        });
+
+        if (totalWidth > 0) {
+          this.track.style.width = `${totalWidth * 2}px`;
+        }
+      }
+
+      setupResizeObserver() {
+        if (typeof ResizeObserver === 'undefined') return;
+
+        try {
+          this.resizeObserver = new ResizeObserver(() => {
+            this.setupAnimation();
+          });
+          this.resizeObserver.observe(this);
+        } catch (error) {
+          console.warn('ResizeObserver setup failed:', error);
+        }
+      }
+
+      cleanup() {
+        if (this.resizeObserver) {
+          try {
+            this.resizeObserver.disconnect();
+          } catch (error) {
+            console.warn('ResizeObserver cleanup failed:', error);
+          }
+          this.resizeObserver = null;
+        }
+      }
+    }
+
+    try {
+      customElements.define(elementName, CollectionTicker{{ ai_gen_id }});
+    } catch (error) {
+      console.warn('Failed to define custom element:', error);
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Collection ticker",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Collections"
+    },
+    {
+      "type": "collection_list",
+      "id": "collections",
+      "label": "Collections",
+      "info": "Leave empty to show all collections",
+      "limit": 20
+    },
+    {
+      "type": "checkbox",
+      "id": "show_images",
+      "label": "Show collection images",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "separator",
+      "label": "Separator",
+      "default": "•"
+    },
+    {
+      "type": "header",
+      "content": "Animation"
+    },
+    {
+      "type": "range",
+      "id": "scroll_speed",
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "unit": "s",
+      "label": "Scroll speed",
+      "default": 30
+    },
+    {
+      "type": "checkbox",
+      "id": "pause_on_hover",
+      "label": "Pause on hover",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "ticker_height",
+      "min": 40,
+      "max": 120,
+      "step": 5,
+      "unit": "px",
+      "label": "Ticker height",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "item_spacing",
+      "min": 10,
+      "max": 50,
+      "step": 5,
+      "unit": "px",
+      "label": "Item spacing",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Top padding",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Bottom padding",
+      "default": 20
+    },
+    {
+      "type": "header",
+      "content": "Images"
+    },
+    {
+      "type": "range",
+      "id": "image_size",
+      "min": 20,
+      "max": 80,
+      "step": 5,
+      "unit": "px",
+      "label": "Image size",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "image_border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Image border radius",
+      "default": 4
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 16
+    },
+    {
+      "type": "select",
+      "id": "font_weight",
+      "label": "Font weight",
+      "options": [
+        {
+          "value": "300",
+          "label": "Light"
+        },
+        {
+          "value": "400",
+          "label": "Normal"
+        },
+        {
+          "value": "500",
+          "label": "Medium"
+        },
+        {
+          "value": "600",
+          "label": "Semi-bold"
+        },
+        {
+          "value": "700",
+          "label": "Bold"
+        }
+      ],
+      "default": "400"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#f8f8f8"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "text_hover_color",
+      "label": "Text hover color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "separator_color",
+      "label": "Separator color",
+      "default": "#cccccc"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Collection ticker"
+    }
+  ]
+}
+{% endschema %}

@@ -1,0 +1,110 @@
+{% schema %}
+{
+  "name": "Rich Text Logo Wave",
+  "tag": "section",
+  "class": "section wave-rich-text",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Living Well Today"
+    },
+    {
+      "type": "select",
+      "id": "heading_size",
+      "label": "Heading size",
+      "default": "h2",
+      "options": [
+        { "label": "Small", "value": "h3" },
+        { "label": "Medium", "value": "h2" },
+        { "label": "Large", "value": "h1" }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "heading_bold",
+      "label": "Bold heading text",
+      "default": true
+    },
+    {
+      "type": "richtext",
+      "id": "description",
+      "label": "Description",
+      "default": "<p>Your section message goes here.</p>"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo_image",
+      "label": "Logo image"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color Scheme",
+      "default": "background-1"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Rich Text Logo Wave",
+      "category": "Custom"
+    }
+  ]
+}
+{% endschema %}
+
+<div class="custom-rich-text wave-rich-text color-{{ section.settings.color_scheme }}">
+  <div class="page-width">
+    <div class="rich-text__inner">
+      <{{ section.settings.heading_size }} class="rich-text__heading {% if section.settings.heading_bold %}bold{% endif %}">
+        {{ section.settings.heading }}
+      </{{ section.settings.heading_size }}>
+      {% if section.settings.logo_image != blank %}
+        <div class="logo-image-wrapper">
+          <img src="{{ section.settings.logo_image | img_url: 'medium' }}" alt="Logo" class="logo-image" />
+        </div>
+      {% endif %}
+      <div class="rich-text__text">
+        {{ section.settings.description }}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.wave-rich-text {
+  background-image: url('{{ "wave-background3.png" | asset_url }}');
+  background-size: cover;
+  background-position: bottom;
+  background-repeat: no-repeat;
+  text-align: center;
+  padding: 60px 20px;
+  color: white;
+}
+
+.wave-rich-text .logo-image-wrapper {
+  margin: 20px auto;
+  max-width: 150px;
+}
+
+.wave-rich-text .logo-image {
+  width: 100%;
+  height: auto;
+}
+
+.wave-rich-text .rich-text__heading {
+  margin-bottom: 20px;
+  color: white;
+}
+
+.wave-rich-text .rich-text__heading.bold {
+  font-weight: 700;
+}
+
+.wave-rich-text .rich-text__text {
+  max-width: 700px;
+  margin: 0 auto;
+  color: white;
+}
+</style>

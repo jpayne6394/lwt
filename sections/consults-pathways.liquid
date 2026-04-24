@@ -1,0 +1,44 @@
+{% schema %}
+{
+  "name": "Consults Pathways",
+  "settings": [],
+  "blocks": [
+    {
+      "type": "pathway",
+      "name": "Pathway",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title" },
+        { "type": "textarea", "id": "content", "label": "Content (HTML enabled)" }
+      ]
+    }
+  ],
+  
+  "presets": [{ "name": "Pathways Accordion" }]
+}
+{% endschema %}
+
+<section class="consults-pathways section--padded bg--light">
+  <div class="wrapper">
+    <h2 class="section-heading">Choose the right Wellness Pathway for your needs:</h2>
+    <div class="accordion" data-accordion>
+      {% for block in section.blocks %}
+      <div class="accordion-item">
+        <button class="accordion-header" type="button">{{ block.settings.title }}</button>
+        <div class="accordion-body">{{ block.settings.content }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<script>
+// Simple accordion toggle
+document.addEventListener('DOMContentLoaded', function(){
+  document.querySelectorAll('[data-accordion] .accordion-header').forEach(header => {
+    header.addEventListener('click', () => {
+      const body = header.nextElementSibling;
+      body.classList.toggle('is-open');
+    });
+  });
+});
+</script>

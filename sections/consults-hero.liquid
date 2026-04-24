@@ -1,0 +1,22 @@
+/* sections/consults-hero.liquid */
+{% schema %}
+{
+  "name": "Consults Hero",
+  "settings": [
+    { "type": "image_picker", "id": "image", "label": "Background image" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Discover Your Path to Wellness" },
+    { "type": "text", "id": "subheading", "label": "Subheading", "default": "Expert-led functional medicine consultations from Living Well Today." },
+    { "type": "url", "id": "button_url", "label": "Button URL"},
+    { "type": "text", "id": "button_text", "label": "Button Text", "default": "Book a Consult" }
+  ],
+  "presets": [{ "name": "Consults Hero" }]
+}
+{% endschema %}
+
+<section class="consults-hero" style="background-image: url({{ section.settings.image | img_url: '2048x' }});">
+  <div class="hero-content text-center">
+    <h1>{{ section.settings.heading }}</h1>
+    <p>{{ section.settings.subheading }}</p>
+    <a href="{{ section.settings.button_url }}" class="btn btn--primary mt-4">{{ section.settings.button_text }}</a>
+  </div>
+</section>

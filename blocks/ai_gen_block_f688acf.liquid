@@ -1,0 +1,736 @@
+{% doc %}
+  @prompt
+    Create an optimized featured collection ticker with the following specific requirements: 1) Smooth horizontal scrolling at slower speed (not 60), 2) Fixed-size product cards with properly fitted smaller product images on white background, 3) Entire card clickable with underlined "View Product" text link on hover, 4) Product title first (less bold), then vendor (all caps, bold, greyed out) positioned closer together with vendor under title, 5) Toggle for inline price vs price badge (hide badge when inline is active), 6) User controls: left/right arrows that stop scroll on hover and during interaction, 7) Toggle scroll direction (left-to-right or right-to-left), 8) Mobile: remove arrows, add swipe functionality, 9) Continuous loop with no blank sections, 10) "View All" button below product row that matches theme styling and is properly positioned above footer, 11) Stop scrolling during any user interaction, 12) Customizable collection selection with proper speed control that doesn't change when collection is linked, prudcts are not rendering, the manual scrolling si not engaged, make it more like the site theme
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-collection-ticker-{{ ai_gen_id }} {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    padding: {{ settings.spacing_sections }}px 0;
+    background: transparent;
+  }
+
+  .ai-collection-ticker-container-{{ ai_gen_id }} {
+    position: relative;
+    max-width: {{ settings.page_width }}px;
+    margin: 0 auto;
+    padding: 0 {{ settings.spacing_grid_horizontal }}px;
+  }
+
+  .ai-collection-ticker-wrapper-{{ ai_gen_id }} {
+    position: relative;
+    overflow: hidden;
+    margin: 0 60px;
+  }
+
+  .ai-collection-ticker-track-{{ ai_gen_id }} {
+    display: flex;
+    animation: ai-collection-ticker-scroll-{{ ai_gen_id }} var(--scroll-duration) linear infinite;
+    will-change: transform;
+    transition: transform 0.3s ease;
+  }
+
+  .ai-collection-ticker-track-{{ ai_gen_id }}.paused {
+    animation-play-state: paused;
+  }
+
+  .ai-collection-ticker-track-{{ ai_gen_id }}.reverse {
+    animation-direction: reverse;
+  }
+
+  .ai-collection-ticker-track-{{ ai_gen_id }}.manual-control {
+    animation: none;
+  }
+
+  @keyframes ai-collection-ticker-scroll-{{ ai_gen_id }} {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .ai-collection-ticker-card-{{ ai_gen_id }} {
+    flex: 0 0 {{ block.settings.card_width }}px;
+    margin-right: {{ settings.spacing_grid_horizontal }}px;
+    background: rgb(var(--color-background));
+    border-radius: {{ settings.card_corner_radius }}px;
+    padding: {{ block.settings.card_padding }}px;
+    text-decoration: none;
+    color: rgb(var(--color-foreground));
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    cursor: pointer;
+    display: block;
+    position: relative;
+    border: {{ settings.card_border_thickness }}px solid rgba(var(--color-foreground), {{ settings.card_border_opacity | divided_by: 100.0 }});
+    box-shadow: {{ settings.card_shadow_horizontal_offset }}px {{ settings.card_shadow_vertical_offset }}px {{ settings.card_shadow_blur }}px rgba(var(--color-shadow), {{ settings.card_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-collection-ticker-card-{{ ai_gen_id }}:hover {
+    {% if settings.animations_hover_elements == 'vertical-lift' %}
+      transform: translateY(-4px);
+    {% elsif settings.animations_hover_elements == '3d-lift' %}
+      transform: translateY(-4px) rotateX(5deg);
+    {% endif %}
+    box-shadow: {{ settings.card_shadow_horizontal_offset }}px {{ settings.card_shadow_vertical_offset | plus: 4 }}px {{ settings.card_shadow_blur | plus: 10 }}px rgba(var(--color-shadow), {{ settings.card_shadow_opacity | divided_by: 100.0 | plus: 0.1 }});
+  }
+
+  .ai-collection-ticker-image-container-{{ ai_gen_id }} {
+    width: 100%;
+    height: {{ block.settings.image_height }}px;
+    background: rgb(var(--color-background));
+    border-radius: {{ settings.media_radius }}px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: {{ settings.spacing_grid_vertical }}px;
+    position: relative;
+    border: {{ settings.media_border_thickness }}px solid rgba(var(--color-foreground), {{ settings.media_border_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-collection-ticker-image-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s ease;
+  }
+
+  .ai-collection-ticker-image-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(var(--color-foreground), 0.04);
+  }
+
+  .ai-collection-ticker-image-placeholder-{{ ai_gen_id }} svg {
+    width: 80%;
+    height: 80%;
+    opacity: 0.3;
+    fill: rgb(var(--color-foreground));
+  }
+
+  .ai-collection-ticker-card-{{ ai_gen_id }}:hover .ai-collection-ticker-image-{{ ai_gen_id }} {
+    transform: scale(1.05);
+  }
+
+  .ai-collection-ticker-content-{{ ai_gen_id }} {
+    text-align: {{ settings.card_text_alignment }};
+  }
+
+  .ai-collection-ticker-title-{{ ai_gen_id }} {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-style: {{ settings.type_header_font.style }};
+    font-weight: {{ settings.type_header_font.weight }};
+    font-size: calc({{ block.settings.title_font_size }}px * {{ settings.heading_scale | divided_by: 100.0 }});
+    color: rgb(var(--color-foreground));
+    margin: 0 0 4px 0;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .ai-collection-ticker-vendor-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-style: {{ settings.type_body_font.style }};
+    font-weight: 700;
+    font-size: calc({{ block.settings.vendor_font_size }}px * {{ settings.body_scale | divided_by: 100.0 }});
+    color: rgba(var(--color-foreground), 0.6);
+    text-transform: uppercase;
+    margin: 0 0 {{ settings.spacing_grid_vertical | divided_by: 2 }}px 0;
+    line-height: 1.2;
+    letter-spacing: 0.5px;
+  }
+
+  .ai-collection-ticker-price-inline-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-style: {{ settings.type_body_font.style }};
+    font-weight: 600;
+    font-size: calc({{ block.settings.price_font_size }}px * {{ settings.body_scale | divided_by: 100.0 }});
+    color: rgb(var(--color-foreground));
+    margin: {{ settings.spacing_grid_vertical | divided_by: 2 }}px 0 0 0;
+  }
+
+  .ai-collection-ticker-price-badge-{{ ai_gen_id }} {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgb(var(--color-button));
+    color: rgb(var(--color-button-text));
+    padding: 6px 12px;
+    border-radius: {{ settings.badge_corner_radius }}px;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: calc(12px * {{ settings.body_scale | divided_by: 100.0 }});
+    font-weight: 600;
+    box-shadow: 0 2px 4px rgba(var(--color-shadow), 0.1);
+  }
+
+  .ai-collection-ticker-view-link-{{ ai_gen_id }} {
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-size: calc(14px * {{ settings.body_scale | divided_by: 100.0 }});
+    color: rgb(var(--color-link));
+    margin-top: {{ settings.spacing_grid_vertical | divided_by: 2 }}px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    text-decoration: none;
+  }
+
+  .ai-collection-ticker-card-{{ ai_gen_id }}:hover .ai-collection-ticker-view-link-{{ ai_gen_id }} {
+    opacity: 1;
+    text-decoration: underline;
+  }
+
+  .ai-collection-ticker-arrow-{{ ai_gen_id }} {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    background: rgb(var(--color-background));
+    border: {{ settings.buttons_border_thickness }}px solid rgba(var(--color-foreground), {{ settings.buttons_border_opacity | divided_by: 100.0 }});
+    border-radius: {{ settings.buttons_radius }}px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    z-index: 2;
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba(var(--color-shadow), {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-collection-ticker-arrow-{{ ai_gen_id }}:hover {
+    background: rgb(var(--color-button));
+    border-color: rgb(var(--color-button));
+    transform: translateY(-50%) scale(1.05);
+  }
+
+  .ai-collection-ticker-arrow-{{ ai_gen_id }}:hover svg {
+    fill: rgb(var(--color-button-text));
+  }
+
+  .ai-collection-ticker-arrow-left-{{ ai_gen_id }} {
+    left: 10px;
+  }
+
+  .ai-collection-ticker-arrow-right-{{ ai_gen_id }} {
+    right: 10px;
+  }
+
+  .ai-collection-ticker-arrow-{{ ai_gen_id }} svg {
+    width: 20px;
+    height: 20px;
+    fill: rgb(var(--color-foreground));
+    transition: fill 0.3s ease;
+  }
+
+  .ai-collection-ticker-view-all-{{ ai_gen_id }} {
+    text-align: center;
+    margin-top: {{ settings.spacing_sections }}px;
+  }
+
+  .ai-collection-ticker-view-all-btn-{{ ai_gen_id }} {
+    display: inline-block;
+    padding: 15px 30px;
+    background: rgb(var(--color-button));
+    color: rgb(var(--color-button-text));
+    text-decoration: none;
+    border-radius: {{ settings.buttons_radius }}px;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    font-weight: 600;
+    font-size: calc(16px * {{ settings.body_scale | divided_by: 100.0 }});
+    transition: all 0.3s ease;
+    border: {{ settings.buttons_border_thickness }}px solid rgba(var(--color-button), {{ settings.buttons_border_opacity | divided_by: 100.0 }});
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba(var(--color-shadow), {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-collection-ticker-view-all-btn-{{ ai_gen_id }}:hover {
+    background: rgba(var(--color-button), 0.8);
+    transform: translateY(-2px);
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset | plus: 2 }}px {{ settings.buttons_shadow_blur | plus: 5 }}px rgba(var(--color-shadow), {{ settings.buttons_shadow_opacity | divided_by: 100.0 | plus: 0.1 }});
+  }
+
+  .ai-collection-ticker-empty-{{ ai_gen_id }} {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(var(--color-foreground), 0.6);
+    background: rgba(var(--color-foreground), 0.04);
+    border-radius: {{ settings.text_boxes_radius }}px;
+    border: {{ settings.text_boxes_border_thickness }}px solid rgba(var(--color-foreground), {{ settings.text_boxes_border_opacity | divided_by: 100.0 }});
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+  }
+
+  .ai-collection-ticker-empty-{{ ai_gen_id }} h3 {
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    font-weight: {{ settings.type_header_font.weight }};
+    color: rgb(var(--color-foreground));
+    margin-bottom: 8px;
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-collection-ticker-wrapper-{{ ai_gen_id }} {
+      margin: 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    .ai-collection-ticker-wrapper-{{ ai_gen_id }}::-webkit-scrollbar {
+      display: none;
+    }
+
+    .ai-collection-ticker-track-{{ ai_gen_id }} {
+      animation: none;
+      scroll-snap-align: start;
+    }
+
+    .ai-collection-ticker-card-{{ ai_gen_id }} {
+      scroll-snap-align: start;
+      flex: 0 0 {{ block.settings.card_width | times: 0.8 }}px;
+      margin-right: {{ settings.spacing_grid_horizontal | divided_by: 2 }}px;
+    }
+
+    .ai-collection-ticker-arrow-{{ ai_gen_id }} {
+      display: none;
+    }
+
+    .ai-collection-ticker-container-{{ ai_gen_id }} {
+      padding: 0 {{ settings.spacing_grid_horizontal | divided_by: 2 }}px;
+    }
+  }
+
+  @media screen and (max-width: 550px) {
+    .ai-collection-ticker-card-{{ ai_gen_id }} {
+      flex: 0 0 {{ block.settings.card_width | times: 0.7 }}px;
+    }
+  }
+{% endstyle %}
+
+<collection-ticker-{{ ai_gen_id }}
+  class="ai-collection-ticker-{{ ai_gen_id }} color-{{ block.settings.color_scheme }}"
+  data-speed="{{ block.settings.scroll_speed }}"
+  data-direction="{{ block.settings.scroll_direction }}"
+  {{ block.shopify_attributes }}
+>
+  <div class="ai-collection-ticker-container-{{ ai_gen_id }}">
+    {% if block.settings.collection != blank and block.settings.collection.products.size > 0 %}
+      <div class="ai-collection-ticker-wrapper-{{ ai_gen_id }}">
+        <button class="ai-collection-ticker-arrow-{{ ai_gen_id }} ai-collection-ticker-arrow-left-{{ ai_gen_id }}" aria-label="Previous products">
+          <svg viewBox="0 0 24 24">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+
+        <div class="ai-collection-ticker-track-{{ ai_gen_id }}" style="--scroll-duration: {{ block.settings.scroll_speed }}s;">
+          {% comment %} First set of products {% endcomment %}
+          {% for product in block.settings.collection.products limit: 20 %}
+            <a href="{{ product.url }}" class="ai-collection-ticker-card-{{ ai_gen_id }}">
+              <div class="ai-collection-ticker-image-container-{{ ai_gen_id }}">
+                {% if product.featured_image %}
+                  <img
+                    src="{{ product.featured_image | image_url: width: 300 }}"
+                    alt="{{ product.featured_image.alt | escape }}"
+                    class="ai-collection-ticker-image-{{ ai_gen_id }}"
+                    loading="lazy"
+                    width="300"
+                    height="300"
+                  >
+                {% else %}
+                  <div class="ai-collection-ticker-image-placeholder-{{ ai_gen_id }}">
+                    {{ 'product-1' | placeholder_svg_tag }}
+                  </div>
+                {% endif %}
+                
+                {% unless block.settings.show_inline_price %}
+                  <div class="ai-collection-ticker-price-badge-{{ ai_gen_id }}">
+                    {{ product.price | money }}
+                  </div>
+                {% endunless %}
+              </div>
+
+              <div class="ai-collection-ticker-content-{{ ai_gen_id }}">
+                <h3 class="ai-collection-ticker-title-{{ ai_gen_id }}">{{ product.title }}</h3>
+                {% if product.vendor != blank %}
+                  <p class="ai-collection-ticker-vendor-{{ ai_gen_id }}">{{ product.vendor }}</p>
+                {% endif %}
+                
+                {% if block.settings.show_inline_price %}
+                  <div class="ai-collection-ticker-price-inline-{{ ai_gen_id }}">
+                    {{ product.price | money }}
+                  </div>
+                {% endif %}
+                
+                <div class="ai-collection-ticker-view-link-{{ ai_gen_id }}">View Product</div>
+              </div>
+            </a>
+          {% endfor %}
+
+          {% comment %} Duplicate set for seamless loop {% endcomment %}
+          {% for product in block.settings.collection.products limit: 20 %}
+            <a href="{{ product.url }}" class="ai-collection-ticker-card-{{ ai_gen_id }}">
+              <div class="ai-collection-ticker-image-container-{{ ai_gen_id }}">
+                {% if product.featured_image %}
+                  <img
+                    src="{{ product.featured_image | image_url: width: 300 }}"
+                    alt="{{ product.featured_image.alt | escape }}"
+                    class="ai-collection-ticker-image-{{ ai_gen_id }}"
+                    loading="lazy"
+                    width="300"
+                    height="300"
+                  >
+                {% else %}
+                  <div class="ai-collection-ticker-image-placeholder-{{ ai_gen_id }}">
+                    {{ 'product-1' | placeholder_svg_tag }}
+                  </div>
+                {% endif %}
+                
+                {% unless block.settings.show_inline_price %}
+                  <div class="ai-collection-ticker-price-badge-{{ ai_gen_id }}">
+                    {{ product.price | money }}
+                  </div>
+                {% endunless %}
+              </div>
+
+              <div class="ai-collection-ticker-content-{{ ai_gen_id }}">
+                <h3 class="ai-collection-ticker-title-{{ ai_gen_id }}">{{ product.title }}</h3>
+                {% if product.vendor != blank %}
+                  <p class="ai-collection-ticker-vendor-{{ ai_gen_id }}">{{ product.vendor }}</p>
+                {% endif %}
+                
+                {% if block.settings.show_inline_price %}
+                  <div class="ai-collection-ticker-price-inline-{{ ai_gen_id }}">
+                    {{ product.price | money }}
+                  </div>
+                {% endif %}
+                
+                <div class="ai-collection-ticker-view-link-{{ ai_gen_id }}">View Product</div>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+
+        <button class="ai-collection-ticker-arrow-{{ ai_gen_id }} ai-collection-ticker-arrow-right-{{ ai_gen_id }}" aria-label="Next products">
+          <svg viewBox="0 0 24 24">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </button>
+      </div>
+
+      {% if block.settings.show_view_all and block.settings.collection.url %}
+        <div class="ai-collection-ticker-view-all-{{ ai_gen_id }}">
+          <a href="{{ block.settings.collection.url }}" class="ai-collection-ticker-view-all-btn-{{ ai_gen_id }}">
+            {{ block.settings.view_all_text }}
+          </a>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="ai-collection-ticker-empty-{{ ai_gen_id }}">
+        {% if block.settings.collection == blank %}
+          <h3>No Collection Selected</h3>
+          <p>Please select a collection in the block settings to display products.</p>
+        {% else %}
+          <h3>No Products Found</h3>
+          <p>The selected collection doesn't contain any products.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</collection-ticker-{{ ai_gen_id }}>
+
+<script>
+(function() {
+  class CollectionTicker{{ ai_gen_id }} extends HTMLElement {
+    constructor() {
+      super();
+      this.track = null;
+      this.leftArrow = null;
+      this.rightArrow = null;
+      this.isInteracting = false;
+      this.scrollSpeed = parseInt(this.dataset.speed) || 30;
+      this.scrollDirection = this.dataset.direction || 'left';
+      this.currentTranslateX = 0;
+      this.cardWidth = {{ block.settings.card_width | plus: 32 }};
+      this.totalWidth = 0;
+    }
+
+    connectedCallback() {
+      this.track = this.querySelector('.ai-collection-ticker-track-{{ ai_gen_id }}');
+      this.leftArrow = this.querySelector('.ai-collection-ticker-arrow-left-{{ ai_gen_id }}');
+      this.rightArrow = this.querySelector('.ai-collection-ticker-arrow-right-{{ ai_gen_id }}');
+
+      if (!this.track) return;
+
+      this.calculateDimensions();
+      this.setupScrolling();
+      this.setupArrows();
+      this.setupHoverPause();
+      this.setupMobileSwipe();
+    }
+
+    calculateDimensions() {
+      const cards = this.querySelectorAll('.ai-collection-ticker-card-{{ ai_gen_id }}');
+      this.totalWidth = (cards.length / 2) * this.cardWidth;
+    }
+
+    setupScrolling() {
+      if (this.scrollDirection === 'right') {
+        this.track.classList.add('reverse');
+      }
+    }
+
+    setupArrows() {
+      if (this.leftArrow) {
+        this.leftArrow.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.scrollLeft();
+        });
+      }
+      if (this.rightArrow) {
+        this.rightArrow.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.scrollRight();
+        });
+      }
+    }
+
+    setupHoverPause() {
+      this.addEventListener('mouseenter', () => this.pauseScroll());
+      this.addEventListener('mouseleave', () => this.resumeScroll());
+      
+      const cards = this.querySelectorAll('.ai-collection-ticker-card-{{ ai_gen_id }}');
+      cards.forEach(card => {
+        card.addEventListener('mouseenter', () => this.pauseScroll());
+        card.addEventListener('mouseleave', () => this.resumeScroll());
+        card.addEventListener('click', (e) => {
+          if (this.isInteracting) {
+            e.preventDefault();
+          }
+        });
+      });
+    }
+
+    setupMobileSwipe() {
+      if (window.innerWidth <= 749) {
+        const wrapper = this.querySelector('.ai-collection-ticker-wrapper-{{ ai_gen_id }}');
+        if (wrapper) {
+          wrapper.addEventListener('touchstart', () => this.pauseScroll());
+          wrapper.addEventListener('touchend', () => this.resumeScroll());
+        }
+      }
+    }
+
+    pauseScroll() {
+      if (this.track && !this.isInteracting) {
+        this.track.classList.add('paused');
+      }
+    }
+
+    resumeScroll() {
+      if (this.track && !this.isInteracting) {
+        this.track.classList.remove('paused');
+      }
+    }
+
+    scrollLeft() {
+      this.isInteracting = true;
+      this.track.classList.add('manual-control');
+      this.pauseScroll();
+      
+      this.currentTranslateX += this.cardWidth;
+      
+      if (this.currentTranslateX > 0) {
+        this.currentTranslateX = -this.totalWidth + this.cardWidth;
+      }
+      
+      this.track.style.transform = `translateX(${this.currentTranslateX}px)`;
+      
+      setTimeout(() => {
+        this.track.classList.remove('manual-control');
+        this.isInteracting = false;
+        this.resumeScroll();
+      }, 500);
+    }
+
+    scrollRight() {
+      this.isInteracting = true;
+      this.track.classList.add('manual-control');
+      this.pauseScroll();
+      
+      this.currentTranslateX -= this.cardWidth;
+      
+      if (this.currentTranslateX < -this.totalWidth) {
+        this.currentTranslateX = -this.cardWidth;
+      }
+      
+      this.track.style.transform = `translateX(${this.currentTranslateX}px)`;
+      
+      setTimeout(() => {
+        this.track.classList.remove('manual-control');
+        this.isInteracting = false;
+        this.resumeScroll();
+      }, 500);
+    }
+  }
+
+  customElements.define('collection-ticker-{{ ai_gen_id }}', CollectionTicker{{ ai_gen_id }});
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Collection ticker",
+  "settings": [
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection"
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "header",
+      "content": "Scroll settings"
+    },
+    {
+      "type": "range",
+      "id": "scroll_speed",
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "unit": "s",
+      "label": "Scroll speed",
+      "default": 30
+    },
+    {
+      "type": "select",
+      "id": "scroll_direction",
+      "label": "Scroll direction",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left to right"
+        },
+        {
+          "value": "right",
+          "label": "Right to left"
+        }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "header",
+      "content": "Card design"
+    },
+    {
+      "type": "range",
+      "id": "card_width",
+      "min": 180,
+      "max": 300,
+      "step": 10,
+      "unit": "px",
+      "label": "Card width",
+      "default": 220
+    },
+    {
+      "type": "range",
+      "id": "card_padding",
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Card padding",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "image_height",
+      "min": 120,
+      "max": 200,
+      "step": 10,
+      "unit": "px",
+      "label": "Image height",
+      "default": 160
+    },
+    {
+      "type": "header",
+      "content": "Text settings"
+    },
+    {
+      "type": "range",
+      "id": "title_font_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Title font size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "vendor_font_size",
+      "min": 10,
+      "max": 14,
+      "step": 1,
+      "unit": "px",
+      "label": "Vendor font size",
+      "default": 11
+    },
+    {
+      "type": "range",
+      "id": "price_font_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Price font size",
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "Price settings"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_inline_price",
+      "label": "Show inline price",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "View all button"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_view_all",
+      "label": "Show view all button",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "view_all_text",
+      "label": "View all text",
+      "default": "View All Products"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Collection ticker"
+    }
+  ]
+}
+{% endschema %}

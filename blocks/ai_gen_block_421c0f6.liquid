@@ -1,0 +1,241 @@
+{% doc %}
+  @prompt
+    Create a text ticker section that scrolls text horizontally across the screen. Include customizable controls for ticker text content, scroll speed, background color, text color, font size, padding, and the ability to pause on hover. Make it responsive and accessible.
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-text-ticker-{{ ai_gen_id }} {
+    background-color: {{ block.settings.background_color }};
+    padding: {{ block.settings.padding }}px 0;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    width: 100%;
+  }
+
+  .ai-text-ticker-content-{{ ai_gen_id }} {
+    display: inline-block;
+    color: {{ block.settings.text_color }};
+    font-size: {{ block.settings.font_size }}px;
+    font-weight: {{ block.settings.font_weight }};
+    line-height: 1.2;
+    animation: ai-ticker-scroll-{{ ai_gen_id }} {{ block.settings.scroll_speed }}s linear infinite;
+    padding-left: 100%;
+  }
+
+  {% if block.settings.pause_on_hover %}
+    .ai-text-ticker-{{ ai_gen_id }}:hover .ai-text-ticker-content-{{ ai_gen_id }} {
+      animation-play-state: paused;
+    }
+  {% endif %}
+
+  @keyframes ai-ticker-scroll-{{ ai_gen_id }} {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(-100%, 0, 0);
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-text-ticker-content-{{ ai_gen_id }} {
+      font-size: {{ block.settings.font_size | times: 0.8 }}px;
+    }
+    
+    .ai-text-ticker-{{ ai_gen_id }} {
+      padding: {{ block.settings.padding | times: 0.7 }}px 0;
+    }
+  }
+
+  .ai-text-ticker-{{ ai_gen_id }}:focus-within {
+    outline: 2px solid {{ block.settings.text_color }};outline-offset: 2px;
+  }
+{% endstyle %}
+
+<text-ticker-{{ ai_gen_id }}
+  class="ai-text-ticker-{{ ai_gen_id }}"
+  role="marquee"
+  aria-live="off"
+  aria-label="Scrolling text announcement"
+  {{ block.shopify_attributes }}
+>
+  {% if block.settings.ticker_text != blank %}
+    <div class="ai-text-ticker-content-{{ ai_gen_id }}">
+      {{ block.settings.ticker_text | escape }}
+    </div>
+  {% else %}
+    <div class="ai-text-ticker-content-{{ ai_gen_id }}">
+      Add your ticker text in the theme editor
+    </div>
+  {% endif %}
+</text-ticker-{{ ai_gen_id }}>
+
+<script>
+(function() {
+  class TextTicker{{ ai_gen_id }} extends HTMLElement {
+    constructor() {
+      super();
+      this.tickerContent = null;
+      this.isPlaying = true;
+    }
+
+    connectedCallback() {
+      this.tickerContent = this.querySelector('.ai-text-ticker-content-{{ ai_gen_id }}');
+      this.setupAccessibility();
+      this.setupKeyboardControls();
+    }
+
+    setupAccessibility() {
+      this.setAttribute('tabindex', '0');
+      this.addEventListener('focus', () => {
+        this.setAttribute('aria-live', 'polite');});
+
+      this.addEventListener('blur', () => {
+        this.setAttribute('aria-live', 'off');
+      });
+    }
+
+    setupKeyboardControls() {
+      this.addEventListener('keydown', (event) => {
+        if (event.key === ' ' || event.key === 'Enter') {
+          event.preventDefault();
+          this.toggleAnimation();
+        }
+      });
+    }
+
+    toggleAnimation() {
+      if (this.tickerContent) {
+        const currentState = getComputedStyle(this.tickerContent).animationPlayState;
+        
+        if (currentState === 'paused' || !this.isPlaying) {
+          this.tickerContent.style.animationPlayState = 'running';
+          this.isPlaying = true;
+          this.setAttribute('aria-label', 'Scrolling text announcement - playing');
+        } else {
+          this.tickerContent.style.animationPlayState = 'paused';
+          this.isPlaying = false;
+          this.setAttribute('aria-label', 'Scrolling text announcement - paused');
+        }
+      }
+    }
+  }
+
+  customElements.define('text-ticker-{{ ai_gen_id }}', TextTicker{{ ai_gen_id }});
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Text ticker",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "textarea",
+      "id": "ticker_text",
+      "label": "Ticker text",
+      "default": "Welcome to our store! Free shipping on orders over $50. New arrivals weekly."
+    },
+    {
+      "type": "header",
+      "content": "Animation"
+    },
+    {
+      "type": "range",
+      "id": "scroll_speed",
+      "min": 5,
+      "max": 50,
+      "step": 5,
+      "unit": "s",
+      "label": "Scroll speed",
+      "default": 20
+    },
+    {
+      "type": "checkbox",
+      "id": "pause_on_hover",
+      "label": "Pause on hover",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "font_size",
+      "min": 12,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Font size",
+      "default": 16
+    },
+    {
+      "type": "select",
+      "id": "font_weight",
+      "label": "Font weight",
+      "options": [
+        {
+          "value": "400",
+          "label": "Normal"
+        },
+        {
+          "value": "500",
+          "label": "Medium"
+        },
+        {
+          "value": "600",
+          "label": "Semi bold"
+        },
+        {
+          "value": "700",
+          "label": "Bold"
+        }
+      ],
+      "default": "400"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "padding",
+      "min": 8,
+      "max": 40,
+      "step": 4,
+      "unit": "px",
+      "label": "Vertical padding",
+      "default": 16
+    }
+  ],
+  "presets": [
+    {
+      "name": "Text ticker"
+    }
+  ],
+  "tag": null
+}
+{% endschema %}

@@ -1,0 +1,501 @@
+{% schema %}
+{
+  "name": "Fade Carousel",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Clinically Curated Protocol Bundles"
+    },
+    {
+      "type": "textarea",
+      "id": "tagline",
+      "label": "Tagline",
+      "default": "Curated support for your most important wellness goals."
+    },
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection",
+      "info": "Pick a collection to show in the fade carousel"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_description",
+      "label": "Show Product Description",
+      "default": true
+    }
+  ],
+  "presets": [
+    {
+      "name": "Fade Carousel",
+      "category": "Slideshow"
+    }
+  ]
+}
+{% endschema %}
+
+<div class="section-wave-top">
+  <svg width="100%" height="72" viewBox="0 0 1600 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0 60C352 100 1264 6 1600 60V0H0V60Z" fill="#fefaf8"/>
+  </svg>
+</div>
+
+<div class="fade-carousel">
+  {% if section.settings.heading != blank %}
+    <h2>{{ section.settings.heading }}</h2>
+  {% endif %}
+  {% if section.settings.tagline != blank %}
+    <p class="carousel-tagline">{{ section.settings.tagline }}</p>
+  {% endif %}
+
+  <!-- Desktop Carousel -->
+  <div class="carousel-track">
+    {% assign products = collections[section.settings.collection].products %}
+    {% assign index = 0 %}
+    {% assign group = 0 %}
+    {% for product in products %}
+      {% if index == 0 %}
+        <div class="carousel-slide-group{% if group == 0 %} active{% endif %}">
+      {% endif %}
+      <div class="carousel-item">
+        <img src="{{ product.featured_image | image_url: width: 400 }}" alt="{{ product.title }}">
+        <h4>{{ product.title }}</h4>
+        {% if section.settings.show_description %}
+          <p>{{ product.description | strip_html | truncate: 100 }}</p>
+        {% endif %}
+        <a href="{{ product.url }}" class="view-product-link">View Product</a>
+      </div>
+      {% assign index = index | plus: 1 %}
+      {% if index == 3 %}
+        </div>
+        {% assign index = 0 %}
+        {% assign group = group | plus: 1 %}
+      {% endif %}
+    {% endfor %}
+    {% if index != 0 %}</div>{% endif %}
+  </div>
+
+  <!-- Mobile Swipe Carousel -->
+  <div class="mobile-carousel-track">
+    {% for product in collections[section.settings.collection].products %}
+      <div class="carousel-item">
+        <img src="{{ product.featured_image | image_url: width: 400 }}" alt="{{ product.title }}">
+        <h4>{{ product.title }}</h4>
+        {% if section.settings.show_description %}
+          <p>{{ product.description | strip_html | truncate: 100 }}</p>
+        {% endif %}
+        <a href="{{ product.url }}" class="view-product-link">View Product</a>
+      </div>
+    {% endfor %}
+  </div>
+
+  {% assign total = collections[section.settings.collection].products.size %}
+  {% if total > 6 %}
+    <div class="mobile-view-all" style="text-align:center; margin:1.5rem 0;">
+      <a href="{{ collections[section.settings.collection].url }}" class="view-all-link">
+        View All
+      </a>
+    </div>
+  {% endif %}
+
+  <div class="carousel-controls">
+    <button class="arrow prev" aria-label="{{ 'accessibility.previous_slide' | t }}">&#10094;</button>
+    <div class="carousel-dots"></div>
+    <button class="arrow next" aria-label="{{ 'accessibility.next_slide' | t }}">&#10095;</button>
+  </div>
+</div>
+
+<style>
+
+  /* ————————————————
+     Carousel Section Header & Tagline
+     (Theme colors)
+     ———————————————— */
+  .fade-carousel h2 {
+    color: #392a60;  /* Primary theme purple */
+  }
+  .carousel-tagline {
+    color: #595177;  /* Standard body-text gray */
+  }
+
+  /* Core carousel styles (unchanged) */
+  .fade-carousel {
+    position: relative;
+    max-width: 1300px;
+    margin: 7rem auto 0 auto;
+    overflow: visible;
+    padding: 5rem 4vw 4rem;
+    text-align: center;
+    border-radius: 36px;
+    background-image:
+      url('data:image/svg+xml;utf8,<svg width="12" height="12" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="12" height="12" fill="rgba(255,255,255,0.02)"/><path d="M0 6h12M6 0v12" stroke="rgba(74,60,132,0.03)" stroke-width="0.5"/></svg>'),
+      linear-gradient(128deg, #fff9f5 60%, #f5e6fa 120%);
+    box-shadow: 0 32px 98px 0 rgba(74,60,132,0.10), 0 1.5px 12px rgba(74,60,132,0.06);
+    z-index: 1;
+  }
+
+  .section-wave-top {
+    position: relative;
+    top: 1px;
+    left: 0; right: 0;
+    z-index: 0;
+    pointer-events: none;
+    margin-bottom: -2.2rem;
+  }
+  .carousel-track {
+    background: #fff;
+    border-radius: 36px;
+    padding: 3.7rem 2.8rem 3.5rem;
+    box-shadow: 0 6px 40px 0 rgba(120,80,180,0.12), 0 1.5px 0 #ece7fa inset;
+    max-width: 100%;
+    margin: 0 auto;
+    position: relative;
+    z-index: 2;
+  }
+  /* …rest of your existing carousel-item, controls, dots, responsive styles… */
+
+.carousel-slide-group {
+  display: flex;
+  justify-content: center;
+  gap: 3.3rem;
+  position: absolute;
+  width: 100%;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1s cubic-bezier(.63, .07, .27, .96);
+}
+.carousel-slide-group.active {
+  opacity: 1;
+  pointer-events: auto;
+  position: relative;
+}
+.carousel-item {
+  background: #fff;
+  padding: 2.6rem 1.7rem 2.6rem 1.7rem;
+  border-radius: 24px;
+  box-shadow: 0 16px 44px 0 rgba(120,80,180,0.13), 0 2.5px 0 #e8e0fa inset;
+  text-align: center;
+  max-width: 340px;
+  min-width: 0;
+  transition: transform 0.29s cubic-bezier(.48,1.35,.5,1.13), box-shadow 0.37s;
+  border: 1.5px solid #f2e6f9;
+  position: relative;
+  z-index: 3;
+  overflow: visible;
+}
+.carousel-item:hover {
+  transform: translateY(-14px) scale(1.05);
+  box-shadow: 0 24px 52px rgba(120,80,180,0.17), 0 0.5px 0 #dfd0f7 inset;
+  border-color: #cab6e7;
+  background: linear-gradient(106deg,#faf7fc 60%,#f8f3fc 100%);
+}
+.carousel-item img {
+  width: 100%;
+  max-width: 168px;
+  margin: 0 auto 1.1rem;
+  border-radius: 18px;
+  box-shadow: 0 6px 26px 0 rgba(120,80,180,0.12);
+  background: #faf6ff;
+  transition: box-shadow 0.2s, transform 0.19s;
+}
+.carousel-item:hover img {
+  transform: scale(1.05) rotate(-2deg);
+  box-shadow: 0 12px 32px rgba(120,80,180,0.19);
+}
+.carousel-item h4 {
+  font-size: 1.21rem;
+  font-weight: 800;
+  margin: 0.7rem 0 0.5rem 0;
+  color: #392a60;
+  line-height: 1.25;
+  min-height: 2.2em;
+  max-height: 2.6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: pre-line;
+}
+.carousel-item p {
+  font-size: 1.07rem;
+  color: #595177;
+  min-height: 3.6rem;
+  margin-bottom: 1.1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.view-product-link {
+  display: inline-block;
+  font-size: 1.05rem;
+  color: #684fa4;
+  background: linear-gradient(90deg, #f5eefd 60%, #ece7fa 100%);
+  border-radius: 13px;
+  padding: 0.48rem 1.2rem;
+  margin-top: 0.4rem;
+  text-decoration: none;
+  font-weight: 700;
+  box-shadow: 0 2px 6px 0 rgba(120,80,180,0.06);
+  position: relative;
+  transition: color 0.17s, background 0.23s;
+}
+.view-product-link:after {
+  content: "";
+  display: block;
+  height: 2px;
+  width: 0%;
+  background: #6c48a2;
+  border-radius: 3px;
+  transition: width 0.23s;
+  position: absolute;
+  left: 12%;
+  bottom: 7px;
+}
+.view-product-link:hover {
+  color: #fff;
+  background: #6c48a2;
+}
+.view-product-link:hover:after {
+  width: 78%;
+  background: #fff;
+}
+/* Featured Badge (Optional) */
+.featured-badge {
+  position: absolute;
+  top: 1.3rem;
+  left: 1.3rem;
+  background: #f8f1ff;
+  color: #6c48a2;
+  font-weight: 800;
+  font-size: 0.87rem;
+  padding: 0.22rem 0.81rem;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px 0 rgba(120,80,180,0.07);
+  letter-spacing: 0.03em;
+  z-index: 9;
+  border: 1.5px solid #e5def5;
+}
+.carousel-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.75rem;
+  margin-top: 2.5rem;
+  z-index: 4;
+  position: relative;
+}
+.carousel-controls .arrow {
+  background: #e8e0fa;
+  border: none;
+  font-size: 2.2rem;
+  color: #6c48a2;
+  cursor: pointer;
+  transition: color 0.17s, background 0.23s, box-shadow 0.24s, transform 0.14s;
+  border-radius: 24px;
+  padding: 0.18rem 1.1rem;
+  box-shadow: 0 2px 8px rgba(120,80,180,0.11);
+  min-width: 2.7rem;
+}
+.carousel-controls .arrow:hover {
+  background: #6c48a2;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(120,80,180,0.19);
+  transform: scale(1.13);
+}
+.carousel-dots {
+  display: flex;
+  gap: 0.6rem;
+}
+.carousel-dots span {
+  width: 14px;
+  height: 14px;
+  background: #dfd0f7;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid #cab6e7;
+  box-shadow: 0 1px 3px rgba(120,80,180,0.09);
+  transition: background 0.19s, border-color 0.19s, box-shadow 0.23s;
+}
+.carousel-dots span.active {
+  background: #6c48a2;
+  border-color: #6c48a2;
+  box-shadow: 0 0 12px 2px #cab6e7;
+}
+@media (max-width: 1050px) {
+  .carousel-slide-group { gap: 1.1rem; }
+  .carousel-item { max-width: 224px; padding: 1.1rem 0.5rem; }
+}
+@media (max-width: 900px) {
+  .carousel-track { padding: 1.8rem 0.4rem; }
+  .fade-carousel { padding: 1.7rem 0.2rem 2.7rem 0.2rem; }
+  .carousel-item { max-width: 96vw; margin-bottom: 1.5rem; }
+}
+@media (max-width: 768px) {
+  .carousel-slide-group {
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+  }
+  .carousel-item {
+    max-width: 99vw;
+    margin-bottom: 2.0rem;
+  }
+}
+.mobile-carousel-track {
+  display: none;
+}
+@media (max-width: 768px) {
+  .carousel-track {
+    display: none !important;
+  }
+  .mobile-carousel-track {
+    display: flex;
+    gap: 1.2rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    padding: 1rem 0.8rem 2.5rem;
+    margin: 0 auto;
+    max-width: 100vw;
+    background: none;
+  }
+  .mobile-carousel-track::-webkit-scrollbar {
+    display: none;
+  }
+  .mobile-carousel-track .carousel-item {
+    flex: 0 0 82vw;
+    scroll-snap-align: center;
+    border-radius: 20px;
+    box-shadow: 0 8px 22px rgba(120,80,180,0.07);
+    background: #fff;
+    margin-right: 1.2rem;
+    max-width: 86vw;
+  }
+  .carousel-controls {
+    display: none !important;
+  }
+}
+.carousel-slide-group:empty {
+  display: none !important;
+}
+  /* Hide completely empty slide-groups */
+  .carousel-slide-group:empty {
+    display: none !important;
+  }
+
+  /* Mobile “View All” link styling */
+  .mobile-view-all .view-all-link {
+    color: #6c48a2;        /* your theme purple */
+    font-weight: 700;
+    text-decoration: none;
+    font-size: 1rem;
+  }
+  .mobile-view-all .view-all-link:hover {
+    text-decoration: underline;
+  }
+.section-wave-top,
+.section-wave-bottom {
+  position: relative;
+  width: 100vw;
+  left: 50%;
+  margin-left: -50vw;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.section-wave-top svg,
+.section-wave-bottom svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+  /* Widen the inner container to 1200px (from 1100px) and reduce side padding */
+.fade-carousel-inner {
+  max-width: 1200px !important;
+  padding: 5rem 1vw 4rem; /* narrow the left/right gutters */
+}
+
+/* Make the white carousel track bleed a bit wider */
+.carousel-track {
+  padding: 3.7rem 1.8rem 3.5rem 1.8rem; /* tighten horizontal padding */
+}
+
+/* Let each item grow a bit */
+.carousel-item {
+  max-width: 380px; /* up from 340px */
+}
+
+</style>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const carousel       = document.querySelector('.fade-carousel');
+  const allGroups      = carousel.querySelectorAll('.carousel-slide-group');
+  const groups         = Array.from(allGroups).filter(g => g.querySelectorAll('.carousel-item').length > 0);
+
+  const controls       = carousel.querySelector('.carousel-controls');
+  const nextBtn        = controls.querySelector('.next');
+  const prevBtn        = controls.querySelector('.prev');
+  const dotsContainer  = controls.querySelector('.carousel-dots');
+  let current = 0, interval;
+
+  // If only one real slide, hide arrows but still show the group & a single dot
+  if (groups.length <= 1) {
+    nextBtn.style.display = 'none';
+    prevBtn.style.display = 'none';
+    dotsContainer.innerHTML = '';
+    if (groups[0]) {
+      groups[0].classList.add('active');
+      const dot = document.createElement('span');
+      dot.classList.add('active');
+      dotsContainer.appendChild(dot);
+    }
+    return;
+  }
+
+  // Build full dot navigation
+  dotsContainer.innerHTML = '';
+  groups.forEach((_, i) => {
+    const dot = document.createElement('span');
+    dot.addEventListener('click', () => showGroup(i, true));
+    dotsContainer.appendChild(dot);
+  });
+
+  function showGroup(index, manual = false) {
+    groups.forEach(g => g.classList.remove('active'));
+    dotsContainer.querySelectorAll('span').forEach(d => d.classList.remove('active'));
+    groups[index].classList.add('active');
+    dotsContainer.querySelectorAll('span')[index].classList.add('active');
+    current = index;
+    if (manual) resetInterval();
+  }
+
+  function nextGroup() {
+    current = (current + 1) % groups.length;
+    showGroup(current);
+  }
+  function prevGroup() {
+    current = (current - 1 + groups.length) % groups.length;
+    showGroup(current);
+  }
+  function resetInterval() {
+    clearInterval(interval);
+    interval = setInterval(nextGroup, 6000);
+  }
+
+  nextBtn.addEventListener('click', () => { nextGroup(); resetInterval(); });
+  prevBtn.addEventListener('click', () => { prevGroup(); resetInterval(); });
+
+  // Initialize
+  showGroup(0);
+  interval = setInterval(nextGroup, 6000);
+});
+</script>
+
+
+
+
+

@@ -1,0 +1,1161 @@
+{% doc %}
+  @prompt
+    Create an engaging and professional intro section for functional wellness that introduces the concept of reimagined wellness. The section should have a modern, clean design with compelling copy that explains functional wellness in an accessible way, includes a strong call-to-action, and uses wellness-focused imagery or icons. Make it customizable for different wellness brands and products., add toggle to remove reimagined wellness. make buttons the theme style, add controls for button size, add a top section for company intro and on top like a hat, logo insert title and text, have the logo on the left. add button color controls, add left and right padding controls, add control for the space between the buttons, add control for space between the logo and company title and text, add toggle to show or remove the feature icon, title, and text., remove badge, add controls for vertical space for the main content and the space between the main content, optimize mobile and smaller screen layout better, on mobile and smaller screens move the main content image above the title/header
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-wellness-intro-{{ ai_gen_id }} {
+    background-color: {{ block.settings.background_color }};
+    background: {{ block.settings.background_gradient }};
+  }
+
+  .ai-wellness-intro__company-section-{{ ai_gen_id }} {
+    background-color: {{ block.settings.company_bg_color }};
+    padding: {{ block.settings.company_section_padding }}px {{ block.settings.horizontal_padding }}px;border-bottom: 1px solid rgba(0,0,0,0.1);
+  }
+
+  .ai-wellness-intro__company-container-{{ ai_gen_id }} {
+    max-width:1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: {{ block.settings.logo_content_spacing }}px;
+  }
+
+  .ai-wellness-intro__company-logo-{{ ai_gen_id }} {
+    width: {{ block.settings.logo_width }}px;
+    height: auto;
+    flex-shrink: 0;
+  }
+
+  .ai-wellness-intro__company-logo-placeholder-{{ ai_gen_id }} {
+    width: {{ block.settings.logo_width }}px;
+    height: 60px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .ai-wellness-intro__company-logo-placeholder-{{ ai_gen_id }} svg {
+    width: 60%;
+    height: 60%;opacity: 0.4;
+  }
+
+  .ai-wellness-intro__company-content-{{ ai_gen_id }} {
+    flex-grow: 1;}
+
+  .ai-wellness-intro__company-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.company_title_size }}px;
+    color: {{ block.settings.company_title_color }};
+    margin: 0 0 8px;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .ai-wellness-intro__company-text-{{ ai_gen_id }} {
+    font-size: {{ block.settings.company_text_size }}px;
+    color: {{ block.settings.company_text_color }};
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  .ai-wellness-intro__main-section-{{ ai_gen_id }} {
+    padding: {{ block.settings.main_content_vertical_spacing }}px {{ block.settings.horizontal_padding }}px;}
+
+  .ai-wellness-intro__container-{{ ai_gen_id }} {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+  }
+
+  .ai-wellness-intro__content-{{ ai_gen_id }} {
+    {% if block.settings.content_order == 2 %}
+      order: 2;
+    {% endif %}
+  }
+
+  .ai-wellness-intro__image-wrapper-{{ ai_gen_id }} {
+    {% if block.settings.visual_order == 2 %}
+      order: 2;
+    {% endif %}
+  }
+
+  .ai-wellness-intro__heading-{{ ai_gen_id }} {
+    font-size: {{ block.settings.heading_size }}px;
+    color: {{ block.settings.heading_color }};
+    margin: 0 0 20px;
+    line-height: 1.2;
+    font-weight: 700;
+  }
+
+  .ai-wellness-intro__description-{{ ai_gen_id }} {
+    font-size: {{ block.settings.text_size }}px;
+    color: {{ block.settings.text_color }};
+    line-height: 1.6;
+    margin-bottom: 30px;
+  }
+
+  .ai-wellness-intro__buttons-{{ ai_gen_id }} {
+    display: flex;
+    gap: {{ block.settings.button_spacing }}px;
+    flex-wrap: wrap;
+  }
+
+  .ai-wellness-intro__button-primary-{{ ai_gen_id }} {
+    background-color: {{ block.settings.primary_button_bg }};
+    color: {{ block.settings.primary_button_text }};
+    padding: {{ block.settings.button_padding_vertical }}px {{ block.settings.button_padding_horizontal }}px;
+    border: {{ settings.buttons_border_thickness }}px solid {{ block.settings.primary_button_border }};
+    border-radius: {{ settings.buttons_radius }}px;
+    font-size: {{ block.settings.button_font_size }}px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba(var(--color-shadow), {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-wellness-intro__button-primary-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.primary_button_hover_bg }};
+    color: {{ block.settings.primary_button_hover_text }};
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset | plus: 4 }}px {{ settings.buttons_shadow_blur | plus: 5 }}px rgba(var(--color-shadow), {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-wellness-intro__button-secondary-{{ ai_gen_id }} {
+    background-color: {{ block.settings.secondary_button_bg }};
+    color: {{ block.settings.secondary_button_text }};
+    padding: {{ block.settings.button_padding_vertical }}px {{ block.settings.button_padding_horizontal }}px;
+    border: {{ settings.buttons_border_thickness }}px solid {{ block.settings.secondary_button_border }};
+    border-radius: {{ settings.buttons_radius }}px;
+    font-size: {{ block.settings.button_font_size }}px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba(var(--color-shadow), {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-wellness-intro__button-secondary-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.secondary_button_hover_bg }};
+    color: {{ block.settings.secondary_button_hover_text }};
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset | plus: 4 }}px {{ settings.buttons_shadow_blur | plus: 5 }}px rgba(var(--color-shadow), {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-wellness-intro__image-{{ ai_gen_id }} {
+    width: 100%;
+    height: auto;
+    border-radius: {{ block.settings.image_border_radius }}px;
+  }
+
+  .ai-wellness-intro__image-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background-color: #f8f9fa;
+    border-radius: {{ block.settings.image_border_radius }}px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ai-wellness-intro__image-placeholder-{{ ai_gen_id }} svg {
+    width: 60%;
+    height: 60%;
+    opacity: 0.3;
+  }
+
+  .ai-wellness-intro__features-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    margin-top: {{ block.settings.content_features_spacing }}px;
+  }
+
+  .ai-wellness-intro__feature-{{ ai_gen_id }} {
+    text-align: center;
+  }
+
+  .ai-wellness-intro__feature-icon-{{ ai_gen_id }} {
+    width: 60px;
+    height: 60px;
+    background-color: {{ block.settings.feature_icon_bg }};
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    color: {{ block.settings.feature_icon_color }};
+  }
+
+  .ai-wellness-intro__feature-title-{{ ai_gen_id }} {
+    font-size:18px;
+    font-weight: 600;
+    color: {{ block.settings.heading_color }};
+    margin: 0 0 8px;
+  }
+
+  .ai-wellness-intro__feature-text-{{ ai_gen_id }} {
+    font-size: 14px;
+    color: {{ block.settings.text_color }};
+    line-height: 1.5;
+  }
+
+  @media screen and (max-width: 1024px) {
+    .ai-wellness-intro__container-{{ ai_gen_id }} {
+      gap: 40px;
+    }
+
+    .ai-wellness-intro__heading-{{ ai_gen_id }} {
+      font-size: {{ block.settings.heading_size | times: 0.9 }}px;
+    }
+
+    .ai-wellness-intro__features-{{ ai_gen_id }} {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 25px;
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .ai-wellness-intro__company-section-{{ ai_gen_id }} {
+      padding: {{ block.settings.company_section_padding | times: 0.7 }}px {{ block.settings.horizontal_padding | times: 0.7 }}px;
+    }
+
+    .ai-wellness-intro__main-section-{{ ai_gen_id }} {
+      padding: {{ block.settings.main_content_vertical_spacing | times: 0.7 }}px {{ block.settings.horizontal_padding | times: 0.7 }}px;
+    }
+
+    .ai-wellness-intro__company-container-{{ ai_gen_id }} {
+      flex-direction: column;
+      text-align: center;gap: {{ block.settings.logo_content_spacing | times: 0.6 }}px;
+    }
+
+    .ai-wellness-intro__company-logo-{{ ai_gen_id }},
+    .ai-wellness-intro__company-logo-placeholder-{{ ai_gen_id }} {
+      width: {{ block.settings.logo_width | times: 0.8 }}px;
+    }
+
+    .ai-wellness-intro__company-title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.company_title_size | times: 0.8 }}px;
+    }
+
+    .ai-wellness-intro__company-text-{{ ai_gen_id }} {
+      font-size: {{ block.settings.company_text_size | times: 0.9 }}px;
+    }
+
+    .ai-wellness-intro__container-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: 30px;
+      text-align: center;
+    }
+
+    .ai-wellness-intro__content-{{ ai_gen_id }} {
+      order: 2;
+    }
+
+    .ai-wellness-intro__image-wrapper-{{ ai_gen_id }} {
+      order: 1;
+    }
+
+    .ai-wellness-intro__heading-{{ ai_gen_id }} {
+      font-size: {{ block.settings.heading_size | times: 0.75 }}px;
+      margin-bottom: 16px;
+    }
+
+    .ai-wellness-intro__description-{{ ai_gen_id }} {
+      font-size: {{ block.settings.text_size | times: 0.9 }}px;
+      margin-bottom: 24px;
+    }
+
+    .ai-wellness-intro__buttons-{{ ai_gen_id }} {
+      justify-content: center;gap: {{ block.settings.button_spacing | times: 0.8 }}px;
+    }
+
+    .ai-wellness-intro__button-primary-{{ ai_gen_id }},
+    .ai-wellness-intro__button-secondary-{{ ai_gen_id }} {
+      padding: {{ block.settings.button_padding_vertical | times: 0.8 }}px {{ block.settings.button_padding_horizontal | times: 0.8 }}px;
+      font-size: {{ block.settings.button_font_size | times: 0.9 }}px;
+      min-width: 140px;
+    }
+
+    .ai-wellness-intro__features-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: 20px;
+      margin-top: {{ block.settings.content_features_spacing | times: 0.7 }}px;
+    }
+
+    .ai-wellness-intro__feature-icon-{{ ai_gen_id }} {
+      width: 50px;
+      height: 50px;margin-bottom: 12px;
+    }
+
+    .ai-wellness-intro__feature-title-{{ ai_gen_id }} {
+      font-size: 16px;
+    }
+
+    .ai-wellness-intro__feature-text-{{ ai_gen_id }} {
+      font-size: 13px;
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .ai-wellness-intro__company-section-{{ ai_gen_id }} {
+      padding: {{ block.settings.company_section_padding | times: 0.5 }}px {{ block.settings.horizontal_padding | times: 0.5 }}px;
+    }
+
+    .ai-wellness-intro__main-section-{{ ai_gen_id }} {
+      padding: {{ block.settings.main_content_vertical_spacing | times: 0.5 }}px {{ block.settings.horizontal_padding | times: 0.5 }}px;
+    }
+
+    .ai-wellness-intro__company-container-{{ ai_gen_id }} {
+      gap: {{ block.settings.logo_content_spacing | times: 0.4 }}px;
+    }
+
+    .ai-wellness-intro__company-logo-{{ ai_gen_id }},
+    .ai-wellness-intro__company-logo-placeholder-{{ ai_gen_id }} {
+      width: {{ block.settings.logo_width | times: 0.6 }}px;
+    }
+
+    .ai-wellness-intro__company-title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.company_title_size | times: 0.65 }}px;margin-bottom: 6px;
+    }
+
+    .ai-wellness-intro__company-text-{{ ai_gen_id }} {
+      font-size: {{ block.settings.company_text_size | times: 0.8 }}px;
+    }
+
+    .ai-wellness-intro__container-{{ ai_gen_id }} {
+      gap: 24px;
+    }
+
+    .ai-wellness-intro__content-{{ ai_gen_id }} {
+      order: 2;
+    }
+
+    .ai-wellness-intro__image-wrapper-{{ ai_gen_id }} {
+      order: 1;
+    }
+
+    .ai-wellness-intro__heading-{{ ai_gen_id }} {
+      font-size: {{ block.settings.heading_size | times: 0.6 }}px;
+      margin-bottom: 12px;
+      line-height: 1.3;
+    }
+
+    .ai-wellness-intro__description-{{ ai_gen_id }} {
+      font-size: {{ block.settings.text_size | times: 0.8 }}px;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .ai-wellness-intro__buttons-{{ ai_gen_id }} {
+      flex-direction: column;
+      align-items: center;
+      gap: {{ block.settings.button_spacing | times: 0.6 }}px;
+    }
+
+    .ai-wellness-intro__button-primary-{{ ai_gen_id }},
+    .ai-wellness-intro__button-secondary-{{ ai_gen_id }} {
+      padding: {{ block.settings.button_padding_vertical | times: 0.7 }}px {{ block.settings.button_padding_horizontal | times: 0.7 }}px;
+      font-size: {{ block.settings.button_font_size | times: 0.85 }}px;
+      width: 100%;
+      max-width: 280px;
+      text-align: center;
+    }
+
+    .ai-wellness-intro__features-{{ ai_gen_id }} {
+      gap: 16px;
+      margin-top: {{ block.settings.content_features_spacing | times: 0.5 }}px;
+    }
+
+    .ai-wellness-intro__feature-icon-{{ ai_gen_id }} {
+      width: 45px;
+      height: 45px;margin-bottom: 10px;
+    }
+
+    .ai-wellness-intro__feature-title-{{ ai_gen_id }} {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .ai-wellness-intro__feature-text-{{ ai_gen_id }} {
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .ai-wellness-intro__image-placeholder-{{ ai_gen_id }} {
+      aspect-ratio: 16/10;
+    }
+  }
+
+  @media screen and (max-width: 360px) {
+    .ai-wellness-intro__company-section-{{ ai_gen_id }} {
+      padding: {{ block.settings.company_section_padding | times: 0.4 }}px {{ block.settings.horizontal_padding | times: 0.4 }}px;
+    }
+
+    .ai-wellness-intro__main-section-{{ ai_gen_id }} {
+      padding: {{ block.settings.main_content_vertical_spacing | times: 0.4 }}px {{ block.settings.horizontal_padding | times: 0.4 }}px;
+    }
+
+    .ai-wellness-intro__content-{{ ai_gen_id }} {
+      order: 2;
+    }
+
+    .ai-wellness-intro__image-wrapper-{{ ai_gen_id }} {
+      order: 1;
+    }
+
+    .ai-wellness-intro__heading-{{ ai_gen_id }} {
+      font-size: {{ block.settings.heading_size | times: 0.5 }}px;
+    }
+
+    .ai-wellness-intro__description-{{ ai_gen_id }} {
+      font-size: {{ block.settings.text_size | times: 0.75 }}px;
+    }
+
+    .ai-wellness-intro__button-primary-{{ ai_gen_id }},
+    .ai-wellness-intro__button-secondary-{{ ai_gen_id }} {
+      font-size: {{ block.settings.button_font_size | times: 0.8 }}px;
+      padding: {{ block.settings.button_padding_vertical | times: 0.6 }}px {{ block.settings.button_padding_horizontal | times: 0.6 }}px;
+    }
+  }
+{% endstyle %}
+
+<div class="ai-wellness-intro-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  {% if block.settings.show_company_section %}
+    <div class="ai-wellness-intro__company-section-{{ ai_gen_id }}">
+      <div class="ai-wellness-intro__company-container-{{ ai_gen_id }}">
+        {% if block.settings.company_logo %}
+          <img
+            src="{{ block.settings.company_logo | image_url: width: 400}}"
+            alt="{{ block.settings.company_logo.alt | escape }}"
+            class="ai-wellness-intro__company-logo-{{ ai_gen_id }}"
+            loading="lazy"
+            width="{{ block.settings.company_logo.width }}"
+            height="{{ block.settings.company_logo.height }}"
+          >
+        {% else %}
+          <div class="ai-wellness-intro__company-logo-placeholder-{{ ai_gen_id }}">
+            {{'image' | placeholder_svg_tag }}
+          </div>
+        {% endif %}
+        
+        <div class="ai-wellness-intro__company-content-{{ ai_gen_id }}">
+          {% if block.settings.company_title != blank %}
+            <h1 class="ai-wellness-intro__company-title-{{ ai_gen_id }}">
+              {{ block.settings.company_title }}
+            </h1>
+          {% endif %}
+
+          {% if block.settings.company_text != blank %}
+            <div class="ai-wellness-intro__company-text-{{ ai_gen_id }}">
+              {{ block.settings.company_text }}
+            </div>
+          {% endif %}
+          
+          {% if block.settings.learn_more_text != blank %}
+            <a 
+              href="{{ block.settings.learn_more_url | default: '/pages/about-us' }}" 
+              class="ai-wellness-intro__learn-more-{{ ai_gen_id }}"
+              style="font-size: {{ block.settings.learn_more_size | default: '16' }}px; color: {{ block.settings.learn_more_color | default: '#333' }};"
+            >
+              {{ block.settings.learn_more_text | default: 'Learn more about us' }}
+              <svg class="ai-wellness-intro__learn-more-arrow-{{ ai_gen_id }}" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14m-7-7 7 7-7 7"/>
+              </svg>
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+  
+  <div class="ai-wellness-intro__main-section-{{ ai_gen_id }}">
+    <div class="ai-wellness-intro__container-{{ ai_gen_id }}">
+      <div class="ai-wellness-intro__content-{{ ai_gen_id }}">
+        {% if block.settings.heading != blank %}
+          <h2 class="ai-wellness-intro__heading-{{ ai_gen_id }}">
+            {{ block.settings.heading }}
+          </h2>
+        {% endif %}
+
+        {% if block.settings.description != blank %}
+          <div class="ai-wellness-intro__description-{{ ai_gen_id }}">
+            {{ block.settings.description }}
+          </div>
+        {% endif %}
+        
+        <div class="ai-wellness-intro__buttons-{{ ai_gen_id }}">
+          {% if block.settings.primary_button_label != blank %}
+            <a 
+              href="{{ block.settings.primary_button_link }}" 
+              class="ai-wellness-intro__button-primary-{{ ai_gen_id }}"
+            >
+              {{ block.settings.primary_button_label }}
+            </a>
+          {% endif %}
+
+          {% if block.settings.secondary_button_label != blank %}
+            <a 
+              href="{{ block.settings.secondary_button_link }}" 
+              class="ai-wellness-intro__button-secondary-{{ ai_gen_id }}"
+            >
+              {{ block.settings.secondary_button_label }}
+            </a>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="ai-wellness-intro__image-wrapper-{{ ai_gen_id }}">
+        {% if block.settings.hero_image %}
+          <img
+            src="{{ block.settings.hero_image | image_url: width: 800}}"
+            alt="{{ block.settings.hero_image.alt | escape }}"
+            class="ai-wellness-intro__image-{{ ai_gen_id }}"
+            loading="lazy"
+            width="{{ block.settings.hero_image.width }}"
+            height="{{ block.settings.hero_image.height }}"
+          >
+        {% else %}
+          <div class="ai-wellness-intro__image-placeholder-{{ ai_gen_id }}">
+            {{ 'hero-apparel-1' | placeholder_svg_tag }}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if block.settings.show_features %}
+      <div class="ai-wellness-intro__features-{{ ai_gen_id }}">
+        {% if block.settings.show_feature_1 and block.settings.feature_1_title != blank %}
+          <div class="ai-wellness-intro__feature-{{ ai_gen_id }}">
+            {% if block.settings.show_feature_1_icon %}
+              <div class="ai-wellness-intro__feature-icon-{{ ai_gen_id }}">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+              </div>
+            {% endif %}
+            {% if block.settings.show_feature_1_title %}
+              <h3 class="ai-wellness-intro__feature-title-{{ ai_gen_id }}">
+                {{ block.settings.feature_1_title }}
+              </h3>
+            {% endif %}
+            {% if block.settings.show_feature_1_text %}
+              <p class="ai-wellness-intro__feature-text-{{ ai_gen_id }}">
+                {{ block.settings.feature_1_description }}
+              </p>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if block.settings.show_feature_2 and block.settings.feature_2_title != blank %}
+          <div class="ai-wellness-intro__feature-{{ ai_gen_id }}">
+            {% if block.settings.show_feature_2_icon %}
+              <div class="ai-wellness-intro__feature-icon-{{ ai_gen_id }}">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/>
+                </svg>
+              </div>
+            {% endif %}
+            {% if block.settings.show_feature_2_title %}
+              <h3 class="ai-wellness-intro__feature-title-{{ ai_gen_id }}">
+                {{ block.settings.feature_2_title }}
+              </h3>
+            {% endif %}
+            {% if block.settings.show_feature_2_text %}
+              <p class="ai-wellness-intro__feature-text-{{ ai_gen_id }}">
+                {{ block.settings.feature_2_description }}
+              </p>
+            {% endif %}
+          </div>
+        {% endif %}
+
+        {% if block.settings.show_feature_3 and block.settings.feature_3_title != blank %}
+          <div class="ai-wellness-intro__feature-{{ ai_gen_id }}">
+            {% if block.settings.show_feature_3_icon %}
+              <div class="ai-wellness-intro__feature-icon-{{ ai_gen_id }}">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+              </div>
+            {% endif %}
+            {% if block.settings.show_feature_3_title %}
+              <h3 class="ai-wellness-intro__feature-title-{{ ai_gen_id }}">
+                {{ block.settings.feature_3_title }}
+              </h3>
+            {% endif %}
+            {% if block.settings.show_feature_3_text %}
+              <p class="ai-wellness-intro__feature-text-{{ ai_gen_id }}">
+                {{ block.settings.feature_3_description }}
+              </p>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Functional wellness intro",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Company section"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_company_section",
+      "label": "Show company section",
+      "default": true
+    },
+    {
+      "type": "image_picker",
+      "id": "company_logo",
+      "label": "Company logo"
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "min": 80,
+      "max": 300,
+      "step": 10,
+      "unit": "px",
+      "label": "Logo width",
+      "default": 150
+    },
+    {
+      "type": "range",
+      "id": "logo_content_spacing",
+      "min": 10,
+      "max": 80,
+      "step": 5,
+      "unit": "px",
+      "label": "Space between logo and content",
+      "default": 30
+    },
+    {
+      "type": "text",
+      "id": "company_title",
+      "label": "Company title",
+      "default": "Wellness Solutions Inc."
+    },
+    {
+      "type": "richtext",
+      "id": "company_text",
+      "label": "Company description",
+      "default": "<p>Leading the way in functional wellness and personalized health solutions for over a decade.</p>"
+    },
+    {
+      "type": "text",
+      "id": "learn_more_text",
+      "label": "Link Text",
+      "default": "Learn more about us"
+    },
+    {
+      "type": "url",
+      "id": "learn_more_url",
+      "label": "Link URL",
+    },
+    {
+      "type": "range",
+      "id": "learn_more_size",
+      "label": "Text Size",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "color",
+      "id": "learn_more_color",
+      "label": "Text Color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "company_bg_color",
+      "label": "Company section background",
+      "default": "#f8f9fa"
+    },
+    {
+      "type": "color",
+      "id": "company_title_color",
+      "label": "Company title color",
+      "default": "#2c3e50"
+    },
+    {
+      "type": "color",
+      "id": "company_text_color",
+      "label": "Company text color",
+      "default": "#5a6c7d"
+    },
+    {
+      "type": "range",
+      "id": "company_title_size",
+      "min": 20,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Company title size",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "company_text_size",
+      "min": 14,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Company text size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "company_section_padding",
+      "min": 20,
+      "max": 80,
+      "step": 5,
+      "unit": "px",
+      "label": "Company section padding",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Main content"
+    },
+    {
+      "type": "richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "<p>Transform Your Health with Functional Wellness</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "description",
+      "label": "Description",
+      "default": "<p>Discover a personalized approach to wellness that addresses the root causes of health concerns. Our functional wellness solutions combine cutting-edge science with natural healing to help you achieve optimal vitality and long-lasting results.</p>"
+    },
+    {
+      "type": "text",
+      "id": "primary_button_label",
+      "label": "Primary button label",
+      "default": "Start Your Journey"
+    },
+    {
+      "type": "url",
+      "id": "primary_button_link",
+      "label": "Primary button link"
+    },
+    {
+      "type": "text",
+      "id": "secondary_button_label",
+      "label": "Secondary button label",
+      "default": "Learn More"
+    },
+    {
+      "type": "url",
+      "id": "secondary_button_link",
+      "label": "Secondary button link"
+    },
+    {
+      "type": "header",
+      "content": "Button style"
+    },
+    {
+      "type": "range",
+      "id": "button_font_size",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "button_padding_horizontal",
+      "min": 15,
+      "max": 50,
+      "step": 5,
+      "unit": "px",
+      "label": "Horizontal padding",
+      "default": 30
+    },
+    {
+      "type": "range",
+      "id": "button_padding_vertical",
+      "min": 8,
+      "max": 25,
+      "step": 1,
+      "unit": "px",
+      "label": "Vertical padding",
+      "default": 15
+    },
+    {
+      "type": "range",
+      "id": "button_spacing",
+      "min": 8,
+      "max": 40,
+      "step": 4,
+      "unit": "px",
+      "label": "Space between buttons",
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Primary button colors"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_bg",
+      "label": "Background color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_text",
+      "label": "Text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_border",
+      "label": "Border color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_hover_bg",
+      "label": "Hover background color",
+      "default": "#3d3268"
+    },
+    {
+      "type": "color",
+      "id": "primary_button_hover_text",
+      "label": "Hover text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Secondary button colors"
+    },
+    {
+      "type": "color",
+      "id": "secondary_button_bg",
+      "label": "Background color",
+      "default": "rgba(75, 63, 130, 0)"
+    },
+    {
+      "type": "color",
+      "id": "secondary_button_text",
+      "label": "Text color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "secondary_button_border",
+      "label": "Border color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "secondary_button_hover_bg",
+      "label": "Hover background color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "secondary_button_hover_text",
+      "label": "Hover text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Image"
+    },
+    {
+      "type": "image_picker",
+      "id": "hero_image",
+      "label": "Hero image"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "content_order",
+      "label": "Content position",
+      "options": [
+        { "value": "1", "label": "Left" },
+        { "value": "2", "label": "Right" }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "select",
+      "id": "visual_order",
+      "label": "Image position",
+      "options": [
+        { "value": "1", "label": "Left" },
+        { "value": "2", "label": "Right" }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "header",
+      "content": "Features"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_features",
+      "label": "Show features",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Feature 1"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_1",
+      "label": "Show feature 1",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_1_icon",
+      "label": "Show feature 1 icon",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_1_title",
+      "label": "Show feature 1 title",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_1_text",
+      "label": "Show feature 1 text",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "feature_1_title",
+      "label": "Feature 1 title",
+      "default": "Personalized Approach"
+    },
+    {
+      "type": "textarea",
+      "id": "feature_1_description",
+      "label": "Feature 1 description",
+      "default": "Tailored wellness plans based on your unique health profile and goals."
+    },
+    {
+      "type": "header",
+      "content": "Feature 2"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_2",
+      "label": "Show feature 2",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_2_icon",
+      "label": "Show feature 2 icon",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_2_title",
+      "label": "Show feature 2 title",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_2_text",
+      "label": "Show feature 2 text",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "feature_2_title",
+      "label": "Feature 2 title",
+      "default": "Root Cause Focus"
+    },
+    {
+      "type": "textarea",
+      "id": "feature_2_description",
+      "label": "Feature 2 description",
+      "default": "Address underlying health issues rather than just treating symptoms."
+    },
+    {
+      "type": "header",
+      "content": "Feature 3"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_3",
+      "label": "Show feature 3",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_3_icon",
+      "label": "Show feature 3 icon",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_3_title",
+      "label": "Show feature 3 title",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "show_feature_3_text",
+      "label": "Show feature 3 text",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "feature_3_title",
+      "label": "Feature 3 title",
+      "default": "Holistic Healing"
+    },
+    {
+      "type": "textarea",
+      "id": "feature_3_description",
+      "label": "Feature 3 description",
+      "default": "Integrate mind, body, and lifestyle for comprehensive wellness transformation."
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color_background",
+      "id": "background_gradient",
+      "label": "Background gradient"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color",
+      "default": "#2c3e50"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#5a6c7d"
+    },
+    {
+      "type": "color",
+      "id": "feature_icon_bg",
+      "label": "Feature icon background",
+      "default": "#f8f9fa"
+    },
+    {
+      "type": "color",
+      "id": "feature_icon_color",
+      "label": "Feature icon color",
+      "default": "#27ae60"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "min": 24,
+      "max": 72,
+      "step": 4,
+      "unit": "px",
+      "label": "Heading size",
+      "default": 48
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "min": 14,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Text size",
+      "default": 18
+    },
+    {
+      "type": "header",
+      "content": "Spacing and borders"
+    },
+    {
+      "type": "range",
+      "id": "main_content_vertical_spacing",
+      "min": 20,
+      "max": 120,
+      "step": 10,
+      "unit": "px",
+      "label": "Main content vertical spacing",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "content_features_spacing",
+      "min": 20,
+      "max": 100,
+      "step": 10,
+      "unit": "px",
+      "label": "Space between main content and features",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "horizontal_padding",
+      "min": 20,
+      "max": 100,
+      "step": 10,
+      "unit": "px",
+      "label": "Left and right padding",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "image_border_radius",
+      "min": 0,
+      "max": 40,
+      "step": 4,
+      "unit": "px",
+      "label": "Image border radius",
+      "default": 12
+    }
+  ],
+  "presets": [
+    {
+      "name": "Functional wellness intro"
+    }
+  ]
+}
+{% endschema %}

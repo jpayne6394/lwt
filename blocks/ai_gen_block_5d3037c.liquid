@@ -1,0 +1,906 @@
+{% doc %}
+  @prompt
+    Create a fun and engaging coming soon page with a bold headline, countdown timer, email signup form to notify customers when you launch, and playful animations or visual elements. Include space for a background image or illustration, exciting copy, and a prominent call-to-action button. The design should be modern, energetic, and build anticipation. Include customizable colors, fonts, and spacing options.
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-coming-soon-{{ ai_gen_id }} {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: 40px 20px;
+  }
+
+  .ai-coming-soon-background-{{ ai_gen_id }} {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+
+  .ai-coming-soon-background-{{ ai_gen_id }} img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .ai-coming-soon-background-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, {{ block.settings.gradient_color_1 }} 0%, {{ block.settings.gradient_color_2 }} 100%);
+  }
+
+  .ai-coming-soon-background-placeholder-{{ ai_gen_id }} svg {
+    display: none;
+  }
+
+  .ai-coming-soon-overlay-{{ ai_gen_id }} {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: {{ block.settings.overlay_color }};
+    opacity: {{ block.settings.overlay_opacity | divided_by: 100.0 }};
+    z-index: 1;
+  }
+
+  .ai-coming-soon-content-{{ ai_gen_id }} {
+    position: relative;
+    z-index: 2;
+    max-width: {{ block.settings.content_width }}px;
+    width: 100%;
+    text-align: center;
+    color: {{ block.settings.text_color }};
+  }
+
+  .ai-coming-soon-logo-{{ ai_gen_id }} {
+    margin-bottom: {{ block.settings.spacing_elements }}px;
+  }
+
+  .ai-coming-soon-logo-{{ ai_gen_id }} img {
+    max-width: {{ block.settings.logo_width }}px;
+    height: auto;
+    margin: 0 auto;
+  }
+
+  .ai-coming-soon-headline-{{ ai_gen_id }} {
+    font-size: {{ block.settings.headline_size }}px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 {{ block.settings.spacing_elements }}px;
+    color: {{ block.settings.headline_color }};
+  }
+
+  .ai-coming-soon-subheadline-{{ ai_gen_id }} {
+    font-size: {{ block.settings.subheadline_size }}px;
+    line-height: 1.5;
+    margin: 0 0 {{ block.settings.spacing_elements }}px;
+    color: {{ block.settings.text_color }};
+  }
+
+  .ai-coming-soon-countdown-{{ ai_gen_id }} {
+    display: flex;
+    justify-content: center;
+    gap: {{ block.settings.countdown_gap }}px;
+    margin: {{ block.settings.spacing_elements }}px 0;
+    flex-wrap: wrap;
+  }
+
+  .ai-coming-soon-countdown-item-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: {{ block.settings.countdown_box_size }}px;
+    padding: {{ block.settings.countdown_padding }}px;
+    background-color: {{ block.settings.countdown_bg_color }};
+    border-radius: {{ block.settings.countdown_border_radius }}px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  .ai-coming-soon-countdown-number-{{ ai_gen_id }} {
+    font-size: {{ block.settings.countdown_number_size }}px;
+    font-weight: 700;
+    line-height: 1;
+    color: {{ block.settings.countdown_number_color }};
+  }
+
+  .ai-coming-soon-countdown-label-{{ ai_gen_id }} {
+    font-size: {{ block.settings.countdown_label_size }}px;
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: {{ block.settings.countdown_label_color }};
+  }
+
+  .ai-coming-soon-form-{{ ai_gen_id }} {
+    margin: {{ block.settings.spacing_elements }}px auto 0;
+    max-width: 500px;
+  }
+
+  .ai-coming-soon-form-wrapper-{{ ai_gen_id }} {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .ai-coming-soon-input-{{ ai_gen_id }} {
+    flex: 1;
+    padding: 16px 20px;
+    font-size: {{ block.settings.input_font_size }}px;
+    border: 2px solid {{ block.settings.input_border_color }};
+    border-radius: {{ block.settings.input_border_radius }}px;
+    background-color: {{ block.settings.input_bg_color }};
+    color: {{ block.settings.input_text_color }};
+  }
+
+  .ai-coming-soon-input-{{ ai_gen_id }}::placeholder {
+    color: {{ block.settings.input_placeholder_color }};
+  }
+
+  .ai-coming-soon-button-{{ ai_gen_id }} {
+    padding: 16px 32px;
+    font-size: {{ block.settings.button_font_size }}px;
+    font-weight: 600;
+    background-color: {{ block.settings.button_bg_color }};
+    color: {{ block.settings.button_text_color }};
+    border: none;
+    border-radius: {{ block.settings.button_border_radius }}px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+  }
+
+  .ai-coming-soon-button-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.button_hover_bg_color }};
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  }
+
+  .ai-coming-soon-message-{{ ai_gen_id }} {
+    font-size: 14px;
+    margin-top: 12px;
+  }
+
+  .ai-coming-soon-success-{{ ai_gen_id }} {
+    color: {{ block.settings.success_color }};
+  }
+
+  .ai-coming-soon-error-{{ ai_gen_id }} {
+    color: {{ block.settings.error_color }};
+  }
+
+  .ai-coming-soon-social-{{ ai_gen_id }} {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: {{ block.settings.spacing_elements }}px;
+  }
+
+  .ai-coming-soon-social-link-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: {{ block.settings.social_bg_color }};
+    color: {{ block.settings.social_icon_color }};
+    transition: all 0.3s ease;
+  }
+
+  .ai-coming-soon-social-link-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.social_hover_bg_color }};
+    transform: scale(1.1);
+  }
+
+  .ai-coming-soon-social-link-{{ ai_gen_id }} svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ai-coming-soon-floating-element-{{ ai_gen_id }} {
+    position: absolute;
+    border-radius: 50%;
+    opacity: 0.6;
+    z-index: 1;
+  }
+
+  .ai-coming-soon-floating-1-{{ ai_gen_id }} {
+    width: 80px;
+    height: 80px;
+    background-color: {{ block.settings.floating_color_1 }};
+    top: 10%;
+    left: 10%;
+  }
+
+  .ai-coming-soon-floating-2-{{ ai_gen_id }} {
+    width: 120px;
+    height: 120px;
+    background-color: {{ block.settings.floating_color_2 }};
+    top: 60%;
+    right: 15%;
+  }
+
+  .ai-coming-soon-floating-3-{{ ai_gen_id }} {
+    width: 60px;
+    height: 60px;
+    background-color: {{ block.settings.floating_color_3 }};
+    bottom: 20%;
+    left: 20%;
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-coming-soon-{{ ai_gen_id }} {
+      padding: 30px 15px;
+    }
+
+    .ai-coming-soon-headline-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.headline_size }}px * 0.6);
+    }
+
+    .ai-coming-soon-subheadline-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.subheadline_size }}px * 0.85);
+    }
+
+    .ai-coming-soon-countdown-{{ ai_gen_id }} {
+      gap: 12px;
+    }
+
+    .ai-coming-soon-countdown-item-{{ ai_gen_id }} {
+      min-width: calc({{ block.settings.countdown_box_size }}px * 0.8);
+      padding: calc({{ block.settings.countdown_padding }}px * 0.8);
+    }
+
+    .ai-coming-soon-countdown-number-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.countdown_number_size }}px * 0.7);
+    }
+
+    .ai-coming-soon-countdown-label-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.countdown_label_size }}px * 0.85);
+    }
+
+    .ai-coming-soon-form-wrapper-{{ ai_gen_id }} {
+      flex-direction: column;
+    }
+
+    .ai-coming-soon-button-{{ ai_gen_id }} {
+      width: 100%;
+    }
+
+    .ai-coming-soon-floating-element-{{ ai_gen_id }} {
+      display: none;
+    }
+  }
+{% endstyle %}
+
+<coming-soon-{{ ai_gen_id }} class="ai-coming-soon-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-coming-soon-background-{{ ai_gen_id }}">
+    {% if block.settings.background_image %}
+      <img
+        src="{{ block.settings.background_image | image_url: width: 2000 }}"
+        alt="{{ block.settings.background_image.alt | escape }}"
+        loading="lazy"
+        width="{{ block.settings.background_image.width }}"
+        height="{{ block.settings.background_image.height }}"
+      >
+    {% else %}
+      <div class="ai-coming-soon-background-placeholder-{{ ai_gen_id }}">
+        {{ 'hero-apparel-1' | placeholder_svg_tag }}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="ai-coming-soon-overlay-{{ ai_gen_id }}"></div>
+
+  {% if block.settings.show_floating_elements %}
+    <div class="ai-coming-soon-floating-element-{{ ai_gen_id }} ai-coming-soon-floating-1-{{ ai_gen_id }}"></div>
+    <div class="ai-coming-soon-floating-element-{{ ai_gen_id }} ai-coming-soon-floating-2-{{ ai_gen_id }}"></div>
+    <div class="ai-coming-soon-floating-element-{{ ai_gen_id }} ai-coming-soon-floating-3-{{ ai_gen_id }}"></div>
+  {% endif %}
+
+  <div class="ai-coming-soon-content-{{ ai_gen_id }}">
+    {% if block.settings.logo %}
+      <div class="ai-coming-soon-logo-{{ ai_gen_id }}">
+        <img
+          src="{{ block.settings.logo | image_url: width: 600 }}"
+          alt="{{ shop.name }}"
+          loading="lazy"
+          width="{{ block.settings.logo_width }}"
+        >
+      </div>
+    {% endif %}
+
+    {% if block.settings.headline != blank %}
+      <h1 class="ai-coming-soon-headline-{{ ai_gen_id }}">{{ block.settings.headline }}</h1>
+    {% endif %}
+
+    {% if block.settings.subheadline != blank %}
+      <div class="ai-coming-soon-subheadline-{{ ai_gen_id }}">{{ block.settings.subheadline }}</div>
+    {% endif %}
+
+    {% if block.settings.show_countdown %}
+      <div class="ai-coming-soon-countdown-{{ ai_gen_id }}" data-countdown-date="{{ block.settings.launch_date }}">
+        <div class="ai-coming-soon-countdown-item-{{ ai_gen_id }}">
+          <div class="ai-coming-soon-countdown-number-{{ ai_gen_id }}" data-days>0</div>
+          <div class="ai-coming-soon-countdown-label-{{ ai_gen_id }}">Days</div>
+        </div>
+        <div class="ai-coming-soon-countdown-item-{{ ai_gen_id }}">
+          <div class="ai-coming-soon-countdown-number-{{ ai_gen_id }}" data-hours>0</div>
+          <div class="ai-coming-soon-countdown-label-{{ ai_gen_id }}">Hours</div>
+        </div>
+        <div class="ai-coming-soon-countdown-item-{{ ai_gen_id }}">
+          <div class="ai-coming-soon-countdown-number-{{ ai_gen_id }}" data-minutes>0</div>
+          <div class="ai-coming-soon-countdown-label-{{ ai_gen_id }}">Minutes</div>
+        </div>
+        <div class="ai-coming-soon-countdown-item-{{ ai_gen_id }}">
+          <div class="ai-coming-soon-countdown-number-{{ ai_gen_id }}" data-seconds>0</div>
+          <div class="ai-coming-soon-countdown-label-{{ ai_gen_id }}">Seconds</div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if block.settings.show_email_form %}
+      <div class="ai-coming-soon-form-{{ ai_gen_id }}">
+        {%- form 'contact' -%}
+          <input type="hidden" name="contact[tags]" value="coming-soon-signup">
+          <div class="ai-coming-soon-form-wrapper-{{ ai_gen_id }}">
+            <input
+              type="email"
+              name="contact[email]"
+              class="ai-coming-soon-input-{{ ai_gen_id }}"
+              value="{{ form.email }}"
+              aria-required="true"
+              autocorrect="off"
+              autocapitalize="off"
+              autocomplete="email"
+              {% if form.errors %}
+                aria-invalid="true"
+                aria-describedby="ai-coming-soon-error-{{ ai_gen_id }}"
+              {% endif %}
+              {% if form.posted_successfully? %}
+                aria-describedby="ai-coming-soon-success-{{ ai_gen_id }}"
+              {% endif %}
+              placeholder="{{ block.settings.email_placeholder }}"
+              required
+            >
+            <button type="submit" class="ai-coming-soon-button-{{ ai_gen_id }}">
+              {{ block.settings.button_text }}
+            </button>
+          </div>
+          {%- if form.errors -%}
+            <div id="ai-coming-soon-error-{{ ai_gen_id }}" class="ai-coming-soon-message-{{ ai_gen_id }} ai-coming-soon-error-{{ ai_gen_id }}">
+              <span>{{ form.errors.messages.email }}</span>
+            </div>
+          {%- endif -%}
+          {%- if form.posted_successfully? -%}
+            <div id="ai-coming-soon-success-{{ ai_gen_id }}" class="ai-coming-soon-message-{{ ai_gen_id }} ai-coming-soon-success-{{ ai_gen_id }}">
+              <span>{{ block.settings.success_message }}</span>
+            </div>
+          {%- endif -%}
+        {%- endform -%}
+      </div>
+    {% endif %}
+
+    {% if block.settings.show_social_links %}
+      <div class="ai-coming-soon-social-{{ ai_gen_id }}">
+        {% if block.settings.facebook_url != blank %}
+          <a href="{{ block.settings.facebook_url }}" class="ai-coming-soon-social-link-{{ ai_gen_id }}" target="_blank" rel="noopener" aria-label="Facebook">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+          </a>
+        {% endif %}
+        {% if block.settings.instagram_url != blank %}
+          <a href="{{ block.settings.instagram_url }}" class="ai-coming-soon-social-link-{{ ai_gen_id }}" target="_blank" rel="noopener" aria-label="Instagram">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+            </svg>
+          </a>
+        {% endif %}
+        {% if block.settings.twitter_url != blank %}
+          <a href="{{ block.settings.twitter_url }}" class="ai-coming-soon-social-link-{{ ai_gen_id }}" target="_blank" rel="noopener" aria-label="Twitter">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
+            </svg>
+          </a>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+</coming-soon-{{ ai_gen_id }}>
+
+<script>
+  (function() {
+    class ComingSoon{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+        this.countdownElement = this.querySelector('.ai-coming-soon-countdown-{{ ai_gen_id }}');
+      }
+
+      connectedCallback() {
+        if (this.countdownElement) {
+          this.initCountdown();
+        }
+      }
+
+      initCountdown() {
+        const launchDate = this.countdownElement.getAttribute('data-countdown-date');
+        if (!launchDate) return;
+
+        const targetDate = new Date(launchDate).getTime();
+        const daysEl = this.countdownElement.querySelector('[data-days]');
+        const hoursEl = this.countdownElement.querySelector('[data-hours]');
+        const minutesEl = this.countdownElement.querySelector('[data-minutes]');
+        const secondsEl = this.countdownElement.querySelector('[data-seconds]');
+
+        const updateCountdown = () => {
+          const now = new Date().getTime();
+          const distance = targetDate - now;
+
+          if (distance < 0) {
+            daysEl.textContent = '0';
+            hoursEl.textContent = '0';
+            minutesEl.textContent = '0';
+            secondsEl.textContent = '0';
+            clearInterval(this.countdownInterval);
+            return;
+          }
+
+          const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+          daysEl.textContent = days;
+          hoursEl.textContent = hours;
+          minutesEl.textContent = minutes;
+          secondsEl.textContent = seconds;
+        };
+
+        updateCountdown();
+        this.countdownInterval = setInterval(updateCountdown, 1000);
+      }
+
+      disconnectedCallback() {
+        if (this.countdownInterval) {
+          clearInterval(this.countdownInterval);
+        }
+      }
+    }
+
+    customElements.define('coming-soon-{{ ai_gen_id }}', ComingSoon{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Coming soon page",
+  "tag": null,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Background"
+    },
+    {
+      "type": "image_picker",
+      "id": "background_image",
+      "label": "Background image"
+    },
+    {
+      "type": "color",
+      "id": "gradient_color_1",
+      "label": "Gradient color 1",
+      "default": "#6366f1"
+    },
+    {
+      "type": "color",
+      "id": "gradient_color_2",
+      "label": "Gradient color 2",
+      "default": "#ec4899"
+    },
+    {
+      "type": "color",
+      "id": "overlay_color",
+      "label": "Overlay color",
+      "default": "#000000"
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "label": "Overlay opacity",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Logo"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo"
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "min": 50,
+      "max": 400,
+      "step": 10,
+      "unit": "px",
+      "label": "Width",
+      "default": 200
+    },
+    {
+      "type": "header",
+      "content": "Content"
+    },
+    {
+      "type": "richtext",
+      "id": "headline",
+      "label": "Headline",
+      "default": "<p>Something Amazing is Coming Soon</p>"
+    },
+    {
+      "type": "range",
+      "id": "headline_size",
+      "min": 24,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Headline size",
+      "default": 64
+    },
+    {
+      "type": "color",
+      "id": "headline_color",
+      "label": "Headline color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "richtext",
+      "id": "subheadline",
+      "label": "Subheadline",
+      "default": "<p>We're working hard to bring you something special. Stay tuned!</p>"
+    },
+    {
+      "type": "range",
+      "id": "subheadline_size",
+      "min": 14,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Subheadline size",
+      "default": 20
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "range",
+      "id": "content_width",
+      "min": 400,
+      "max": 1200,
+      "step": 50,
+      "unit": "px",
+      "label": "Content width",
+      "default": 800
+    },
+    {
+      "type": "range",
+      "id": "spacing_elements",
+      "min": 20,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Spacing between elements",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Countdown timer"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_countdown",
+      "label": "Show countdown",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "launch_date",
+      "label": "Launch date",
+      "info": "Format: YYYY-MM-DD (e.g., 2025-12-31)",
+      "default": "2025-12-31"
+    },
+    {
+      "type": "range",
+      "id": "countdown_box_size",
+      "min": 60,
+      "max": 140,
+      "step": 10,
+      "unit": "px",
+      "label": "Box size",
+      "default": 100
+    },
+    {
+      "type": "range",
+      "id": "countdown_padding",
+      "min": 10,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Box padding",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "countdown_gap",
+      "min": 10,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Gap between boxes",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "countdown_border_radius",
+      "min": 0,
+      "max": 30,
+      "step": 2,
+      "unit": "px",
+      "label": "Border radius",
+      "default": 12
+    },
+    {
+      "type": "color",
+      "id": "countdown_bg_color",
+      "label": "Background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "range",
+      "id": "countdown_number_size",
+      "min": 24,
+      "max": 72,
+      "step": 4,
+      "unit": "px",
+      "label": "Number size",
+      "default": 48
+    },
+    {
+      "type": "color",
+      "id": "countdown_number_color",
+      "label": "Number color",
+      "default": "#000000"
+    },
+    {
+      "type": "range",
+      "id": "countdown_label_size",
+      "min": 10,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Label size",
+      "default": 12
+    },
+    {
+      "type": "color",
+      "id": "countdown_label_color",
+      "label": "Label color",
+      "default": "#666666"
+    },
+    {
+      "type": "header",
+      "content": "Email signup form"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_email_form",
+      "label": "Show email form",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "email_placeholder",
+      "label": "Email placeholder",
+      "default": "Enter your email"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button text",
+      "default": "Notify Me"
+    },
+    {
+      "type": "richtext",
+      "id": "success_message",
+      "label": "Success message",
+      "default": "<p>Thanks! We'll notify you when we launch.</p>"
+    },
+    {
+      "type": "color",
+      "id": "input_bg_color",
+      "label": "Input background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "input_text_color",
+      "label": "Input text",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "input_border_color",
+      "label": "Input border",
+      "default": "#cccccc"
+    },
+    {
+      "type": "color",
+      "id": "input_placeholder_color",
+      "label": "Placeholder text",
+      "default": "#999999"
+    },
+    {
+      "type": "range",
+      "id": "input_border_radius",
+      "min": 0,
+      "max": 30,
+      "step": 2,
+      "unit": "px",
+      "label": "Input border radius",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "input_font_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Input font size",
+      "default": 16
+    },
+    {
+      "type": "color",
+      "id": "button_bg_color",
+      "label": "Button background",
+      "default": "#6366f1"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_bg_color",
+      "label": "Button hover background",
+      "default": "#4f46e5"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "range",
+      "id": "button_border_radius",
+      "min": 0,
+      "max": 30,
+      "step": 2,
+      "unit": "px",
+      "label": "Button border radius",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "button_font_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Button font size",
+      "default": 16
+    },
+    {
+      "type": "color",
+      "id": "success_color",
+      "label": "Success message color",
+      "default": "#10b981"
+    },
+    {
+      "type": "color",
+      "id": "error_color",
+      "label": "Error message color",
+      "default": "#ef4444"
+    },
+    {
+      "type": "header",
+      "content": "Social links"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_social_links",
+      "label": "Show social links",
+      "default": true
+    },
+    {
+      "type": "url",
+      "id": "facebook_url",
+      "label": "Facebook URL"
+    },
+    {
+      "type": "url",
+      "id": "instagram_url",
+      "label": "Instagram URL"
+    },
+    {
+      "type": "url",
+      "id": "twitter_url",
+      "label": "Twitter URL"
+    },
+    {
+      "type": "color",
+      "id": "social_bg_color",
+      "label": "Icon background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "social_hover_bg_color",
+      "label": "Icon hover background",
+      "default": "#6366f1"
+    },
+    {
+      "type": "color",
+      "id": "social_icon_color",
+      "label": "Icon color",
+      "default": "#000000"
+    },
+    {
+      "type": "header",
+      "content": "Floating elements"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_floating_elements",
+      "label": "Show floating elements",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "floating_color_1",
+      "label": "Element 1 color",
+      "default": "#fbbf24"
+    },
+    {
+      "type": "color",
+      "id": "floating_color_2",
+      "label": "Element 2 color",
+      "default": "#ec4899"
+    },
+    {
+      "type": "color",
+      "id": "floating_color_3",
+      "label": "Element 3 color",
+      "default": "#8b5cf6"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Coming soon page"
+    }
+  ]
+}
+{% endschema %}

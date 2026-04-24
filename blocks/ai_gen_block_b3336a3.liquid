@@ -1,0 +1,250 @@
+{% doc %}
+  @prompt
+    Create a customizable text link component with an arrow at the end. Include theme editor settings for: link text/label (default "Learn more about us"), link URL, text size control, text color control, and arrow style. The link should have hover effects and be fully customizable through the Shopify theme editor interface without requiring code knowledge.
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-text-link-{{ ai_gen_id }} {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    font-size: {{ block.settings.text_size }}px;
+    color: {{ block.settings.text_color }};
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+
+  .ai-text-link-{{ ai_gen_id }}:hover {
+    color: {{ block.settings.hover_color }};
+  }
+
+  .ai-text-link-{{ ai_gen_id }}:hover .ai-text-link-arrow-{{ ai_gen_id }} {
+    transform: translateX(4px);
+  }
+
+  .ai-text-link-text-{{ ai_gen_id }} {
+    font-weight: {{ block.settings.font_weight }};
+  }
+
+  .ai-text-link-arrow-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+    width: {{ block.settings.arrow_size }}px;
+    height: {{ block.settings.arrow_size }}px;
+  }
+
+  .ai-text-link-arrow-{{ ai_gen_id }} svg {
+    width: 100%;
+    height: 100%;fill: currentColor;
+  }
+
+  {% if block.settings.underline_style == 'always' %}
+    .ai-text-link-{{ ai_gen_id }} {
+      text-decoration: underline;
+    }
+  {% elsif block.settings.underline_style == 'hover' %}
+    .ai-text-link-{{ ai_gen_id }}:hover {
+      text-decoration: underline;
+    }
+  {% endif %}
+
+  @media screen and (max-width: 749px) {
+    .ai-text-link-{{ ai_gen_id }} {
+      font-size: {{ block.settings.text_size | times: 0.9 }}px;
+    }
+    
+    .ai-text-link-arrow-{{ ai_gen_id }} {
+      width: {{ block.settings.arrow_size | times: 0.9 }}px;
+      height: {{ block.settings.arrow_size | times: 0.9 }}px;
+    }
+  }
+{% endstyle %}
+
+{% if block.settings.link_url != blank %}
+  <a 
+    href="{{ block.settings.link_url }}" 
+    class="ai-text-link-{{ ai_gen_id }}"
+    {{ block.shopify_attributes }}
+  >
+{% else %}
+  <span
+    class="ai-text-link-{{ ai_gen_id }}"
+    {{ block.shopify_attributes }}
+  >
+{% endif %}<span class="ai-text-link-text-{{ ai_gen_id }}">
+    {{ block.settings.link_text }}
+  </span>
+  <span class="ai-text-link-arrow-{{ ai_gen_id }}">
+    {% case block.settings.arrow_style %}
+      {% when 'arrow_right' %}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+        </svg>
+      {% when 'arrow_diagonal' %}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M7 7h8.586L5.293 17.293l1.414 1.414L17 8.414V17h2V5H7v2z"/>
+        </svg>
+      {% when 'chevron_right' %}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+        </svg>
+      {% when 'plus' %}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+        </svg>
+      {% else %}
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+        </svg>
+    {% endcase %}
+  </span>
+{% if block.settings.link_url != blank %}</a>
+{% else %}
+  </span>
+{% endif %}
+
+{% schema %}
+{
+  "name": "Text link with arrow",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Link content"
+    },
+    {
+      "type": "text",
+      "id": "link_text",
+      "label": "Link text",
+      "default": "Learn more about us"
+    },
+    {
+      "type": "url",
+      "id": "link_url",
+      "label": "Link URL"
+    },
+    {
+      "type": "header",
+      "content": "Text style"
+    },
+    {
+      "type": "range",
+      "id": "text_size",
+      "min": 12,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "label": "Text size",
+      "default": 16
+    },
+    {
+      "type": "select",
+      "id": "font_weight",
+      "label": "Font weight",
+      "options": [
+        {
+          "value": "400",
+          "label": "Normal"
+        },
+        {
+          "value": "500",
+          "label": "Medium"
+        },
+        {
+          "value": "600",
+          "label": "Semi-bold"
+        },
+        {
+          "value": "700",
+          "label": "Bold"
+        }
+      ],
+      "default": "400"
+    },
+    {
+      "type": "select",
+      "id": "underline_style",
+      "label": "Underline",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "always",
+          "label": "Always"
+        },
+        {
+          "value": "hover",
+          "label": "On hover"
+        }
+      ],
+      "default": "none"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#121212"
+    },
+    {
+      "type": "color",
+      "id": "hover_color",
+      "label": "Hover color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "header",
+      "content": "Arrow style"
+    },
+    {
+      "type": "select",
+      "id": "arrow_style",
+      "label": "Arrow type",
+      "options": [
+        {
+          "value": "arrow_right",
+          "label": "Arrow right"
+        },
+        {
+          "value": "arrow_diagonal",
+          "label": "Arrow diagonal"
+        },
+        {
+          "value": "chevron_right",
+          "label": "Chevron right"
+        },
+        {
+          "value": "plus",
+          "label": "Plus"
+        }
+      ],
+      "default": "arrow_right"
+    },
+    {
+      "type": "range",
+      "id": "arrow_size",
+      "min": 12,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Arrow size",
+      "default": 18
+    }
+  ],
+  "presets": [
+    {
+      "name": "Text link with arrow"
+    }
+  ],
+  "tag": null
+}
+{% endschema %}

@@ -1,0 +1,393 @@
+{% schema %}
+{
+  "name": "Featured Collection",
+  "tag": "section",
+  "class": "featured-collection-ticker",
+  "settings": [
+    {
+      "type": "collection",
+      "id": "collection",
+      "label": "Collection"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "min": 3,
+      "max": 25,
+      "step": 1,
+      "default": 6,
+      "label": "Products to show"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_vendor",
+      "label": "Show vendor",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Heading",
+      "default": "Trending Now"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_button",
+      "label": "Show button below dots",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button text",
+      "default": "View All"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Button link",
+      "default": "/collections/all"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Featured Collection Ticker"
+    }
+  ]
+}
+{% endschema %}
+
+<div class="featured-ticker">
+  <div class="ticker-header">
+    <h2>{{ section.settings.title }}</h2>
+  </div>
+
+  <button class="arrow-btn prev">&#10094;</button>
+  <div class="ticker-track">
+    <div class="ticker-line">
+      {% for product in section.settings.collection.products limit: section.settings.products_to_show %}
+      <a href="{{ product.url }}" class="ticker-item">
+        <img src="{{ product.featured_image | image_url: width: 300 }}" alt="{{ product.title }}">
+        <h4 class="product-title">{{ product.title }}</h4>
+        {% if section.settings.show_vendor %}
+        <span class="vendor">{{ product.vendor }}</span>
+        {% endif %}
+        <span class="price">{{ product.price | money }}</span>
+        <span class="view-link">View Product</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  <button class="arrow-btn next">&#10095;</button>
+  <div class="slider-dots"></div>
+
+  {% if section.settings.show_button %}
+    <div class="ticker-button-wrap">
+      <a href="{{ section.settings.button_link }}" class="pill-button">{{ section.settings.button_text }}</a>
+    </div>
+  {% endif %}
+</div>
+
+<style>
+.featured-ticker {
+  background: #fefaf8;
+  padding: 3rem 1rem;
+  border-radius: 20px;
+  max-width: 1650px;
+  margin: 2rem auto;
+  overflow: hidden;
+  position: relative;
+}
+
+/* header */
+.ticker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+.ticker-header h2 {
+  font-size: 2rem;
+  color: #3e2764;
+}
+
+/* TRACK wrapper gets side‐gutters on desktop */
+.ticker-track {
+  overflow: hidden;
+  padding: 0 70px;
+  position: relative;
+}
+
+/* Product cards line */
+.ticker-line {
+  display: flex;
+  gap: 2rem;
+  transition: transform 0.4s ease;
+}
+
+/* individual cards */
+.ticker-item {
+  flex: 0 0 auto;
+  width: 180px;
+  text-align: center;
+  background: #fff;
+  border-radius: 10px;
+  padding: 1rem;
+  transition: transform 0.3s, box-shadow 0.3s;
+  text-decoration: none;
+}
+.ticker-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+}
+.ticker-item:hover .product-title,
+.ticker-item:hover .vendor,
+.ticker-item:hover .price,
+.ticker-item:hover .view-link {
+  text-decoration: underline;
+}
+.ticker-item img {
+  width: 100%;
+  border-radius: 10px;
+}
+.product-title { font-size: 1rem; color: #333; margin: 0.5rem 0 0.2rem; }
+.vendor {
+  display: block;
+  font-size: 0.85rem;
+  color: #777;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+.price {
+  display: block;
+  font-size: 0.9rem;
+  color: #4a3c84;
+  margin-bottom: 0.4rem;
+}
+.view-link {
+  display: block;
+  font-size: 0.9rem;
+  color: #4a3c84;
+  text-decoration: underline;
+}
+
+/* desktop fade‐masks */
+.featured-ticker::before, .featured-ticker::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 60px;
+  height: 100%;
+  pointer-events: none;
+  z-index: 5;
+}
+.featured-ticker::before {
+  left: 0;
+  background: linear-gradient(to right, #fefaf8 60%, transparent);
+}
+.featured-ticker::after {
+  right: 0;
+  background: linear-gradient(to left, #fefaf8 60%, transparent);
+}
+
+/* arrows */
+.arrow-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.9);
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem; color: #4a3c84;
+  cursor: pointer; opacity: 0; pointer-events: none;
+  transition: opacity 0.4s ease, background 0.3s;
+  z-index: 10;
+}
+.featured-ticker:hover .arrow-btn {
+  opacity: 1; pointer-events: auto;
+}
+.arrow-btn.prev { left: 0.5rem; }
+.arrow-btn.next { right: 0.5rem; }
+.arrow-btn:hover {
+  background: rgba(74,60,132,0.9);
+  color: #fff;
+}
+
+/* dots */
+.slider-dots {
+  display: flex; justify-content: center;
+  margin-top: 1.5rem; gap: 8px;
+  opacity: 0; transition: opacity 0.3s;
+}
+.featured-ticker:hover .slider-dots { opacity: 1; }
+.slider-dots span {
+  width: 10px; height: 10px;
+  background: #ccc; border-radius: 50%;
+  cursor: pointer; transition: background 0.3s;
+}
+.slider-dots span.active { background: #4a3c84; }
+
+/* View All pill */
+.ticker-button-wrap {
+  display: flex; justify-content: center;
+  margin-top: 1.5rem;
+}
+.pill-button {
+  background: #4a3c84; color: #fff;
+  padding: 0.6rem 1.8rem; border-radius: 999px;
+  font-size: 0.9rem; text-decoration: none;
+  transition: background 0.3s, transform 0.2s;
+}
+.pill-button:hover {
+  background: #3e2764; transform: translateY(-2px);
+}
+
+/* ───────── mobile (<768px) ───────── */
+@media (max-width: 768px) {
+  /* hide arrows, masks & dots */
+  .featured-ticker .arrow-btn,
+  .featured-ticker::before,
+  .featured-ticker::after,
+  .featured-ticker .slider-dots {
+    display: none !important;
+  }
+
+  /* show only first 6 items */
+  .ticker-line .ticker-item:nth-of-type(n+7) {
+    display: none;
+  }
+
+  /* native swipe on track */
+  .ticker-track {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    padding: 0; /* remove gutters */
+  }
+  .ticker-track::-webkit-scrollbar { display: none; }
+  .ticker-track {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .ticker-item {
+    scroll-snap-align: start;
+  }
+
+  /* always show the “View All” pill */
+  .ticker-button-wrap { opacity: 1 !important; }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.featured-ticker').forEach(ticker => {
+    const track    = ticker.querySelector('.ticker-track');
+    const line     = ticker.querySelector('.ticker-line');
+    const nextBtn  = ticker.querySelector('.arrow-btn.next');
+    const prevBtn  = ticker.querySelector('.arrow-btn.prev');
+    const dotsWrap = ticker.querySelector('.slider-dots');
+    const items    = Array.from(ticker.querySelectorAll('.ticker-item'));
+    if (!items.length) return;
+
+    let step, lineHalf, totalSteps;
+    let offset = 0, index = 0, timerId = null;
+
+    function recalc() {
+      if (!line.dataset.cloned) {
+        line.appendChild(line.cloneNode(true));
+        line.dataset.cloned = '1';
+      }
+      const itemWidth = items[0].offsetWidth + 32;
+      step      = itemWidth * 2;
+      lineHalf  = line.scrollWidth / 2;
+      totalSteps = Math.max(1,
+        Math.round((lineHalf - track.offsetWidth) / step) + 1
+      );
+
+      const needControls = lineHalf > track.offsetWidth;
+      [ nextBtn, prevBtn, dotsWrap ].forEach(el => {
+        el.style.display = needControls ? '' : 'none';
+      });
+      if (!needControls) {
+        stopTicker();
+        return;
+      }
+
+      dotsWrap.innerHTML = '';
+      for (let i = 0; i < totalSteps; i++) {
+        const dot = document.createElement('span');
+        if (i === index) dot.classList.add('active');
+        dotsWrap.appendChild(dot);
+        dot.addEventListener('click', () => moveTo(i));
+      }
+    }
+
+    const SPEED_MS       = 120;
+    const DELAY_MS       = 1200;
+    const PIXELS_PER_TICK = () => step / 100;
+
+    function startTicker() {
+      stopTicker();
+      timerId = setInterval(() => {
+        offset -= PIXELS_PER_TICK();
+        if (-offset >= lineHalf) offset = 0;
+        line.style.transform = `translateX(${offset}px)`;
+        if (Math.abs(offset) % step < 1) {
+          index = Math.round(Math.abs(offset) / step) % totalSteps;
+          updateDots();
+        }
+      }, SPEED_MS);
+    }
+
+    function stopTicker() {
+      if (timerId) clearInterval(timerId);
+      timerId = null;
+    }
+
+    function updateDots() {
+      dotsWrap.querySelectorAll('span').forEach((d,i) =>
+        d.classList.toggle('active', i === index)
+      );
+    }
+
+    function moveTo(page) {
+      stopTicker();
+      index  = page;
+      offset = -step * index;
+      line.style.transition = 'transform .5s';
+      line.style.transform  = `translateX(${offset}px)`;
+      updateDots();
+      setTimeout(() => {
+        line.style.transition = '';
+        startTicker();
+      }, 550);
+    }
+
+    function moveBy(n) {
+      moveTo((index + n + totalSteps) % totalSteps);
+    }
+
+    nextBtn.addEventListener('click', () => moveBy(+1));
+    prevBtn.addEventListener('click', () => moveBy(-1));
+    track.addEventListener('mouseenter', stopTicker);
+    track.addEventListener('mouseleave', () => setTimeout(startTicker, DELAY_MS));
+
+    /* ────────── Boot logic ────────── */
+    const boot = () => {
+      // on mobile we bail out entirely (no clone/no autoplay)
+      if (window.innerWidth <= 768) return;
+      recalc();
+      setTimeout(startTicker, DELAY_MS);
+    };
+
+    window.addEventListener('load',  boot, { once: true });
+    window.addEventListener('resize', () => recalc());
+    boot();
+  });
+});
+</script>
+
+
+

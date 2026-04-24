@@ -1,0 +1,335 @@
+{% style %}
+.newsletter-section {
+  max-width: 1700px;
+  margin: 0 auto;
+  padding: 4rem 0;
+  background: #f9f9f9;
+}
+.newsletter-section-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2.5rem;
+  padding: 0 1rem;
+  width: 100%;
+}
+.newsletter-section-header h2 {
+  font-size: 2.35rem;
+  font-weight: 800;
+  color: #7a49e7;
+  margin: 0;
+  line-height: 1.13;
+  letter-spacing: -0.5px;
+  text-align: center;
+}
+.newsletter-header-accent {
+  height: 4px;
+  width: 56px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #eab2fc, #7a49e7 90%);
+  margin: 0.15rem 0 0.15rem 0;
+  display: block;
+}
+.newsletter-subheading {
+  font-size: 1.13rem;
+  color: #7a49e7;
+  font-weight: 500;
+  opacity: 0.92;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  max-width: 600px;
+}
+.newsletter-initial-row {
+  display: grid;
+  grid-template-columns: 1.7fr 1fr;
+  gap: 2.4rem;
+  align-items: stretch;
+  margin-bottom: 3rem;
+}
+.featured-large {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(60,30,80,0.06);
+  overflow: hidden;
+  min-height: 420px;
+}
+.featured-card-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 2.5rem 2.4rem 2.3rem 2.4rem;
+  box-sizing: border-box;
+}
+.newsletter-featured-img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 12px;
+  object-fit: cover;
+  margin-bottom: 1.3rem;
+  background: #eee;
+  display: block;
+  max-height: 270px;
+  min-height: 160px;
+}
+.featured-card-title {
+  font-size: 2.4rem;
+  font-weight: 800;
+  color: #3e2764;
+  margin: 0.8rem 0 1.4rem 0;
+  line-height: 1.14;
+  letter-spacing: -0.5px;
+}
+.featured-card-desc {
+  font-size: 1.18rem;
+  color: #51416c;
+  line-height: 1.6;
+  margin-bottom: 0;
+  margin-top: 0;
+  flex: 1 1 auto;
+  min-height: 2.4em;
+  max-width: 95%;
+}
+.featured-card-footer {
+  margin-top: 2.2rem;
+  display: flex;
+}
+.featured-card-inner .read-more-link {
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: #7a49e7;
+  text-decoration: none;
+  border-bottom: 2.5px solid #eac9fa;
+  width: max-content;
+  transition: color 0.18s, border 0.15s;
+  padding-bottom: 4px;
+  display: inline-block;
+  letter-spacing: -0.03em;
+}
+.featured-card-inner .read-more-link:hover {
+  color: #3e2764;
+  border-bottom: 2.5px solid #ae67e6;
+}
+.featured-column-right {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 2rem;
+  height: 100%;
+}
+.newsletter-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+  padding: 1.4rem 1.3rem 1.4rem 1.3rem;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.3s ease;
+  overflow: hidden;
+  height: 100%;
+}
+.newsletter-card .newsletter-card-img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  object-fit: cover;
+  max-height: 120px;
+  min-height: 60px;
+  background: #eee;
+  display: block;
+}
+.newsletter-card h3 {
+  font-size: 1.15rem;
+  color: #3e2764;
+  margin-bottom: 0.4rem;
+  font-weight: 700;
+}
+.newsletter-card p {
+  color: #555;
+  font-size: 0.97rem;
+  margin-bottom: 0.7rem;
+  line-height: 1.48;
+  flex: 1 1 auto;
+}
+.newsletter-card .read-more-link {
+  font-weight: 700;
+  color: #7a49e7;
+  text-decoration: none;
+  font-size: 0.99rem;
+  border-bottom: 2px solid #eac9fa;
+  width: max-content;
+  transition: color 0.18s, border 0.15s;
+  margin-top: 0.1rem;
+  padding-bottom: 1px;
+  display: inline-block;
+}
+.newsletter-card .read-more-link:hover {
+  color: #3e2764;
+  border-bottom: 2px solid #ae67e6;
+}
+.grid-layout {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+.grid-layout .newsletter-card {
+  height: 100%;
+}
+.load-more-container {
+  text-align: center;
+  margin-top: 3rem;
+}
+.load-more-btn {
+  background-color: #4d3670;
+  color: #fff;
+  padding: 1rem 2.5rem;
+  font-size: 1.1rem;
+  border-radius: 999px;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+  font-weight: 600;
+}
+.load-more-btn:hover {
+  background-color: #3b2958;
+}
+.hidden { display: none; }
+@media (max-width: 1000px) {
+  .newsletter-initial-row { grid-template-columns: 1fr; }
+  .featured-column-right { grid-template-rows: 1fr 1fr; }
+  .grid-layout { grid-template-columns: repeat(2, 1fr); }
+  .featured-card-inner { padding: 1.3rem !important; }
+  .newsletter-featured-img { max-height: 140px; min-height: 90px; }
+}
+{% endstyle %}
+
+<div class="newsletter-section">
+  <div class="newsletter-section-header">
+    <h2>{{ section.settings.heading }}</h2>
+    <span class="newsletter-header-accent"></span>
+    <div class="newsletter-subheading">{{ section.settings.subheading }}</div>
+  </div>
+  <div id="initialView" class="newsletter-initial-row">
+    {% assign featured_blocks = section.blocks | slice: 0, 3 %}
+    <div class="featured-large">
+      <div class="featured-card-inner">
+        {% assign article = articles[featured_blocks[0].settings.article] %}
+        {% if article %}
+          {% if article.image %}
+            <img src="{{ article.image | image_url: width: 900 }}" alt="{{ article.title }}" class="newsletter-featured-img">
+          {% endif %}
+          <div class="featured-card-title">{{ article.title }}</div>
+          <div class="featured-card-desc">{{ article.excerpt_or_content | truncate: 260 }}</div>
+          <div class="featured-card-footer">
+            <a href="{{ article.url }}" class="read-more-link">Read More →</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+    <div class="featured-column-right">
+      {% for block in featured_blocks offset:1 %}
+        {% assign article = articles[block.settings.article] %}
+        {% if article %}
+          <div class="newsletter-card">
+            {% if article.image %}
+              <img src="{{ article.image | image_url: width: 800 }}" alt="{{ article.title }}" class="newsletter-card-img">
+            {% endif %}
+            <h3>{{ article.title }}</h3>
+            <p>{{ article.excerpt_or_content | truncate: 100 }}</p>
+            <a href="{{ article.url }}" class="read-more-link">Read More →</a>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  <!-- Load More grid layout -->
+  <div id="gridView" class="grid-layout hidden">
+    {% for block in section.blocks %}
+      {% assign article = articles[block.settings.article] %}
+      {% if article %}
+        <div class="newsletter-card">
+          {% if article.image %}
+            <img src="{{ article.image | image_url: width: 800 }}" alt="{{ article.title }}" class="newsletter-card-img">
+          {% endif %}
+          <h3>{{ article.title }}</h3>
+          <p>{{ article.excerpt_or_content | truncate: 100 }}</p>
+          <a href="{{ article.url }}" class="read-more-link">Read More →</a>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% if section.blocks.size > 3 %}
+    <div class="load-more-container">
+      <button id="loadMoreBtn" class="load-more-btn">Load More</button>
+      <button id="readLessBtn" class="load-more-btn hidden">Load Less</button>
+    </div>
+  {% endif %}
+</div>
+
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var initialView = document.getElementById("initialView");
+    var gridView = document.getElementById("gridView");
+    var loadMoreBtn = document.getElementById("loadMoreBtn");
+    var readLessBtn = document.getElementById("readLessBtn");
+    if (loadMoreBtn && readLessBtn) {
+      loadMoreBtn.addEventListener("click", function () {
+        initialView.classList.add("hidden");
+        gridView.classList.remove("hidden");
+        loadMoreBtn.classList.add("hidden");
+        readLessBtn.classList.remove("hidden");
+      });
+      readLessBtn.addEventListener("click", function () {
+        gridView.classList.add("hidden");
+        initialView.classList.remove("hidden");
+        readLessBtn.classList.add("hidden");
+        loadMoreBtn.classList.remove("hidden");
+      });
+    }
+  });
+</script>
+
+{% schema %}
+{
+  "name": "Newsletter Highlights",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Section Heading",
+      "default": "From the Newsletter"
+    },
+    {
+      "type": "text",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Selected highlights from recent issues of our community newsletter."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "article",
+      "name": "Newsletter Article",
+      "settings": [
+        {
+          "type": "article",
+          "id": "article",
+          "label": "Select Article"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Newsletter Highlights",
+      "blocks": []
+    }
+  ]
+}
+{% endschema %}

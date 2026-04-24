@@ -1,0 +1,1581 @@
+{% doc %}
+  @prompt
+    Create a professional consultations section that showcases consultation services with customizable headings, descriptions, service cards with icons, booking call-to-action button, and contact information. Include options for different layout styles and color schemes., style the cards more, add more style, luxury wellenss, no card hover, add session length, remove, add clock/stop watch next to time, switch position of the time and price. Write starting at next to price, add space above header for logo, logo image is not rendering. fix, logo is not rendering when uploaded. fix this, image for logo is broken fix it, rework the cta section.,  Use the built-in Hide feature for the connect with us section, add button like theme buttons to the cta under the "schedule your consultation", "add icon picker to cards" or "customize card icons", "Modal popup for services, add a read more text link for the pop up, on pop up dont show button unless linked, add logo insert at top, logo image is not rendering, add top spacing control for logo, add placeholder icons on cards, add more style with the header add divider line, divider is not rendering
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-service-modal-{{ ai_gen_id }} {
+    padding: {{ block.settings.section_padding }}px0;
+    background: {{ block.settings.background_color }};
+    color: {{ block.settings.text_color }};
+    position: relative;
+  }
+
+  .ai-service-modal-container-{{ ai_gen_id }} {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .ai-service-modal-logo-{{ ai_gen_id }} {
+    text-align: {{ block.settings.text_alignment }};
+    margin-top: {{ block.settings.logo_margin_top }}px;
+    margin-bottom: {{ block.settings.logo_margin_bottom }}px;
+  }
+
+  .ai-service-modal-logo-image-{{ ai_gen_id }} {
+    max-width: {{ block.settings.logo_width }}px;
+    height: auto;
+    display: inline-block;
+  }
+
+  .ai-service-modal-logo-placeholder-{{ ai_gen_id }} {
+    max-width: {{ block.settings.logo_width }}px;
+    height: {{ block.settings.logo_height }}px;
+    background-color: #f4f4f4;
+    border: 2px dashed #cccccc;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #999999;
+    font-size: 14px;
+    text-align: center;
+    padding: 20px;
+    flex-direction: column;
+  }
+
+  .ai-service-modal-logo-placeholder-{{ ai_gen_id }} svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 8px;
+  }
+
+  .ai-service-modal-header-{{ ai_gen_id }} {
+    text-align: {{ block.settings.text_alignment }};
+    margin-bottom: 48px;
+    position: relative;
+  }
+
+  .ai-service-modal-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.heading_size }}px;
+    font-weight: 300;
+    margin: 0 0 16px;
+    color: {{ block.settings.heading_color }};
+    letter-spacing: 1px;
+    position: relative;
+  }
+
+  .ai-service-modal-description-{{ ai_gen_id }} {
+    font-size: {{ block.settings.description_size }}px;
+    line-height: 1.6;
+    margin: 0 0 32px;
+    max-width: 600px;
+    {% if block.settings.text_alignment == 'center' %}
+      margin-left: auto;
+      margin-right: auto;
+      margin-bottom: 32px;
+    {% endif %}
+  }
+
+  .ai-service-modal-header-divider-{{ ai_gen_id }} {
+    width: {{ block.settings.divider_width }}px;
+    height: {{ block.settings.divider_thickness }}px;
+    background: linear-gradient(90deg, transparent, {{ block.settings.divider_color }}, transparent);
+    border-radius: {{ block.settings.divider_thickness | divided_by: 2 }}px;
+    position: relative;
+    {% if block.settings.text_alignment == 'center' %}
+      margin: 0 auto;
+    {% elsif block.settings.text_alignment == 'right' %}
+      margin-left: auto;
+      margin-right: 0;
+    {% else %}
+      margin-left: 0;
+      margin-right: auto;
+    {% endif %}
+  }
+
+  .ai-service-modal-header-divider-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: {{ block.settings.divider_accent_size }}px;
+    height: {{ block.settings.divider_accent_size }}px;
+    background: {{ block.settings.divider_accent_color }};
+    border-radius: 50%;
+    box-shadow: 0 0 0 {{ block.settings.divider_accent_ring }}px {{ block.settings.divider_accent_color | color_modify: 'alpha', 0.2 }};
+  }
+
+  .ai-service-modal-grid-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 32px;
+  }
+
+  .ai-service-modal-card-{{ ai_gen_id }} {
+    background: {{ block.settings.card_background_color }};
+    border-radius: {{ block.settings.card_border_radius }}px;
+    padding: {{ block.settings.card_padding }}px;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    border: 1px solid {{ block.settings.card_border_color }};
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+  }
+
+  .ai-service-modal-card-{{ ai_gen_id }}:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  }
+
+  .ai-service-modal-card-icon-{{ ai_gen_id }} {
+    width: {{ block.settings.icon_size }}px;
+    height: {{ block.settings.icon_size }}px;
+    background: linear-gradient(135deg, {{ block.settings.icon_background_color }}, {{ block.settings.icon_background_color | color_modify: 'lightness', '+10' }});
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: {{ block.settings.icon_color }};
+    margin: 0 auto 24px;
+    box-shadow: 0 8px 24px {{ block.settings.icon_background_color | color_modify: 'alpha', 0.3 }};
+  }
+
+  .ai-service-modal-card-icon-{{ ai_gen_id }} img {
+    width: calc({{ block.settings.icon_size }}px * 0.5);
+    height: calc({{ block.settings.icon_size }}px * 0.5);object-fit: contain;
+  }
+
+  .ai-service-modal-card-icon-placeholder-{{ ai_gen_id }} {
+    width: {{ block.settings.icon_size }}px;
+    height: {{ block.settings.icon_size }}px;
+    background: #f4f4f4;
+    border: 2px dashed #cccccc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999999;
+    margin: 0 auto 24px;
+    font-size: 12px;
+    text-align: center;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ai-service-modal-card-icon-placeholder-{{ ai_gen_id }} svg {
+    width: calc({{ block.settings.icon_size }}px * 0.4);
+    height: calc({{ block.settings.icon_size }}px * 0.4);}
+
+  .ai-service-modal-card-title-{{ ai_gen_id }} {
+    font-size: 20px;
+    font-weight: 500;
+    margin: 0 0 12px;
+    color: {{ block.settings.card_heading_color }};
+  }
+
+  .ai-service-modal-card-price-{{ ai_gen_id }} {
+    font-size: 24px;
+    font-weight: 600;
+    color: {{ block.settings.price_color }};
+    margin: 0 0 16px;
+  }
+
+  .ai-service-modal-card-summary-{{ ai_gen_id }} {
+    font-size: 14px;
+    color: {{ block.settings.card_text_color }};
+    margin: 0 0 16px;
+    line-height: 1.5;
+  }
+
+  .ai-service-modal-card-read-more-{{ ai_gen_id }} {
+    color: {{ block.settings.read_more_color }};
+    text-decoration: none;
+    font-size: {{ block.settings.read_more_size }}px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: color 0.3s ease;
+  }
+
+  .ai-service-modal-card-read-more-{{ ai_gen_id }}:hover {
+    color: {{ block.settings.read_more_hover_color }};
+  }
+
+  .ai-service-modal-card-read-more-icon-{{ ai_gen_id }} {
+    width: 16px;
+    height: 16px;
+    transition: transform 0.3s ease;
+  }
+
+  .ai-service-modal-card-read-more-{{ ai_gen_id }}:hover .ai-service-modal-card-read-more-icon-{{ ai_gen_id }} {
+    transform: translateX(2px);
+  }
+
+  .ai-service-modal-overlay-{{ ai_gen_id }} {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    backdrop-filter: blur(4px);
+  }
+
+  .ai-service-modal-overlay-{{ ai_gen_id }}.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .ai-service-modal-popup-{{ ai_gen_id }} {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: {{ block.settings.modal_background_color }};
+    border-radius: {{ block.settings.modal_border_radius }}px;
+    padding: 0;
+    max-width: {{ block.settings.modal_width }}px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    z-index: 1001;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+    transition: transform 0.3s ease;border: 1px solid {{ block.settings.modal_border_color }};
+  }
+
+  .ai-service-modal-overlay-{{ ai_gen_id }}.active .ai-service-modal-popup-{{ ai_gen_id }} {
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .ai-service-modal-popup-header-{{ ai_gen_id }} {
+    padding: {{ block.settings.modal_padding }}px {{ block.settings.modal_padding }}px 0;
+    border-bottom: 1px solid {{ block.settings.modal_border_color }};
+    position: relative;
+  }
+
+  .ai-service-modal-popup-close-{{ ai_gen_id }} {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    color: {{ block.settings.modal_text_color }};
+    border-radius: 50%;
+    transition: background-color 0.3s ease;
+  }
+
+  .ai-service-modal-popup-close-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.modal_border_color }};
+  }
+
+  .ai-service-modal-popup-close-{{ ai_gen_id }} svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ai-service-modal-popup-icon-{{ ai_gen_id }} {
+    width: {{ block.settings.modal_icon_size }}px;
+    height: {{ block.settings.modal_icon_size }}px;
+    background: linear-gradient(135deg, {{ block.settings.icon_background_color }}, {{ block.settings.icon_background_color | color_modify: 'lightness', '+10' }});
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: {{ block.settings.icon_color }};
+    margin: 0 auto 24px;
+    box-shadow: 0 8px 24px {{ block.settings.icon_background_color | color_modify: 'alpha', 0.3 }};
+  }
+
+  .ai-service-modal-popup-icon-{{ ai_gen_id }} img {
+    width: calc({{ block.settings.modal_icon_size }}px * 0.5);
+    height: calc({{ block.settings.modal_icon_size }}px * 0.5);
+    object-fit: contain;
+  }
+
+  .ai-service-modal-popup-icon-placeholder-{{ ai_gen_id }} {
+    width: {{ block.settings.modal_icon_size }}px;
+    height: {{ block.settings.modal_icon_size }}px;
+    background: #f4f4f4;
+    border: 2px dashed #cccccc;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999999;
+    margin: 0 auto 24px;
+    font-size: 14px;
+    text-align: center;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ai-service-modal-popup-icon-placeholder-{{ ai_gen_id }} svg {
+    width: calc({{ block.settings.modal_icon_size }}px * 0.4);
+    height: calc({{ block.settings.modal_icon_size }}px * 0.4);
+  }
+
+  .ai-service-modal-popup-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.modal_heading_size }}px;
+    font-weight: 400;
+    margin: 0 0 8px;
+    color: {{ block.settings.modal_heading_color }};
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+
+  .ai-service-modal-popup-price-{{ ai_gen_id }} {
+    font-size: {{ block.settings.modal_price_size }}px;
+    font-weight: 600;
+    color: {{ block.settings.price_color }};
+    text-align: center;
+    margin: 0 0 24px;
+  }
+
+  .ai-service-modal-popup-content-{{ ai_gen_id }} {
+    padding: 0 {{ block.settings.modal_padding }}px {{ block.settings.modal_padding }}px;
+  }
+
+  .ai-service-modal-popup-description-{{ ai_gen_id }} {
+    font-size: 16px;
+    line-height: 1.7;
+    color: {{ block.settings.modal_text_color }};
+    margin: 0 0 32px;
+    text-align: left;
+  }
+
+  .ai-service-modal-popup-features-{{ ai_gen_id }} {
+    margin-bottom: 32px;
+  }
+
+  .ai-service-modal-popup-features-title-{{ ai_gen_id }} {
+    font-size: 18px;
+    font-weight: 500;
+    margin: 0 0 16px;
+    color: {{ block.settings.modal_heading_color }};
+  }
+
+  .ai-service-modal-popup-features-list-{{ ai_gen_id }} {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .ai-service-modal-popup-features-item-{{ ai_gen_id }} {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: {{ block.settings.modal_text_color }};line-height: 1.5;
+  }
+
+  .ai-service-modal-popup-features-icon-{{ ai_gen_id }} {
+    width: 20px;
+    height: 20px;
+    color: {{ block.settings.icon_background_color }};
+    flex-shrink: 0;margin-top: 2px;
+  }
+
+  .ai-service-modal-popup-duration-{{ ai_gen_id }} {
+    background: {{ block.settings.modal_background_color | color_modify: 'lightness', '-2' }};
+    border-radius: {{ block.settings.card_border_radius | divided_by: 2 }}px;
+    padding: 16px;
+    margin-bottom: 32px;
+    border: 1px solid {{ block.settings.modal_border_color }};
+  }
+
+  .ai-service-modal-popup-duration-title-{{ ai_gen_id }} {
+    font-size: 14px;
+    font-weight: 500;
+    color: {{ block.settings.modal_text_color }};
+    margin: 0 0 8px;opacity: 0.8;
+  }
+
+  .ai-service-modal-popup-duration-value-{{ ai_gen_id }} {
+    font-size: 18px;
+    font-weight: 600;
+    color: {{ block.settings.modal_heading_color }};
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ai-service-modal-popup-duration-icon-{{ ai_gen_id }} {
+    width: 20px;
+    height: 20px;
+    color: {{ block.settings.icon_background_color }};
+  }
+
+  .ai-service-modal-popup-cta-{{ ai_gen_id }} {
+    text-align: center;
+    padding-top: 24px;
+    border-top: 1px solid {{ block.settings.modal_border_color }};
+  }
+
+  .ai-service-modal-popup-cta-{{ ai_gen_id }}.hidden {
+    display: none;
+  }
+
+  .ai-service-modal-popup-button-{{ ai_gen_id }} {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    padding: {{ block.settings.button_padding }}px {{ block.settings.button_padding | times: 1.5 }}px;
+    background: linear-gradient(135deg, {{ block.settings.button_color }}, {{ block.settings.button_color | color_modify: 'lightness', '+5' }});
+    color: {{ block.settings.button_text_color }};
+    text-decoration: none;
+    border-radius: {{ block.settings.button_border_radius }}px;
+    font-weight: 500;
+    font-size: {{ block.settings.button_font_size }}px;
+    box-shadow: 0 8px 24px {{ block.settings.button_color | color_modify: 'alpha', 0.3 }};
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    cursor: pointer;letter-spacing: 0.5px;
+  }
+
+  .ai-service-modal-popup-button-{{ ai_gen_id }}:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px {{ block.settings.button_color | color_modify: 'alpha', 0.4 }};
+  }
+
+  .ai-service-modal-popup-button-icon-{{ ai_gen_id }} {
+    width: 20px;
+    height: 20px;
+  }
+
+  @media screen and (max-width: 768px) {
+    .ai-service-modal-popup-{{ ai_gen_id }} {
+      width: 95%;
+      max-height: 95vh;
+    }
+
+    .ai-service-modal-popup-header-{{ ai_gen_id }},
+    .ai-service-modal-popup-content-{{ ai_gen_id }} {
+      padding: {{ block.settings.modal_padding | times: 0.7 }}px;
+    }
+
+    .ai-service-modal-popup-title-{{ ai_gen_id }} {
+      font-size: calc({{ block.settings.modal_heading_size }}px * 0.9);
+    }
+
+    .ai-service-modal-grid-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+
+    .ai-service-modal-logo-image-{{ ai_gen_id }},
+    .ai-service-modal-logo-placeholder-{{ ai_gen_id }} {
+      max-width: calc({{ block.settings.logo_width }}px * 0.8);
+    }
+
+    .ai-service-modal-header-divider-{{ ai_gen_id }} {
+      width: calc({{ block.settings.divider_width }}px * 0.8);}
+  }
+{% endstyle %}
+
+<service-modal-{{ ai_gen_id }} class="ai-service-modal-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-service-modal-container-{{ ai_gen_id }}">
+    {% if block.settings.show_logo %}
+      <div class="ai-service-modal-logo-{{ ai_gen_id }}">
+        {% if block.settings.logo != blank %}
+          <img
+            src="{{ block.settings.logo | image_url: width: block.settings.logo_width, height: block.settings.logo_height }}"
+            alt="{{ block.settings.logo.alt | default: 'Logo' | escape }}"
+            class="ai-service-modal-logo-image-{{ ai_gen_id }}"
+            width="{{ block.settings.logo_width }}"
+            height="auto"
+            loading="lazy"
+          >
+        {% else %}
+          <div class="ai-service-modal-logo-placeholder-{{ ai_gen_id }}">
+            {{'image' | placeholder_svg_tag }}<div>Add your logo</div>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if block.settings.heading != blank or block.settings.description != blank %}
+      <div class="ai-service-modal-header-{{ ai_gen_id }}">
+        {% if block.settings.heading != blank %}
+          <h2 class="ai-service-modal-title-{{ ai_gen_id }}">{{ block.settings.heading }}</h2>
+        {% endif %}
+        {% if block.settings.description != blank %}
+          <div class="ai-service-modal-description-{{ ai_gen_id }}">{{ block.settings.description }}</div>
+        {% endif %}
+        {% if block.settings.show_divider %}
+          <div class="ai-service-modal-header-divider-{{ ai_gen_id }}"></div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    <div class="ai-service-modal-grid-{{ ai_gen_id }}">
+      {% for i in (1..6) %}
+        {% liquid
+          assign service_enabled_key = 'service_' | append: i | append: '_enabled'
+          assign service_title_key = 'service_' | append: i | append: '_title'
+          assign service_price_key = 'service_' | append: i | append: '_price'
+          assign service_summary_key = 'service_' | append: i | append: '_summary'
+          assign service_description_key = 'service_' | append: i | append: '_description'
+          assign service_duration_key = 'service_' | append: i | append: '_duration'
+          assign service_features_key = 'service_' | append: i | append: '_features'
+          assign service_button_text_key = 'service_' | append: i | append: '_button_text'
+          assign service_button_link_key = 'service_' | append: i | append: '_button_link'
+          assign service_icon_key = 'service_' | append: i | append: '_icon'
+
+          assign service_enabled = block.settings[service_enabled_key]
+          assign service_title = block.settings[service_title_key]
+          assign service_price = block.settings[service_price_key]
+          assign service_summary = block.settings[service_summary_key]
+          assign service_description = block.settings[service_description_key]
+          assign service_duration = block.settings[service_duration_key]
+          assign service_features = block.settings[service_features_key]
+          assign service_button_text = block.settings[service_button_text_key]
+          assign service_button_link = block.settings[service_button_link_key]
+          assign service_icon = block.settings[service_icon_key]
+        %}
+
+        {% if service_enabled and service_title != blank %}
+          <div class="ai-service-modal-card-{{ ai_gen_id }}" data-service="{{ i }}">
+            {% if service_icon != blank %}
+              <div class="ai-service-modal-card-icon-{{ ai_gen_id }}">
+                <img
+                  src="{{ service_icon | image_url: width: 64}}"
+                  alt="{{ service_title | escape }}"
+                  width="32"
+                  height="32"
+                  loading="lazy"
+                >
+              </div>
+            {% else %}
+              <div class="ai-service-modal-card-icon-placeholder-{{ ai_gen_id }}">
+                {{ 'image' | placeholder_svg_tag }}<div>Add icon</div>
+              </div>
+            {% endif %}
+            <h3 class="ai-service-modal-card-title-{{ ai_gen_id }}">{{ service_title }}</h3>
+            {% if service_price != blank %}
+              <div class="ai-service-modal-card-price-{{ ai_gen_id }}">{{ service_price }}</div>
+            {% endif %}
+            {% if service_summary != blank %}
+              <p class="ai-service-modal-card-summary-{{ ai_gen_id }}">{{ service_summary }}</p>
+            {% endif %}<a href="#" class="ai-service-modal-card-read-more-{{ ai_gen_id }}" data-read-more="{{ i }}">
+              {{ block.settings.read_more_text }}<svg class="ai-service-modal-card-read-more-icon-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+            </a>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="ai-service-modal-overlay-{{ ai_gen_id }}" data-modal-overlay>
+    <div class="ai-service-modal-popup-{{ ai_gen_id }}" data-modal-popup>
+      <div class="ai-service-modal-popup-header-{{ ai_gen_id }}"><button class="ai-service-modal-popup-close-{{ ai_gen_id }}" data-modal-close aria-label="Close modal">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <div class="ai-service-modal-popup-icon-{{ ai_gen_id }}" data-modal-icon></div>
+        <h3 class="ai-service-modal-popup-title-{{ ai_gen_id }}" data-modal-title></h3>
+        <div class="ai-service-modal-popup-price-{{ ai_gen_id }}" data-modal-price></div>
+      </div>
+      <div class="ai-service-modal-popup-content-{{ ai_gen_id }}">
+        <div class="ai-service-modal-popup-description-{{ ai_gen_id }}" data-modal-description></div>
+        <div class="ai-service-modal-popup-duration-{{ ai_gen_id }}" data-modal-duration-wrapper>
+          <div class="ai-service-modal-popup-duration-title-{{ ai_gen_id }}">Session Duration</div>
+          <div class="ai-service-modal-popup-duration-value-{{ ai_gen_id }}">
+            <svg class="ai-service-modal-popup-duration-icon-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12,6 12,12 16,14"/></svg>
+            <span data-modal-duration></span>
+          </div>
+        </div>
+
+        <div class="ai-service-modal-popup-features-{{ ai_gen_id }}" data-modal-features-wrapper>
+          <h4 class="ai-service-modal-popup-features-title-{{ ai_gen_id }}">What's Included</h4>
+          <ul class="ai-service-modal-popup-features-list-{{ ai_gen_id }}" data-modal-features></ul>
+        </div>
+
+        <div class="ai-service-modal-popup-cta-{{ ai_gen_id }}" data-modal-cta>
+          <a href="#" class="ai-service-modal-popup-button-{{ ai_gen_id }}" data-modal-button><svg class="ai-service-modal-popup-button-icon-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"/>
+            </svg>
+            <span data-modal-button-text>Book Now</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</service-modal-{{ ai_gen_id }}><script>
+  (function() {
+    class ServiceModal{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+        this.services = {
+          {% for i in (1..6) %}
+            {% liquid
+              assign service_enabled_key = 'service_' | append: i | append: '_enabled'
+              assign service_title_key = 'service_' | append: i | append: '_title'
+              assign service_price_key = 'service_' | append: i | append: '_price'
+              assign service_description_key = 'service_' | append: i | append: '_description'
+              assign service_duration_key = 'service_' | append: i | append: '_duration'
+              assign service_features_key = 'service_' | append: i | append: '_features'
+              assign service_button_text_key = 'service_' | append: i | append: '_button_text'
+              assign service_button_link_key = 'service_' | append: i | append: '_button_link'
+              assign service_icon_key = 'service_' | append: i | append: '_icon'
+
+              assign service_enabled = block.settings[service_enabled_key]
+              assign service_title = block.settings[service_title_key]
+              assign service_price = block.settings[service_price_key]
+              assign service_description = block.settings[service_description_key]
+              assign service_duration = block.settings[service_duration_key]
+              assign service_features = block.settings[service_features_key]
+              assign service_button_text = block.settings[service_button_text_key]
+              assign service_button_link = block.settings[service_button_link_key]
+              assign service_icon = block.settings[service_icon_key]
+            %}{% if service_enabled and service_title != blank %}
+              {{ i }}: {
+                title: {{ service_title | json }},
+                price: {{ service_price | json }},
+                description: {{ service_description | json }},
+                duration: {{ service_duration | json }},
+                features: {{ service_features | json }},
+                buttonText: {{ service_button_text | default: 'Book Now' | json }},
+                buttonLink: {{ service_button_link | json }},
+                icon: {{ service_icon | json }}
+              },
+            {% endif %}
+          {% endfor %}
+        };
+      }
+
+      connectedCallback() {
+        this.setupEventListeners();
+      }
+
+      setupEventListeners() {
+        const cards = this.querySelectorAll('.ai-service-modal-card-{{ ai_gen_id }}');
+        const readMoreLinks = this.querySelectorAll('[data-read-more]');
+        const overlay = this.querySelector('[data-modal-overlay]');
+        const closeButton = this.querySelector('[data-modal-close]');
+
+        cards.forEach(card => {
+          card.addEventListener('click', (e) => {
+            if (!e.target.closest('[data-read-more]')) {
+              const serviceId = card.dataset.service;
+              this.openModal(serviceId);
+            }
+          });
+        });
+
+        readMoreLinks.forEach(link => {
+          link.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const serviceId = link.dataset.readMore;
+            this.openModal(serviceId);
+          });
+        });
+
+        closeButton.addEventListener('click', () => {
+          this.closeModal();
+        });
+
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) {
+            this.closeModal();
+          }
+        });document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && overlay.classList.contains('active')) {
+            this.closeModal();
+          }
+        });
+      }
+
+      openModal(serviceId) {
+        const service = this.services[serviceId];
+        if (!service) return;
+
+        const overlay = this.querySelector('[data-modal-overlay]');
+        const modalIcon = this.querySelector('[data-modal-icon]');
+        const modalTitle = this.querySelector('[data-modal-title]');
+        const modalPrice = this.querySelector('[data-modal-price]');
+        const modalDescription = this.querySelector('[data-modal-description]');
+        const modalDuration = this.querySelector('[data-modal-duration]');
+        const modalDurationWrapper = this.querySelector('[data-modal-duration-wrapper]');
+        const modalFeatures = this.querySelector('[data-modal-features]');
+        const modalFeaturesWrapper = this.querySelector('[data-modal-features-wrapper]');
+        const modalButton = this.querySelector('[data-modal-button]');
+        const modalButtonText = this.querySelector('[data-modal-button-text]');
+        const modalCta = this.querySelector('[data-modal-cta]');
+
+        if (service.icon) {
+          modalIcon.innerHTML = `<img src="${service.icon}" alt="${service.title}" width="40" height="40" loading="lazy">`;
+          modalIcon.className = 'ai-service-modal-popup-icon-{{ ai_gen_id }}';
+        } else {
+          modalIcon.innerHTML = `{{ 'image' | placeholder_svg_tag }}<div>Add icon</div>`;
+          modalIcon.className = 'ai-service-modal-popup-icon-placeholder-{{ ai_gen_id }}';
+        }
+
+        modalTitle.textContent = service.title;
+        modalPrice.textContent = service.price;
+        modalDescription.textContent = service.description;
+
+        if (service.duration) {
+          modalDuration.textContent = service.duration;
+          modalDurationWrapper.style.display = 'block';
+        } else {
+          modalDurationWrapper.style.display = 'none';
+        }
+
+        if (service.features) {
+          const featuresArray = service.features.split('\n').filter(feature => feature.trim());
+          modalFeatures.innerHTML = featuresArray.map(feature => `
+            <li class="ai-service-modal-popup-features-item-{{ ai_gen_id }}">
+              <svg class="ai-service-modal-popup-features-icon-{{ ai_gen_id }}" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20,6 9,17 4,12"/>
+              </svg>
+              <span>${feature.trim()}</span>
+            </li>
+          `).join('');
+          modalFeaturesWrapper.style.display = 'block';
+        } else {
+          modalFeaturesWrapper.style.display = 'none';
+        }
+
+        if (service.buttonLink && service.buttonLink.trim() !== '') {
+          modalButtonText.textContent = service.buttonText;
+          modalButton.href = service.buttonLink;
+          modalCta.classList.remove('hidden');
+        } else {
+          modalCta.classList.add('hidden');
+        }
+
+        overlay.classList.add('active');document.body.style.overflow = 'hidden';
+      }
+
+      closeModal() {
+        const overlay = this.querySelector('[data-modal-overlay]');
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+    }
+
+    customElements.define('service-modal-{{ ai_gen_id }}', ServiceModal{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Service modal popup",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Logo"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_logo",
+      "label": "Show logo",
+      "default": true
+    },
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo image"
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "min": 80,
+      "max": 400,
+      "step": 10,
+      "unit": "px",
+      "label": "Logo width",
+      "default": 200
+    },
+    {
+      "type": "range",
+      "id": "logo_height",
+      "min": 60,
+      "max": 200,
+      "step": 10,
+      "unit": "px",
+      "label": "Logo placeholder height",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "logo_margin_top",
+      "min": 0,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Logo top spacing",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "logo_margin_bottom",
+      "min": 20,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Logo bottom spacing",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Section content"
+    },
+    {
+      "type": "richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "<p>Our Services</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "description",
+      "label": "Description",
+      "default": "<p>Discover our comprehensive range of wellness services designed to support your health journey.</p>"
+    },
+    {
+      "type": "select",
+      "id": "text_alignment",
+      "label": "Text alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        }
+      ],
+      "default": "center"
+    },
+    {
+      "type": "text",
+      "id": "read_more_text",
+      "label": "Read more text",
+      "default": "Learn more"
+    },
+    {
+      "type": "header",
+      "content": "Header divider"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_divider",
+      "label": "Show divider",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "divider_width",
+      "min": 60,
+      "max": 200,
+      "step": 10,
+      "unit": "px",
+      "label": "Divider width",
+      "default": 120
+    },
+    {
+      "type": "range",
+      "id": "divider_thickness",
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "unit": "px",
+      "label": "Divider thickness",
+      "default": 3
+    },
+    {
+      "type": "color",
+      "id": "divider_color",
+      "label": "Divider color",
+      "default": "#d4af37"
+    },
+    {
+      "type": "range",
+      "id": "divider_accent_size",
+      "min": 8,
+      "max": 16,
+      "step": 2,
+      "unit": "px",
+      "label": "Accent dot size",
+      "default": 12
+    },
+    {
+      "type": "color",
+      "id": "divider_accent_color",
+      "label": "Accent dot color",
+      "default": "#8b7355"
+    },
+    {
+      "type": "range",
+      "id": "divider_accent_ring",
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "unit": "px",
+      "label": "Accent ring size",
+      "default": 4
+    },
+    {
+      "type": "header",
+      "content": "Service1"
+    },
+    {
+      "type": "checkbox",
+      "id": "service_1_enabled",
+      "label": "Enable service 1",
+      "default": true
+    },
+    {
+      "type": "image_picker",
+      "id": "service_1_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "text",
+      "id": "service_1_title",
+      "label": "Title",
+      "default": "Wellness Assessment"
+    },
+    {
+      "type": "text",
+      "id": "service_1_price",
+      "label": "Price",
+      "default": "Starting at $250"
+    },
+    {
+      "type": "textarea",
+      "id": "service_1_summary",
+      "label": "Card summary",
+      "default": "Comprehensive health evaluation and personalized wellness plan."
+    },
+    {
+      "type": "textarea",
+      "id": "service_1_description",
+      "label": "Full description",
+      "default": "Our comprehensive wellness assessment provides a thorough evaluation of your current health status, lifestyle factors, and wellness goals. Through detailed consultation and analysis, we create a personalized roadmap to optimize your health and well-being."
+    },
+    {
+      "type": "text",
+      "id": "service_1_duration",
+      "label": "Duration",
+      "default": "90 minutes"
+    },
+    {
+      "type": "textarea",
+      "id": "service_1_features",
+      "label": "Features (one per line)",
+      "default": "Complete health history review\nPersonalized wellness plan\nNutritional guidance\nLifestyle recommendations\nFollow-up support"
+    },
+    {
+      "type": "text",
+      "id": "service_1_button_text",
+      "label": "Button text",
+      "default": "Book Assessment"
+    },
+    {
+      "type": "url",
+      "id": "service_1_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "header",
+      "content": "Service 2"
+    },
+    {
+      "type": "checkbox",
+      "id": "service_2_enabled",
+      "label": "Enable service 2",
+      "default": true
+    },
+    {
+      "type": "image_picker",
+      "id": "service_2_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "text",
+      "id": "service_2_title",
+      "label": "Title",
+      "default": "Nutrition Consultation"
+    },
+    {
+      "type": "text",
+      "id": "service_2_price",
+      "label": "Price",
+      "default": "Starting at $200"
+    },
+    {
+      "type": "textarea",
+      "id": "service_2_summary",
+      "label": "Card summary",
+      "default": "Expert nutritional guidance tailored to your unique needs."
+    },
+    {
+      "type": "textarea",
+      "id": "service_2_description",
+      "label": "Full description",
+      "default": "Work with our certified nutritionists to develop a sustainable eating plan that supports your health goals. We focus on whole foods, proper nutrition timing, and creating lasting healthy habits."
+    },
+    {
+      "type": "text",
+      "id": "service_2_duration",
+      "label": "Duration",
+      "default": "60 minutes"
+    },
+    {
+      "type": "textarea",
+      "id": "service_2_features",
+      "label": "Features (one per line)",
+      "default": "Dietary assessment\nCustom meal planning\nSupplement recommendations\nFood sensitivity analysis\nOngoing support"
+    },
+    {
+      "type": "text",
+      "id": "service_2_button_text",
+      "label": "Button text",
+      "default": "Book Consultation"
+    },
+    {
+      "type": "url",
+      "id": "service_2_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "header",
+      "content": "Service 3"
+    },
+    {
+      "type": "checkbox",
+      "id": "service_3_enabled",
+      "label": "Enable service 3",
+      "default": true
+    },
+    {
+      "type": "image_picker",
+      "id": "service_3_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "text",
+      "id": "service_3_title",
+      "label": "Title",
+      "default": "Stress Management"
+    },
+    {
+      "type": "text",
+      "id": "service_3_price",
+      "label": "Price",
+      "default": "Starting at $175"
+    },
+    {
+      "type": "textarea",
+      "id": "service_3_summary",
+      "label": "Card summary",
+      "default": "Learn effective techniques to manage stress and improve mental clarity."
+    },
+    {
+      "type": "textarea",
+      "id": "service_3_description",
+      "label": "Full description",
+      "default": "Discover proven stress management techniques including mindfulness, breathing exercises, and lifestyle modifications. Our approach helps you build resilience and maintain emotional balance in daily life."
+    },
+    {
+      "type": "text",
+      "id": "service_3_duration",
+      "label": "Duration",
+      "default": "75 minutes"
+    },
+    {
+      "type": "textarea",
+      "id": "service_3_features",
+      "label": "Features (one per line)",
+      "default": "Stress assessment\nMindfulness training\nBreathing techniques\nRelaxation methods\nDaily practice plan"
+    },
+    {
+      "type": "text",
+      "id": "service_3_button_text",
+      "label": "Button text",
+      "default": "Book Session"
+    },
+    {
+      "type": "url",
+      "id": "service_3_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "header",
+      "content": "Service 4"
+    },
+    {
+      "type": "checkbox",
+      "id": "service_4_enabled",
+      "label": "Enable service 4",
+      "default": false
+    },
+    {
+      "type": "image_picker",
+      "id": "service_4_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "text",
+      "id": "service_4_title",
+      "label": "Title"
+    },
+    {
+      "type": "text",
+      "id": "service_4_price",
+      "label": "Price"
+    },
+    {
+      "type": "textarea",
+      "id": "service_4_summary",
+      "label": "Card summary"
+    },
+    {
+      "type": "textarea",
+      "id": "service_4_description",
+      "label": "Full description"
+    },
+    {
+      "type": "text",
+      "id": "service_4_duration",
+      "label": "Duration"
+    },
+    {
+      "type": "textarea",
+      "id": "service_4_features",
+      "label": "Features (one per line)"
+    },
+    {
+      "type": "text",
+      "id": "service_4_button_text",
+      "label": "Button text"
+    },
+    {
+      "type": "url",
+      "id": "service_4_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "header",
+      "content": "Service 5"
+    },
+    {
+      "type": "checkbox",
+      "id": "service_5_enabled",
+      "label": "Enable service 5",
+      "default": false
+    },
+    {
+      "type": "image_picker",
+      "id": "service_5_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "text",
+      "id": "service_5_title",
+      "label": "Title"
+    },
+    {
+      "type": "text",
+      "id": "service_5_price",
+      "label": "Price"
+    },
+    {
+      "type": "textarea",
+      "id": "service_5_summary",
+      "label": "Card summary"
+    },
+    {
+      "type": "textarea",
+      "id": "service_5_description",
+      "label": "Full description"
+    },
+    {
+      "type": "text",
+      "id": "service_5_duration",
+      "label": "Duration"
+    },
+    {
+      "type": "textarea",
+      "id": "service_5_features",
+      "label": "Features (one per line)"
+    },
+    {
+      "type": "text",
+      "id": "service_5_button_text",
+      "label": "Button text"
+    },
+    {
+      "type": "url",
+      "id": "service_5_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "header",
+      "content": "Service 6"
+    },
+    {
+      "type": "checkbox",
+      "id": "service_6_enabled",
+      "label": "Enable service 6",
+      "default": false
+    },
+    {
+      "type": "image_picker",
+      "id": "service_6_icon",
+      "label": "Icon"
+    },
+    {
+      "type": "text",
+      "id": "service_6_title",
+      "label": "Title"
+    },
+    {
+      "type": "text",
+      "id": "service_6_price",
+      "label": "Price"
+    },
+    {
+      "type": "textarea",
+      "id": "service_6_summary",
+      "label": "Card summary"
+    },
+    {
+      "type": "textarea",
+      "id": "service_6_description",
+      "label": "Full description"
+    },
+    {
+      "type": "text",
+      "id": "service_6_duration",
+      "label": "Duration"
+    },
+    {
+      "type": "textarea",
+      "id": "service_6_features",
+      "label": "Features (one per line)"
+    },
+    {
+      "type": "text",
+      "id": "service_6_button_text",
+      "label": "Button text"
+    },
+    {
+      "type": "url",
+      "id": "service_6_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background",
+      "default": "#fafafa"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text",
+      "default": "#2c2c2c"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Headings",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "card_background_color",
+      "label": "Card background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "card_heading_color",
+      "label": "Card headings",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "card_text_color",
+      "label": "Card text",
+      "default": "#555555"
+    },
+    {
+      "type": "color",
+      "id": "card_border_color",
+      "label": "Card border",
+      "default": "#e8e8e8"
+    },
+    {
+      "type": "color",
+      "id": "price_color",
+      "label": "Price",
+      "default": "#d4af37"
+    },
+    {
+      "type": "color",
+      "id": "icon_background_color",
+      "label": "Icon background",
+      "default": "#8b7355"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "Icon",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "read_more_color",
+      "label": "Read more link",
+      "default": "#8b7355"
+    },
+    {
+      "type": "color",
+      "id": "read_more_hover_color",
+      "label": "Read more link hover",
+      "default": "#6b5a42"
+    },
+    {
+      "type": "color",
+      "id": "modal_background_color",
+      "label": "Modal background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "modal_text_color",
+      "label": "Modal text",
+      "default": "#2c2c2c"
+    },
+    {
+      "type": "color",
+      "id": "modal_heading_color",
+      "label": "Modal headings",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "modal_border_color",
+      "label": "Modal border",
+      "default": "#e8e8e8"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button",
+      "default": "#8b7355"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "min": 24,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Heading size",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "description_size",
+      "min": 14,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Description size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "read_more_size",
+      "min": 12,
+      "max": 16,
+      "step": 1,
+      "unit": "px",
+      "label": "Read more size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "modal_heading_size",
+      "min": 20,
+      "max": 36,
+      "step": 2,
+      "unit": "px",
+      "label": "Modal heading size",
+      "default": 28
+    },
+    {
+      "type": "range",
+      "id": "modal_price_size",
+      "min": 18,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Modal price size",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "button_font_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Button font size",
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Spacing and style"
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "min": 40,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Section padding",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "card_padding",
+      "min": 20,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Card padding",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "modal_padding",
+      "min": 24,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Modal padding",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "button_padding",
+      "min": 12,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Button padding",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "card_border_radius",
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Card border radius",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "modal_border_radius",
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Modal border radius",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "button_border_radius",
+      "min": 4,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Button border radius",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "icon_size",
+      "min": 48,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Card icon size",
+      "default": 64
+    },
+    {
+      "type": "range",
+      "id": "modal_icon_size",
+      "min": 64,
+      "max": 96,
+      "step": 4,
+      "unit": "px",
+      "label": "Modal icon size",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "modal_width",
+      "min": 500,
+      "max": 800,
+      "step": 20,
+      "unit": "px",
+      "label": "Modal width",
+      "default": 600
+    }
+  ],
+  "presets": [
+    {
+      "name": "Service modal popup"
+    }
+  ],
+  "tag": null
+}
+{% endschema %}

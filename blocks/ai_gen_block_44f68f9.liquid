@@ -1,0 +1,704 @@
+{% doc %}
+  @prompt
+    Create a professional company bio section with mission and vision statements that can be customized with the company's information. Include fields for company description, mission statement, vision statement, and founding story. Make it visually appealing with proper typography and spacing., the about us abd story should be the same card. make the mission and vision smaller, add a good design and styler
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-company-bio-{{ ai_gen_id }} {
+    padding: {{ block.settings.section_padding }}px 0;
+    background: {{ block.settings.background_color }};
+    background: linear-gradient(135deg, {{ block.settings.background_color }} 0%, {{ block.settings.background_gradient }} 100%);
+    color: {{ block.settings.text_color }};
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-company-bio-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23f0f0f0' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .ai-company-bio-container-{{ ai_gen_id }} {
+    max-width: {{ block.settings.max_width }}px;
+    margin: 0 auto;
+    padding: 0 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .ai-company-bio-header-{{ ai_gen_id }} {
+    text-align: {{ block.settings.text_alignment }};
+    margin-bottom: {{ block.settings.section_spacing }}px;
+  }
+
+  .ai-company-bio-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.title_size }}px;
+    font-weight:700;
+    color: {{ block.settings.title_color }};
+    margin: 0 0 16px 0;
+    line-height: 1.2;position: relative;
+  }
+
+  .ai-company-bio-title-{{ ai_gen_id }}::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: {% if block.settings.text_alignment == 'center' %}50%{% elsif block.settings.text_alignment == 'right' %}100%{% else %}0{% endif %};
+    transform: translateX({% if block.settings.text_alignment == 'center' %}-50%{% elsif block.settings.text_alignment == 'right' %}-100%{% else %}0{% endif %});
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, {{ block.settings.accent_color }}, {{ block.settings.accent_color_secondary }});
+    border-radius: 2px;
+  }
+
+  .ai-company-bio-subtitle-{{ ai_gen_id }} {
+    font-size: {{ block.settings.subtitle_size }}px;
+    color: {{ block.settings.subtitle_color }};
+    margin: 0;
+    line-height: 1.5;
+    opacity: 0.9;
+    font-weight: 300;
+  }
+
+  .ai-company-bio-content-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: {{ block.settings.content_gap }}px;
+    margin-top: {{ block.settings.section_spacing }}px;
+  }
+
+  .ai-company-bio-main-card-{{ ai_gen_id }} {
+    background: {{ block.settings.card_background }};
+    background: linear-gradient(145deg, {{ block.settings.card_background }}, {{ block.settings.card_background_secondary }});
+    padding: {{ block.settings.card_padding }}px;
+    border-radius: {{ block.settings.card_border_radius }}px;
+    border: {{ block.settings.card_border_width }}px solid {{ block.settings.card_border_color }};
+    box-shadow: 
+      0 {{ block.settings.card_shadow_blur }}px {{ block.settings.card_shadow_spread }}px rgba(0, 0, 0, {{ block.settings.card_shadow_opacity | divided_by: 100.0 }}),
+      0 1px 3px rgba(0, 0, 0, 0.12),
+      0 1px 2px rgba(0, 0, 0, 0.24);
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-company-bio-main-card-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, {{ block.settings.accent_color }}, {{ block.settings.accent_color_secondary }});}
+
+  .ai-company-bio-main-card-{{ ai_gen_id }}:hover {
+    transform: translateY(-8px);
+    box-shadow: 
+      0 {{ block.settings.card_shadow_blur | plus: 8 }}px {{ block.settings.card_shadow_spread | plus: 4 }}px rgba(0, 0, 0, {{ block.settings.card_shadow_opacity | divided_by: 100.0 | plus: 0.08 }}),
+      0 4px 6px rgba(0, 0, 0, 0.12),
+      0 2px 4px rgba(0, 0, 0, 0.08);
+  }
+
+  .ai-company-bio-mini-card-{{ ai_gen_id }} {
+    background: {{ block.settings.mini_card_background }};
+    padding: {{ block.settings.mini_card_padding }}px;
+    border-radius: {{ block.settings.card_border_radius }}px;
+    border: 1px solid {{ block.settings.mini_card_border_color }};
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+  }
+
+  .ai-company-bio-mini-card-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: {{ block.settings.accent_color }};
+    opacity: 0.6;
+  }
+
+  .ai-company-bio-mini-card-{{ ai_gen_id }}:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  .ai-company-bio-mini-card-{{ ai_gen_id }}:hover::before {
+    opacity: 1;
+  }
+
+  .ai-company-bio-card-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.card_title_size }}px;
+    font-weight: 600;
+    color: {{ block.settings.card_title_color }};
+    margin: 0 0 20px 0;
+    line-height: 1.3;display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ai-company-bio-mini-card-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.mini_card_title_size }}px;
+    font-weight: 600;
+    color: {{ block.settings.mini_card_title_color }};margin: 0 0 12px 0;
+    line-height: 1.3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ai-company-bio-card-icon-{{ ai_gen_id }} {
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, {{ block.settings.accent_color }}, {{ block.settings.accent_color_secondary }});
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;}
+
+  .ai-company-bio-mini-card-icon-{{ ai_gen_id }} {
+    width: 20px;
+    height: 20px;
+    background: {{ block.settings.accent_color }};
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .ai-company-bio-card-content-{{ ai_gen_id }} {
+    font-size: {{ block.settings.card_text_size }}px;
+    line-height: 1.7;
+    color: {{ block.settings.card_text_color }};
+  }
+
+  .ai-company-bio-mini-card-content-{{ ai_gen_id }} {
+    font-size: {{ block.settings.mini_card_text_size }}px;
+    line-height: 1.6;
+    color: {{ block.settings.mini_card_text_color }};
+  }
+
+  .ai-company-bio-card-content-{{ ai_gen_id }} p,
+  .ai-company-bio-mini-card-content-{{ ai_gen_id }} p {
+    margin: 0 0 16px 0;
+  }
+
+  .ai-company-bio-card-content-{{ ai_gen_id }} p:last-child,
+  .ai-company-bio-mini-card-content-{{ ai_gen_id }} p:last-child {
+    margin-bottom: 0;
+  }
+
+  .ai-company-bio-empty-state-{{ ai_gen_id }} {
+    text-align: center;
+    padding: 80px 20px;
+    color: #666;
+    font-style: italic;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 12px;
+    border: 2px dashed #ddd;
+  }
+
+  @media screen and (max-width: 1024px) {
+    .ai-company-bio-content-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: {{ block.settings.content_gap | times: 0.8 }}px;
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .ai-company-bio-{{ ai_gen_id }} {
+      padding: {{ block.settings.section_padding | times: 0.7 }}px 0;
+    }
+
+    .ai-company-bio-container-{{ ai_gen_id }} {
+      padding: 0 16px;
+    }
+
+    .ai-company-bio-main-card-{{ ai_gen_id }} {
+      padding: {{ block.settings.card_padding | times: 0.8 }}px;
+    }
+
+    .ai-company-bio-mini-card-{{ ai_gen_id }} {
+      padding: {{ block.settings.mini_card_padding | times: 0.8 }}px;
+    }
+
+    .ai-company-bio-title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.title_size | times: 0.8 }}px;
+    }
+
+    .ai-company-bio-subtitle-{{ ai_gen_id }} {
+      font-size: {{ block.settings.subtitle_size | times: 0.9 }}px;
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .ai-company-bio-title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.title_size | times: 0.7 }}px;
+    }
+
+    .ai-company-bio-card-title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.card_title_size | times: 0.9 }}px;
+    }
+
+    .ai-company-bio-mini-card-title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.mini_card_title_size | times: 0.9 }}px;
+    }
+  }
+{% endstyle %}<div class="ai-company-bio-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-company-bio-container-{{ ai_gen_id }}">
+    {% if block.settings.section_title != blank or block.settings.section_subtitle != blank %}
+      <div class="ai-company-bio-header-{{ ai_gen_id }}">
+        {% if block.settings.section_title != blank %}
+          <h2 class="ai-company-bio-title-{{ ai_gen_id }}">{{ block.settings.section_title }}</h2>
+        {% endif %}
+        {% if block.settings.section_subtitle != blank %}
+          <div class="ai-company-bio-subtitle-{{ ai_gen_id }}">{{ block.settings.section_subtitle }}</div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% assign has_main_content = false %}
+    {% assign has_mission = false %}
+    {% assign has_vision = false %}
+    
+    {% if block.settings.company_description != blank or block.settings.founding_story != blank %}
+      {% assign has_main_content = true %}
+    {% endif %}
+    
+    {% if block.settings.mission_statement != blank %}
+      {% assign has_mission = true %}
+    {% endif %}
+    
+    {% if block.settings.vision_statement != blank %}
+      {% assign has_vision = true %}
+    {% endif %}
+
+    {% if has_main_content or has_mission or has_vision %}
+      <div class="ai-company-bio-content-{{ ai_gen_id }}">
+        {% if has_main_content %}
+          <div class="ai-company-bio-main-card-{{ ai_gen_id }}">
+            <h3 class="ai-company-bio-card-title-{{ ai_gen_id }}"><div class="ai-company-bio-card-icon-{{ ai_gen_id }}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+              About Us & Our Story
+            </h3>
+            <div class="ai-company-bio-card-content-{{ ai_gen_id }}">
+              {% if block.settings.company_description != blank %}
+                {{ block.settings.company_description }}
+              {% endif %}
+              {% if block.settings.founding_story != blank %}
+                {{ block.settings.founding_story }}
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if has_mission %}
+          <div class="ai-company-bio-mini-card-{{ ai_gen_id }}">
+            <h3 class="ai-company-bio-mini-card-title-{{ ai_gen_id }}">
+              <div class="ai-company-bio-mini-card-icon-{{ ai_gen_id }}">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                </svg>
+              </div>
+              Our Mission
+            </h3>
+            <div class="ai-company-bio-mini-card-content-{{ ai_gen_id }}">
+              {{ block.settings.mission_statement }}
+            </div>
+          </div>
+        {% endif %}
+
+        {% if has_vision %}
+          <div class="ai-company-bio-mini-card-{{ ai_gen_id }}">
+            <h3 class="ai-company-bio-mini-card-title-{{ ai_gen_id }}">
+              <div class="ai-company-bio-mini-card-icon-{{ ai_gen_id }}">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+              </div>
+              Our Vision
+            </h3>
+            <div class="ai-company-bio-mini-card-content-{{ ai_gen_id }}">
+              {{ block.settings.vision_statement }}
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% else %}
+      <div class="ai-company-bio-empty-state-{{ ai_gen_id }}">
+        Add your company information to get started
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Company bio section",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Section header"
+    },
+    {
+      "type": "text",
+      "id": "section_title",
+      "label": "Section title",
+      "default": "About Our Company"
+    },
+    {
+      "type": "richtext",
+      "id": "section_subtitle",
+      "label": "Section subtitle",
+      "default": "<p>Learn more about who we are and what drives us forward</p>"
+    },
+    {
+      "type": "header",
+      "content": "Company information"
+    },
+    {
+      "type": "richtext",
+      "id": "company_description",
+      "label": "Company description",
+      "default": "<p>We are a forward-thinking company dedicated to delivering exceptional products and services that make a difference in our customers' lives. Our team combines expertise with passion to create solutions that exceed expectations.</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "founding_story",
+      "label": "Founding story",
+      "default": "<p>Founded with a passion for excellence and a vision to make a difference, our company started as a small team with big dreams and has grown into a trusted partner for customers worldwide. Every step of our journey has been guided by our commitment to innovation and quality.</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "mission_statement",
+      "label": "Mission statement",
+      "default": "<p>To provide innovative solutions that empower our customers to achieve their goals while maintaining the highest standards of quality and integrity.</p>"
+    },
+    {
+      "type": "richtext",
+      "id": "vision_statement",
+      "label": "Vision statement",
+      "default": "<p>To be the leading company in our industry, recognized for our commitment to excellence, innovation, and positive impact on the communities we serve.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "select",
+      "id": "text_alignment",
+      "label": "Header alignment",
+      "options": [
+        {"value": "left", "label": "Left"},
+        {"value": "center", "label": "Center"},
+        {"value": "right", "label": "Right"}
+      ],
+      "default": "center"
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "label": "Maximum width",
+      "min": 800,
+      "max": 1400,
+      "step": 50,
+      "unit": "px",
+      "default": 1200
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "label": "Section padding",
+      "min": 40,
+      "max": 120,
+      "step": 10,
+      "unit": "px",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "section_spacing",
+      "label": "Header spacing",
+      "min": 30,
+      "max": 80,
+      "step": 5,
+      "unit": "px",
+      "default": 50
+    },
+    {
+      "type": "range",
+      "id": "content_gap",
+      "label": "Content gap",
+      "min": 20,
+      "max": 60,
+      "step": 5,
+      "unit": "px",
+      "default": 30
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background start",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "background_gradient",
+      "label": "Background end",
+      "default": "#f8f9fa"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Section title",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "subtitle_color",
+      "label": "Section subtitle",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#4f46e5"
+    },
+    {
+      "type": "color",
+      "id": "accent_color_secondary",
+      "label": "Accent color secondary",
+      "default": "#7c3aed"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "label": "Section title size",
+      "min": 28,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "default": 42
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size",
+      "label": "Section subtitle size",
+      "min": 16,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "card_title_size",
+      "label": "Main card title size",
+      "min": 20,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "default": 26
+    },
+    {
+      "type": "range",
+      "id": "card_text_size",
+      "label": "Main card text size",
+      "min": 14,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "mini_card_title_size",
+      "label": "Mini card title size",
+      "min": 16,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "default": 18
+    },
+    {
+      "type": "range",
+      "id": "mini_card_text_size",
+      "label": "Mini card text size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "Main card style"
+    },
+    {
+      "type": "color",
+      "id": "card_background",
+      "label": "Background start",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "card_background_secondary",
+      "label": "Background end",
+      "default": "#fefefe"
+    },
+    {
+      "type": "color",
+      "id": "card_title_color",
+      "label": "Title color",
+      "default": "#1a1a1a"
+    },
+    {
+      "type": "color",
+      "id": "card_text_color",
+      "label": "Text color",
+      "default": "#4a4a4a"
+    },
+    {
+      "type": "range",
+      "id": "card_padding",
+      "label": "Padding",
+      "min": 25,
+      "max": 50,
+      "step": 5,
+      "unit": "px",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "card_border_radius",
+      "label": "Border radius",
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "card_border_width",
+      "label": "Border width",
+      "min": 0,
+      "max": 3,
+      "step": 1,
+      "unit": "px",
+      "default": 1
+    },
+    {
+      "type": "color",
+      "id": "card_border_color",
+      "label": "Border color",
+      "default": "#e5e7eb"
+    },
+    {
+      "type": "range",
+      "id": "card_shadow_blur",
+      "label": "Shadow blur",
+      "min": 4,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "card_shadow_spread",
+      "label": "Shadow spread",
+      "min": 0,
+      "max": 8,
+      "step": 1,
+      "unit": "px",
+      "default": 2
+    },
+    {
+      "type": "range",
+      "id": "card_shadow_opacity",
+      "label": "Shadow opacity",
+      "min": 5,
+      "max": 30,
+      "step": 5,
+      "unit": "%",
+      "default": 15
+    },
+    {
+      "type": "header",
+      "content": "Mini cards style"
+    },
+    {
+      "type": "color",
+      "id": "mini_card_background",
+      "label": "Background",
+      "default": "#f9fafb"
+    },
+    {
+      "type": "color",
+      "id": "mini_card_title_color",
+      "label": "Title color",
+      "default": "#1f2937"
+    },
+    {
+      "type": "color",
+      "id": "mini_card_text_color",
+      "label": "Text color",
+      "default": "#6b7280"
+    },
+    {
+      "type": "color",
+      "id": "mini_card_border_color",
+      "label": "Border color",
+      "default": "#e5e7eb"
+    },
+    {
+      "type": "range",
+      "id": "mini_card_padding",
+      "label": "Padding",
+      "min": 15,
+      "max": 35,
+      "step": 5,
+      "unit": "px",
+      "default": 25
+    }
+  ],
+  "presets": [
+    {
+      "name": "Company bio section"
+    }
+  ]
+}
+{% endschema %}

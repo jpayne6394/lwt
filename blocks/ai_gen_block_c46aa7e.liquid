@@ -1,0 +1,513 @@
+{% doc %}
+  @prompt
+    Create a cart toaster notification that appears when items are added to cart, and a buy now button for product pages. Include smooth animations for the toaster pop-out, proper cart functionality, and styling that matches modern e-commerce standards., the add cart button is not rendering
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-cart-toaster-{{ ai_gen_id }} {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: {{ block.settings.toaster_bg_color }};
+    color: {{ block.settings.toaster_text_color }};
+    padding: 16px 20px;
+    border-radius: {{ block.settings.border_radius }}px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    max-width: 350px;
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.3s ease;
+    border-left: 4px solid {{ block.settings.accent_color }};}
+
+  .ai-cart-toaster-{{ ai_gen_id }}.show {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  .ai-cart-toaster-content-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ai-cart-toaster-image-{{ ai_gen_id }} {
+    width: 50px;
+    height: 50px;
+    border-radius: 4px;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .ai-cart-toaster-image-{{ ai_gen_id }} img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .ai-cart-toaster-info-{{ ai_gen_id }} {
+    flex-grow: 1;
+  }
+
+  .ai-cart-toaster-title-{{ ai_gen_id }} {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 4px;line-height: 1.2;
+  }
+
+  .ai-cart-toaster-message-{{ ai_gen_id }} {
+    font-size: 12px;
+    opacity: 0.8;
+    margin: 0;
+  }
+
+  .ai-cart-toaster-close-{{ ai_gen_id }} {
+    background: none;
+    border: none;
+    color: {{ block.settings.toaster_text_color }};
+    cursor: pointer;
+    padding: 4px;
+    opacity: 0.7;
+    flex-shrink: 0;
+  }
+
+  .ai-cart-toaster-close-{{ ai_gen_id }}:hover {
+    opacity: 1;
+  }
+
+  .ai-buy-now-container-{{ ai_gen_id }} {
+    width: 100%;
+    margin: 16px 0;
+  }
+
+  .ai-buy-now-button-{{ ai_gen_id }} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: {{ block.settings.button_padding }}px {{ block.settings.button_padding | times: 1.5 }}px;
+    background-color: {{ block.settings.button_bg_color }};
+    color: {{ block.settings.button_text_color }};
+    border: {{ block.settings.button_border_width }}px solid {{ block.settings.button_border_color }};
+    border-radius: {{ block.settings.button_border_radius }}px;
+    font-size: {{ block.settings.button_font_size }}px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 48px;
+    width: 100%;max-width: 300px;
+  }
+
+  .ai-buy-now-button-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.button_hover_bg_color }};
+    color: {{ block.settings.button_hover_text_color }};transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  }
+
+  .ai-buy-now-button-{{ ai_gen_id }}:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .ai-buy-now-button-{{ ai_gen_id }}.loading {
+    position: relative;
+    color: transparent;
+  }
+
+  .ai-buy-now-button-{{ ai_gen_id }}.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin-left: -10px;
+    margin-top: -10px;
+    border: 2px solid {{ block.settings.button_text_color }};
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: ai-spin-{{ ai_gen_id }} 1s ease-in-out infinite;
+  }
+
+  @keyframes ai-spin-{{ ai_gen_id }} {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-cart-toaster-{{ ai_gen_id }} {
+      top: 10px;
+      right: 10px;
+      left: 10px;
+      max-width: none;
+    }
+
+    .ai-buy-now-button-{{ ai_gen_id }} {
+      width: 100%;
+      max-width: none;
+    }
+  }
+{% endstyle %}
+
+<cart-toaster-{{ ai_gen_id }} {{ block.shopify_attributes }}>
+  <div id="ai-cart-toaster-{{ ai_gen_id }}" class="ai-cart-toaster-{{ ai_gen_id }}">
+    <div class="ai-cart-toaster-content-{{ ai_gen_id }}">
+      <div class="ai-cart-toaster-image-{{ ai_gen_id }}">
+        <img id="ai-toaster-image-{{ ai_gen_id }}" src="" alt="">
+      </div>
+      <div class="ai-cart-toaster-info-{{ ai_gen_id }}">
+        <div id="ai-toaster-title-{{ ai_gen_id }}" class="ai-cart-toaster-title-{{ ai_gen_id }}"></div>
+        <div id="ai-toaster-message-{{ ai_gen_id }}" class="ai-cart-toaster-message-{{ ai_gen_id }}">{{ block.settings.success_message }}</div>
+      </div>
+      <button class="ai-cart-toaster-close-{{ ai_gen_id }}" aria-label="Close notification">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  {% if product %}
+    <div class="ai-buy-now-container-{{ ai_gen_id }}">
+      <form action="/cart/add" method="post" enctype="multipart/form-data" class="ai-buy-now-form-{{ ai_gen_id }}">
+        {% if product.has_only_default_variant %}
+          <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+        {% else %}
+          <select name="id" style="display: none;" required>
+            {% for variant in product.variants %}
+              <option 
+                value="{{ variant.id }}" 
+                {% if variant == product.selected_or_first_available_variant %}selected{% endif %}{% unless variant.available %}disabled{% endunless %}
+              >
+                {{ variant.title }}
+              </option>
+            {% endfor %}
+          </select>
+        {% endif %}
+        
+        <button
+          type="submit" 
+          class="ai-buy-now-button-{{ ai_gen_id }}"
+          {% unless product.selected_or_first_available_variant.available %}disabled{% endunless %}
+        >
+          {% if product.selected_or_first_available_variant.available %}
+            {{ block.settings.button_text }}
+          {% else %}
+            {{ block.settings.sold_out_text }}
+          {% endif %}
+        </button>
+      </form>
+    </div>
+  {% else %}
+    <div class="ai-buy-now-container-{{ ai_gen_id }}">
+      <button class="ai-buy-now-button-{{ ai_gen_id }}" disabled>
+        {{ block.settings.button_text }}
+      </button>
+      <p style="font-size: 12px; color: #666; margin-top: 8px; text-align: center;">
+        Add this block to a product page to enable functionality
+      </p>
+    </div>
+  {% endif %}
+</cart-toaster-{{ ai_gen_id }}>
+
+<script>
+(function() {
+  class CartToaster{{ ai_gen_id }} extends HTMLElement {
+    constructor() {
+      super();
+      this.toaster = this.querySelector('#ai-cart-toaster-{{ ai_gen_id }}');
+      this.form = this.querySelector('.ai-buy-now-form-{{ ai_gen_id }}');
+      this.button = this.querySelector('.ai-buy-now-button-{{ ai_gen_id }}');
+      this.closeBtn = this.querySelector('.ai-cart-toaster-close-{{ ai_gen_id }}');
+    }
+
+    connectedCallback() {
+      this.setupEventListeners();this.listenForCartEvents();
+      this.updateVariantSelection();
+    }
+
+    setupEventListeners() {
+      if (this.form && this.button) {
+        this.form.addEventListener('submit', this.handleBuyNow.bind(this));
+      }
+
+      if (this.closeBtn) {
+        this.closeBtn.addEventListener('click', this.hideToaster.bind(this));
+      }document.addEventListener('click', (e) => {
+        if (e.target.closest('form[action="/cart/add"]') && !e.target.closest('.ai-buy-now-form-{{ ai_gen_id }}')) {
+          setTimeout(() => this.checkCartAndShowToaster(), 100);
+        }
+      });document.addEventListener('variant:change', (e) => {
+        this.updateVariantSelection(e.detail);
+      });
+    }
+
+    updateVariantSelection(variant) {
+      if (!this.form) return;
+
+      const select = this.form.querySelector('select[name="id"]');
+      const hiddenInput = this.form.querySelector('input[name="id"]');
+
+      if (variant) {
+        if (select) {
+          select.value = variant.id;
+        }
+        if (hiddenInput) {
+          hiddenInput.value = variant.id;
+        }
+
+        this.button.disabled = !variant.available;
+        this.button.textContent = variant.available ? 
+          '{{ block.settings.button_text }}' : 
+          '{{ block.settings.sold_out_text }}';
+      }
+    }
+
+    async handleBuyNow(event) {
+      event.preventDefault();
+      
+      if (!this.button) return;
+      
+      this.button.classList.add('loading');
+      this.button.disabled = true;
+
+      try {
+        const formData = new FormData(this.form);
+        const response = await fetch('/cart/add.js', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          const item = await response.json();
+          this.showToaster(item);document.dispatchEvent(new CustomEvent('cart:item-added', {
+            detail: { item: item }
+          }));
+
+          if ({{ block.settings.redirect_to_cart | json }}) {
+            setTimeout(() => {
+              window.location.href = '/cart';
+            }, 1000);
+          }
+        } else {
+          throw new Error('Failed to add to cart');
+        }
+      } catch (error) {
+        console.error('Error adding to cart:', error);} finally {
+        this.button.classList.remove('loading');
+        this.button.disabled = false;
+      }
+    }
+
+    async checkCartAndShowToaster() {
+      try {
+        const response = await fetch('/cart.js');
+        const cart = await response.json();
+        
+        if (cart.items && cart.items.length > 0) {
+          const lastItem = cart.items[cart.items.length - 1];
+          this.showToaster(lastItem);
+        }
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+      }
+    }
+
+    showToaster(item) {
+      if (!this.toaster) return;
+
+      const image = this.querySelector('#ai-toaster-image-{{ ai_gen_id }}');
+      const title = this.querySelector('#ai-toaster-title-{{ ai_gen_id }}');
+
+      if (image && item.featured_image) {
+        image.src = item.featured_image.url;
+        image.alt = item.featured_image.alt || item.product_title;
+      }
+
+      if (title) {
+        title.textContent = item.product_title || item.title;
+      }
+
+      this.toaster.classList.add('show');
+
+      setTimeout(() => {
+        this.hideToaster();
+      }, {{ block.settings.auto_hide_delay | times: 1000 }});
+    }
+
+    hideToaster() {
+      if (this.toaster) {
+        this.toaster.classList.remove('show');
+      }
+    }
+
+    listenForCartEvents() {
+      document.addEventListener('cart:item-added', (event) => {
+        if (event.detail && event.detail.item) {
+          this.showToaster(event.detail.item);
+        }
+      });
+    }
+  }
+
+  customElements.define('cart-toaster-{{ ai_gen_id }}', CartToaster{{ ai_gen_id }});
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Cart Toaster & Buy Now",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Buy Now Button"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Button text",
+      "default": "Buy Now"
+    },
+    {
+      "type": "text",
+      "id": "sold_out_text",
+      "label": "Sold out text",
+      "default": "Sold Out"
+    },
+    {
+      "type": "checkbox",
+      "id": "redirect_to_cart",
+      "label": "Redirect to cart after purchase",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "button_bg_color",
+      "label": "Background color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_bg_color",
+      "label": "Hover background color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_text_color",
+      "label": "Hover text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_border_color",
+      "label": "Border color",
+      "default": "#000000"
+    },
+    {
+      "type": "range",
+      "id": "button_border_width",
+      "min": 0,
+      "max": 5,
+      "step": 1,
+      "unit": "px",
+      "label": "Border width",
+      "default": 0
+    },
+    {
+      "type": "range",
+      "id": "button_border_radius",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Border radius",
+      "default": 6
+    },
+    {
+      "type": "range",
+      "id": "button_padding",
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "unit": "px",
+      "label": "Padding",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "button_font_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Font size",
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Toaster Notification"
+    },
+    {
+      "type": "text",
+      "id": "success_message",
+      "label": "Success message",
+      "default": "Added to cart!"
+    },
+    {
+      "type": "range",
+      "id": "auto_hide_delay",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "label": "Auto hide delay",
+      "default": 4
+    },
+    {
+      "type": "color",
+      "id": "toaster_bg_color",
+      "label": "Background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "toaster_text_color",
+      "label": "Text color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#00d4aa"
+    },
+    {
+      "type": "range",
+      "id": "border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Border radius",
+      "default": 8
+    }
+  ],
+  "presets": [
+    {
+      "name": "Cart Toaster & Buy Now"
+    }
+  ]
+}
+{% endschema %}

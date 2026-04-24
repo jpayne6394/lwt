@@ -1,0 +1,567 @@
+{% doc %}
+  @prompt
+    Create a featured collection ticker with these exact specifications: LAYOUT: Fixed-width product cards (250px) with 20px gaps, white background product images (150px height), continuous horizontal scroll with no gaps. CONTENT: Product title first (font-weight: 500), vendor below in ALL CAPS (font-weight: bold, color: #666), tight 5px spacing between them. Toggle between price badge OR inline price before "View Product" link. FUNCTIONALITY: Slow scroll speed (20px/second), pause on ANY hover (cards, arrows, container), resume on mouse leave. Desktop arrows with WORKING back/forward functionality - ensure both left and right arrow buttons properly control scroll direction and speed. Mobile swipe with no arrows. Direction toggle (left-to-right or right-to-left). INTERACTIONS: Entire card clickable, "View Product" text underlines on hover, scroll stops during all user interactions. CONTROLS: View All button below ticker (small size, theme-matched styling) with proper margin to avoid footer overlap. CRITICAL: Ensure both navigation arrows have proper event listeners and functional JavaScript for bidirectional scrolling control. Theme editor settings for: collection selection, scroll speed, direction, price display toggle, button sizing, card spacing.
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-collection-ticker-{{ ai_gen_id }} {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    margin-bottom: {{ block.settings.bottom_margin }}px;
+  }
+
+  .ai-ticker-container-{{ ai_gen_id }} {
+    position: relative;
+    width: 100%;}
+
+  .ai-ticker-track-{{ ai_gen_id }} {
+    display: flex;
+    gap: 20px;
+    animation: ai-ticker-scroll-{{ ai_gen_id }} {{ block.settings.scroll_speed }}s linear infinite;
+    animation-direction: {% if block.settings.scroll_direction == 'right' %}normal{% else %}reverse{% endif %};will-change: transform;
+  }
+
+  .ai-ticker-track-{{ ai_gen_id }}.paused {
+    animation-play-state: paused;
+  }
+
+  @keyframes ai-ticker-scroll-{{ ai_gen_id }} {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+
+  .ai-ticker-card-{{ ai_gen_id }} {
+    flex: 0 0 250px;
+    width: 250px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .ai-ticker-card-{{ ai_gen_id }}:hover {
+    transform: translateY(-4px);
+  }
+
+  .ai-ticker-image-{{ ai_gen_id }} {
+    width: 100%;
+    height: 150px;
+    background: white;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-ticker-image-{{ ai_gen_id }} img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .ai-ticker-image-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;}
+
+  .ai-ticker-image-placeholder-{{ ai_gen_id }} svg {
+    width: 60px;
+    height: 60px;
+    opacity: 0.3;
+  }
+
+  .ai-ticker-content-{{ ai_gen_id }} {
+    padding: 15px;
+  }
+
+  .ai-ticker-title-{{ ai_gen_id }} {
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 1.3;
+    margin: 0 0 5px 0;
+    color: #333;
+  }
+
+  .ai-ticker-vendor-{{ ai_gen_id }} {
+    font-weight: bold;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #666;
+    margin: 0 0 10px 0;
+  }
+
+  .ai-ticker-price-section-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .ai-ticker-price-badge-{{ ai_gen_id }} {
+    background: #333;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .ai-ticker-price-inline-{{ ai_gen_id }} {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;}
+
+  .ai-ticker-link-{{ ai_gen_id }} {
+    font-size: 12px;
+    color: #666;
+    text-decoration: none;
+    transition: text-decoration 0.2s ease;
+  }
+
+  .ai-ticker-link-{{ ai_gen_id }}:hover {
+    text-decoration: underline;
+  }
+
+  .ai-ticker-arrows-{{ ai_gen_id }} {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .ai-ticker-arrows-{{ ai_gen_id }} {
+      display: block;
+    }
+
+    .ai-ticker-arrow-{{ ai_gen_id }} {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid #ddd;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 10;
+      transition: all 0.3s ease;
+    }
+
+    .ai-ticker-arrow-{{ ai_gen_id }}:hover {
+      background: white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .ai-ticker-arrow-left-{{ ai_gen_id }} {
+      left: 10px;
+    }
+
+    .ai-ticker-arrow-right-{{ ai_gen_id }} {
+      right: 10px;
+    }
+
+    .ai-ticker-arrow-{{ ai_gen_id }} svg {
+      width: 16px;
+      height: 16px;
+      fill: #333;
+    }
+  }
+
+  .ai-ticker-view-all-{{ ai_gen_id }} {
+    text-align: center;
+    margin-top: 20px;
+  }
+
+  .ai-ticker-view-all-button-{{ ai_gen_id }} {
+    display: inline-block;
+    padding: {% if block.settings.button_size == 'small' %}8px 16px{% elsif block.settings.button_size == 'medium' %}12px 24px{% else %}16px 32px{% endif %};
+    background: #333;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: {% if block.settings.button_size == 'small' %}12px{% elsif block.settings.button_size == 'medium' %}14px{% else %}16px{% endif %};
+    font-weight: 500;
+    transition: background 0.3s ease;
+  }
+
+  .ai-ticker-view-all-button-{{ ai_gen_id }}:hover {
+    background: #555;
+  }
+{% endstyle %}
+
+<collection-ticker-{{ ai_gen_id }}
+  class="ai-collection-ticker-{{ ai_gen_id }}"
+  data-scroll-speed="{{ block.settings.scroll_speed }}"
+  data-direction="{{ block.settings.scroll_direction }}"
+  {{ block.shopify_attributes }}
+>
+  <div class="ai-ticker-container-{{ ai_gen_id }}">
+    <div class="ai-ticker-arrows-{{ ai_gen_id }}">
+      <button class="ai-ticker-arrow-{{ ai_gen_id }} ai-ticker-arrow-left-{{ ai_gen_id }}" aria-label="Previous products">
+        <svg viewBox="0 0 24 24">
+          <path d="M1518l-6-6 6-6"/>
+        </svg>
+      </button>
+      <button class="ai-ticker-arrow-{{ ai_gen_id }} ai-ticker-arrow-right-{{ ai_gen_id }}" aria-label="Next products">
+        <svg viewBox="0 0 24 24">
+          <path d="M9 18l6-6-6-6"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="ai-ticker-track-{{ ai_gen_id }}">
+      {% if block.settings.featured_collection %}
+        {% for product in block.settings.featured_collection.products limit: 20 %}
+          <a href="{{ product.url }}" class="ai-ticker-card-{{ ai_gen_id }}">
+            <div class="ai-ticker-image-{{ ai_gen_id }}">
+              {% if product.featured_image %}
+                <img
+                  src="{{ product.featured_image | image_url: width: 300}}"
+                  alt="{{ product.featured_image.alt | escape }}"
+                  loading="lazy"
+                  width="250"
+                  height="150"
+                >
+              {% else %}
+                <div class="ai-ticker-image-placeholder-{{ ai_gen_id }}">
+                  {{ 'product-1' | placeholder_svg_tag }}
+                </div>
+              {% endif %}
+            </div>
+            <div class="ai-ticker-content-{{ ai_gen_id }}">
+              <h3 class="ai-ticker-title-{{ ai_gen_id }}">{{ product.title }}</h3>
+              {% if product.vendor %}
+                <div class="ai-ticker-vendor-{{ ai_gen_id }}">{{ product.vendor }}</div>
+              {% endif %}
+              <div class="ai-ticker-price-section-{{ ai_gen_id }}">
+                {% if block.settings.price_display == 'badge' %}
+                  <span class="ai-ticker-price-badge-{{ ai_gen_id }}">{{ product.price | money }}</span>
+                {% else %}
+                  <span class="ai-ticker-price-inline-{{ ai_gen_id }}">{{ product.price | money }}</span>
+                {% endif %}
+                <span class="ai-ticker-link-{{ ai_gen_id }}">View Product</span>
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+        {% for product in block.settings.featured_collection.products limit: 20 %}
+          <a href="{{ product.url }}" class="ai-ticker-card-{{ ai_gen_id }}">
+            <div class="ai-ticker-image-{{ ai_gen_id }}">
+              {% if product.featured_image %}
+                <img
+                  src="{{ product.featured_image | image_url: width: 300 }}"
+                  alt="{{ product.featured_image.alt | escape }}"
+                  loading="lazy"
+                  width="250"
+                  height="150"
+                >
+              {% else %}
+                <div class="ai-ticker-image-placeholder-{{ ai_gen_id }}">
+                  {{ 'product-1' | placeholder_svg_tag }}
+                </div>
+              {% endif %}
+            </div>
+            <div class="ai-ticker-content-{{ ai_gen_id }}">
+              <h3 class="ai-ticker-title-{{ ai_gen_id }}">{{ product.title }}</h3>
+              {% if product.vendor %}
+                <div class="ai-ticker-vendor-{{ ai_gen_id }}">{{ product.vendor }}</div>
+              {% endif %}
+              <div class="ai-ticker-price-section-{{ ai_gen_id }}">
+                {% if block.settings.price_display == 'badge' %}
+                  <span class="ai-ticker-price-badge-{{ ai_gen_id }}">{{ product.price | money }}</span>
+                {% else %}
+                  <span class="ai-ticker-price-inline-{{ ai_gen_id }}">{{ product.price | money }}</span>
+                {% endif %}
+                <span class="ai-ticker-link-{{ ai_gen_id }}">View Product</span>
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+      {% else %}
+        {% for i in (1..8) %}
+          <div class="ai-ticker-card-{{ ai_gen_id }}">
+            <div class="ai-ticker-image-{{ ai_gen_id }}">
+              <div class="ai-ticker-image-placeholder-{{ ai_gen_id }}">
+                {{ 'product-1' | placeholder_svg_tag }}
+              </div>
+            </div>
+            <div class="ai-ticker-content-{{ ai_gen_id }}">
+              <h3 class="ai-ticker-title-{{ ai_gen_id }}">Sample Product {{ i }}</h3>
+              <div class="ai-ticker-vendor-{{ ai_gen_id }}">BRAND NAME</div>
+              <div class="ai-ticker-price-section-{{ ai_gen_id }}">
+                {% if block.settings.price_display == 'badge' %}
+                  <span class="ai-ticker-price-badge-{{ ai_gen_id }}">$29.99</span>
+                {% else %}
+                  <span class="ai-ticker-price-inline-{{ ai_gen_id }}">$29.99</span>
+                {% endif %}
+                <span class="ai-ticker-link-{{ ai_gen_id }}">View Product</span>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if block.settings.featured_collection and block.settings.show_view_all %}
+    <div class="ai-ticker-view-all-{{ ai_gen_id }}">
+      <a href="{{ block.settings.featured_collection.url }}" class="ai-ticker-view-all-button-{{ ai_gen_id }}">
+        View All Products
+      </a>
+    </div>
+  {% endif %}
+</collection-ticker-{{ ai_gen_id }}><script>
+  (function() {
+    class CollectionTicker{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+        this.track = null;
+        this.leftArrow = null;
+        this.rightArrow = null;
+        this.isHovered = false;
+        this.scrollSpeed = 20;
+        this.direction = 'right';
+        this.animationDuration = 0;}
+
+      connectedCallback() {
+        this.track = this.querySelector('.ai-ticker-track-{{ ai_gen_id }}');
+        this.leftArrow = this.querySelector('.ai-ticker-arrow-left-{{ ai_gen_id }}');
+        this.rightArrow = this.querySelector('.ai-ticker-arrow-right-{{ ai_gen_id }}');
+        
+        this.scrollSpeed = parseInt(this.dataset.scrollSpeed) || 20;
+        this.direction = this.dataset.direction || 'right';
+        
+        this.calculateAnimationDuration();
+        this.setupEventListeners();
+        this.updateAnimation();
+      }
+
+      calculateAnimationDuration() {
+        if (this.track) {
+          const trackWidth = this.track.scrollWidth /2;
+          this.animationDuration = trackWidth / this.scrollSpeed;this.track.style.animationDuration = this.animationDuration + 's';
+        }
+      }
+
+      setupEventListeners() {
+        this.addEventListener('mouseenter', () => {
+          this.pauseAnimation();
+        });
+
+        this.addEventListener('mouseleave', () => {
+          this.resumeAnimation();
+        });
+
+        if (this.leftArrow) {
+          this.leftArrow.addEventListener('click', () => {
+            this.scrollLeft();
+          });
+        }
+
+        if (this.rightArrow) {
+          this.rightArrow.addEventListener('click', () => {
+            this.scrollRight();
+          });
+        }
+
+        let startX = 0;
+        let scrollLeft = 0;
+
+        this.addEventListener('touchstart', (e) => {
+          startX = e.touches[0].pageX;
+          this.pauseAnimation();
+        });
+
+        this.addEventListener('touchmove', (e) => {
+          e.preventDefault();
+          const x = e.touches[0].pageX;
+          const walk = (x - startX) * 2;
+          if (this.track) {
+            this.track.style.transform = `translateX(${walk}px)`;
+          }
+        });
+
+        this.addEventListener('touchend', () => {
+          this.resumeAnimation();
+          if (this.track) {
+            this.track.style.transform = '';
+          }
+        });
+      }
+
+      pauseAnimation() {
+        if (this.track) {
+          this.track.classList.add('paused');
+        }
+      }
+
+      resumeAnimation() {
+        if (this.track) {
+          this.track.classList.remove('paused');
+        }
+      }
+
+      scrollLeft() {
+        this.pauseAnimation();
+        if (this.track) {
+          const currentTransform = this.track.style.transform;
+          const currentX = currentTransform ? parseFloat(currentTransform.match(/-?\d+/)?.[0] || 0) : 0;
+          const newX = currentX +270;
+          this.track.style.transform = `translateX(${newX}px)`;
+          this.track.style.transition = 'transform 0.5s ease';
+          
+          setTimeout(() => {
+            this.track.style.transition = '';this.track.style.transform = '';this.resumeAnimation();
+          }, 500);
+        }
+      }
+
+      scrollRight() {
+        this.pauseAnimation();
+        if (this.track) {
+          const currentTransform = this.track.style.transform;
+          const currentX = currentTransform ? parseFloat(currentTransform.match(/-?\d+/)?.[0] || 0) : 0;
+          const newX = currentX - 270;
+          this.track.style.transform = `translateX(${newX}px)`;
+          this.track.style.transition = 'transform 0.5s ease';
+          
+          setTimeout(() => {
+            this.track.style.transition = '';
+            this.track.style.transform = '';
+            this.resumeAnimation();
+          }, 500);
+        }
+      }
+
+      updateAnimation() {
+        if (this.track) {
+          this.track.style.animationDirection = this.direction === 'right' ? 'normal' : 'reverse';
+        }
+      }
+    }
+
+    customElements.define('collection-ticker-{{ ai_gen_id }}', CollectionTicker{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Collection ticker",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Collection"
+    },
+    {
+      "type": "collection",
+      "id": "featured_collection",
+      "label": "Collection"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_view_all",
+      "label": "Show view all button",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Scroll settings"
+    },
+    {
+      "type": "range",
+      "id": "scroll_speed",
+      "min": 10,
+      "max": 50,
+      "step": 5,
+      "unit": "px",
+      "label": "Scroll speed",
+      "default": 20
+    },
+    {
+      "type": "select",
+      "id": "scroll_direction",
+      "label": "Scroll direction",
+      "options": [
+        {
+          "value": "right",
+          "label": "Left to right"
+        },
+        {
+          "value": "left",
+          "label": "Right to left"
+        }
+      ],
+      "default": "right"
+    },
+    {
+      "type": "header",
+      "content": "Display options"
+    },
+    {
+      "type": "select",
+      "id": "price_display",
+      "label": "Price display",
+      "options": [
+        {
+          "value": "badge",
+          "label": "Badge"
+        },
+        {
+          "value": "inline",
+          "label": "Inline"
+        }
+      ],
+      "default": "badge"
+    },
+    {
+      "type": "select",
+      "id": "button_size",
+      "label": "Button size",
+      "options": [
+        {
+          "value": "small",
+          "label": "Small"
+        },
+        {
+          "value": "medium",
+          "label": "Medium"
+        },
+        {
+          "value": "large",
+          "label": "Large"
+        }
+      ],
+      "default": "small"
+    },
+    {
+      "type": "range",
+      "id": "bottom_margin",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "px",
+      "label": "Bottom margin",
+      "default": 40
+    }
+  ],
+  "presets": [
+    {
+      "name": "Collection ticker"
+    }
+  ],
+  "tag": null
+}
+{% endschema %}

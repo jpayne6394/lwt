@@ -1,0 +1,1096 @@
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-collection-ticker-wrapper-{{ ai_gen_id }} {
+    background-color: {{ block.settings.background_color }};
+    padding: {{ block.settings.padding_vertical }}px 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .ai-collection-ticker-header-{{ ai_gen_id }} {
+    text-align: {{ block.settings.title_alignment }};
+    margin-bottom: {{ block.settings.title_spacing }}px;
+    padding: 0 20px;
+  }
+
+  .ai-collection-ticker-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.title_font_size }}px;
+    color: {{ block.settings.title_text_color }};
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .ai-collection-ticker-subtitle-{{ ai_gen_id }} {
+    font-size: {{ block.settings.subtitle_font_size }}px;
+    color: {{ block.settings.subtitle_text_color }};
+    margin: 8px 0 0 0;
+    opacity: 0.8;
+    line-height: 1.4;
+  }
+
+  .ai-collection-ticker-container-{{ ai_gen_id }} {
+    position: relative;
+    width: 100%;
+  }
+
+  .ai-collection-ticker-{{ ai_gen_id }} {
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .ai-collection-ticker-track-{{ ai_gen_id }} {
+    display: flex;
+    width: max-content;
+    will-change: transform;
+    transition: transform 0.3s ease;
+  }
+
+  .ai-collection-ticker-{{ ai_gen_id }}:hover .ai-collection-ticker-track-{{ ai_gen_id }} {
+    {% if block.settings.pause_on_hover %} animation-play-state: paused; {% endif %}
+  }
+
+  .ai-collection-ticker-item-{{ ai_gen_id }} {
+    flex-shrink: 0;
+    margin-right: {{ block.settings.item_spacing }}px;
+    transition: transform 0.3s ease;
+    width: {{ block.settings.item_width }}px;
+  }
+
+  .ai-collection-ticker-item-{{ ai_gen_id }}:hover { transform: translateY(-{{ block.settings.hover_lift }}px); }
+
+  .ai-collection-ticker-card-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
+    height: 100%;
+    background-color: {{ block.settings.card_background }};
+    border-radius: {{ block.settings.card_border_radius }}px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    transition: box-shadow .3s ease;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .ai-collection-ticker-card-{{ ai_gen_id }}:hover { box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+  .ai-collection-ticker-card-{{ ai_gen_id }}:hover .ai-collection-ticker-view-link-{{ ai_gen_id }} { text-decoration: underline; color: {{ block.settings.link_hover_color }}; }
+
+  .ai-collection-ticker-image-wrapper-{{ ai_gen_id }} {
+    position: relative;
+    width: 100%;
+    height: {{ block.settings.image_height }}px;
+    overflow: hidden;
+    background-color: #ffffff;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: {{ block.settings.image_padding }}px;
+  }
+
+  .ai-collection-ticker-image-{{ ai_gen_id }} {
+    width: calc(100% - {{ block.settings.image_padding | times: 2 }}px);
+    height: calc(100% - {{ block.settings.image_padding | times: 2 }}px);
+    object-fit: {{ block.settings.image_fit }};
+    object-position: center;
+    transition: transform .3s ease;
+    display: block;
+    border-radius: {{ block.settings.image_border_radius }}px;
+  }
+
+  .ai-collection-ticker-card-{{ ai_gen_id }}:hover .ai-collection-ticker-image-{{ ai_gen_id }} { transform: scale(1.05); }
+
+  .ai-collection-ticker-placeholder-{{ ai_gen_id }} {
+    width: calc(100% - {{ block.settings.image_padding | times: 2 }}px);
+    height: calc(100% - {{ block.settings.image_padding | times: 2 }}px);
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: {{ block.settings.image_border_radius }}px;
+  }
+  .ai-collection-ticker-placeholder-{{ ai_gen_id }} svg { width: 60%; height: 60%; opacity: .3; }
+
+  .ai-collection-ticker-content-{{ ai_gen_id }} {
+    padding: {{ block.settings.content_padding }}px;
+    text-align: {{ block.settings.text_alignment }};
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-grow: 1;
+    min-height: 100px;
+  }
+
+  .ai-collection-ticker-product-info-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ai-collection-ticker-product-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.product_title_size }}px;
+    font-weight: 500;
+    color: {{ block.settings.product_title_color }};
+    margin: 0;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.6em;
+    order: 1;
+  }
+
+  .ai-collection-ticker-vendor-{{ ai_gen_id }} {
+    font-size: {{ block.settings.vendor_size }}px;
+    color: #999999;
+    margin: 0;
+    order: 2;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .ai-collection-ticker-price-badge-{{ ai_gen_id }} {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background-color: {{ block.settings.badge_color }};
+    color: {{ block.settings.badge_text_color }};
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 2;
+    {% if block.settings.show_price_inline %} display: none; {% endif %}
+  }
+
+  .ai-collection-ticker-price-inline-{{ ai_gen_id }} {
+    font-size: {{ block.settings.price_inline_size }}px;
+    color: {{ block.settings.price_inline_color }};
+    font-weight: 600;
+    margin: 8px 0 4px 0;
+    order: 3;
+  }
+
+  .ai-collection-ticker-view-link-{{ ai_gen_id }} {
+    color: {{ block.settings.link_color }};
+    font-size: {{ block.settings.link_size }}px;
+    font-weight: 500;
+    text-decoration: none;
+    margin-top: auto;
+    transition: text-decoration .3s ease, color .3s ease;
+    display: inline-block;
+    order: 4;
+  }
+
+  .ai-collection-ticker-controls-{{ ai_gen_id }} {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    {% if block.settings.show_controls %} opacity: 1; visibility: visible; {% else %} opacity: 0; visibility: hidden; {% endif %}
+    transition: opacity .3s ease, visibility .3s ease;
+  }
+  .ai-collection-ticker-wrapper-{{ ai_gen_id }}:hover .ai-collection-ticker-controls-{{ ai_gen_id }} { {% if block.settings.show_controls_on_hover %} opacity: 1; visibility: visible; {% endif %} }
+  .ai-collection-ticker-control-left-{{ ai_gen_id }}  { left: {{ block.settings.control_offset }}px; }
+  .ai-collection-ticker-control-right-{{ ai_gen_id }} { right: {{ block.settings.control_offset }}px; }
+
+  .ai-collection-ticker-control-btn-{{ ai_gen_id }} {
+    width: {{ block.settings.control_size }}px;
+    height: {{ block.settings.control_size }}px;
+    border-radius: 50%;
+    background-color: {{ block.settings.control_background }};
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    transition: all .3s ease;
+    color: {{ block.settings.control_color }};
+  }
+  .ai-collection-ticker-control-btn-{{ ai_gen_id }}:hover   { background-color: {{ block.settings.control_hover_background }}; color: {{ block.settings.control_hover_color }}; transform: scale(1.1); }
+  .ai-collection-ticker-control-btn-{{ ai_gen_id }}:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+  .ai-collection-ticker-control-btn-{{ ai_gen_id }} svg { width: 60%; height: 60%; }
+
+  .ai-collection-ticker-view-all-{{ ai_gen_id }} {
+    text-align: {{ block.settings.view_all_alignment }};
+    margin-top: {{ block.settings.view_all_spacing }}px;
+    padding: 0 20px {{ block.settings.view_all_bottom_spacing }}px 20px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .ai-collection-ticker-view-all-btn-{{ ai_gen_id }} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    min-height: 36px;
+    background-color: rgba(var(--color-button), 1);
+    color: rgba(var(--color-button-text), 1);
+    border: {{ settings.buttons_border_thickness }}px solid rgba(var(--color-button), {{ settings.buttons_border_opacity | divided_by: 100.0 }});
+    border-radius: {{ settings.buttons_radius }}px;
+    font-family: inherit;
+    font-size: 1.1rem;
+    font-weight: 500;
+    text-decoration: none;
+    letter-spacing: .06rem;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba(var(--color-shadow), {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+    position: relative;
+    overflow: hidden;
+  }
+  .ai-collection-ticker-view-all-btn-{{ ai_gen_id }}:hover { background-color: rgba(var(--color-button), .85); border-color: rgba(var(--color-button), {{ settings.buttons_border_opacity | divided_by: 100.0 }}); }
+  .ai-collection-ticker-view-all-btn-{{ ai_gen_id }}:focus, .ai-collection-ticker-view-all-btn-{{ ai_gen_id }}:focus-visible {
+    outline: .2rem solid rgba(var(--color-foreground), .5);
+    outline-offset: .3rem;
+    box-shadow: 0 0 0 .3rem rgb(var(--color-background)), 0 0 .5rem .4rem rgba(var(--color-foreground), .3);
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-collection-ticker-wrapper-{{ ai_gen_id }} { padding: {{ block.settings.padding_vertical | times: 0.7 }}px 0; }
+    .ai-collection-ticker-header-{{ ai_gen_id }} { padding: 0 15px; margin-bottom: {{ block.settings.title_spacing | times: 0.8 }}px; }
+    .ai-collection-ticker-title-{{ ai_gen_id }} { font-size: {{ block.settings.title_font_size | times: 0.9 }}px; }
+    .ai-collection-ticker-subtitle-{{ ai_gen_id }} { font-size: {{ block.settings.subtitle_font_size | times: 0.9 }}px; }
+
+    .ai-collection-ticker-item-{{ ai_gen_id }} { width: {{ block.settings.item_width | times: 0.8 }}px; margin-right: {{ block.settings.item_spacing | times: 0.8 }}px; }
+    .ai-collection-ticker-image-wrapper-{{ ai_gen_id }} { height: {{ block.settings.image_height | times: 0.8 }}px; padding: {{ block.settings.image_padding | times: 0.8 }}px; }
+    .ai-collection-ticker-content-{{ ai_gen_id }} { padding: {{ block.settings.content_padding | times: 0.8 }}px; min-height: 80px; }
+
+    .ai-collection-ticker-product-title-{{ ai_gen_id }} { font-size: {{ block.settings.product_title_size | times: 0.9 }}px; }
+    .ai-collection-ticker-vendor-{{ ai_gen_id }}       { font-size: {{ block.settings.vendor_size | times: 0.9 }}px; }
+    .ai-collection-ticker-price-inline-{{ ai_gen_id }} { font-size: {{ block.settings.price_inline_size | times: 0.9 }}px; }
+    .ai-collection-ticker-view-link-{{ ai_gen_id }}    { font-size: {{ block.settings.link_size | times: 0.9 }}px; }
+
+    .ai-collection-ticker-controls-{{ ai_gen_id }} { display: none; }
+    .ai-collection-ticker-{{ ai_gen_id }} { touch-action: pan-x; -webkit-overflow-scrolling: touch; }
+    .ai-collection-ticker-item-{{ ai_gen_id }}:hover { transform: none; }
+    .ai-collection-ticker-card-{{ ai_gen_id }}:hover .ai-collection-ticker-image-{{ ai_gen_id }} { transform: none; }
+
+    .ai-collection-ticker-view-all-{{ ai_gen_id }} { padding: 0 15px {{ block.settings.view_all_bottom_spacing | times: 0.8 }}px 15px; margin-top: {{ block.settings.view_all_spacing | times: 0.8 }}px; }
+    .ai-collection-ticker-view-all-btn-{{ ai_gen_id }} { font-size: 1rem; padding: 6px 14px; min-height: 32px; }
+  }
+
+  @media screen and (max-width: 480px) {
+    .ai-collection-ticker-header-{{ ai_gen_id }} { padding: 0 10px; }
+    .ai-collection-ticker-title-{{ ai_gen_id }} { font-size: {{ block.settings.title_font_size | times: 0.8 }}px; }
+    .ai-collection-ticker-subtitle-{{ ai_gen_id }} { font-size: {{ block.settings.subtitle_font_size | times: 0.8 }}px; }
+
+    .ai-collection-ticker-item-{{ ai_gen_id }} { width: {{ block.settings.item_width | times: 0.7 }}px; margin-right: {{ block.settings.item_spacing | times: 0.7 }}px; }
+    .ai-collection-ticker-image-wrapper-{{ ai_gen_id }} { height: {{ block.settings.image_height | times: 0.7 }}px; padding: {{ block.settings.image_padding | times: 0.7 }}px; }
+    .ai-collection-ticker-content-{{ ai_gen_id }} { min-height: 70px; }
+
+    .ai-collection-ticker-price-inline-{{ ai_gen_id }} { font-size: {{ block.settings.price_inline_size | times: 0.8 }}px; }
+    .ai-collection-ticker-view-all-{{ ai_gen_id }} { padding: 0 10px {{ block.settings.view_all_bottom_spacing | times: 0.7 }}px 10px; }
+    .ai-collection-ticker-view-all-btn-{{ ai_gen_id }} { font-size: .95rem; padding: 6px 12px; min-height: 30px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ai-collection-ticker-track-{{ ai_gen_id }} { animation: none; }
+    .ai-collection-ticker-{{ ai_gen_id }} { overflow-x: auto; scrollbar-width: thin; }
+    .ai-collection-ticker-{{ ai_gen_id }}::-webkit-scrollbar { height: 6px; }
+    .ai-collection-ticker-{{ ai_gen_id }}::-webkit-scrollbar-track { background: #f1f1f1; }
+    .ai-collection-ticker-{{ ai_gen_id }}::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+  }
+{% endstyle %}
+
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-collection-ticker-wrapper-{{ ai_gen_id }} {
+    background-color: {{ block.settings.background_color }};
+    padding: {{ block.settings.padding_vertical }}px 0;
+    position: relative;
+    z-index: 1;
+    /* NEW: ensure nothing inside can push the page width */
+    overflow: hidden;
+    max-width: 100%;
+  }
+
+  .ai-collection-ticker-header-{{ ai_gen_id }} {
+    text-align: {{ block.settings.title_alignment }};
+    margin-bottom: {{ block.settings.title_spacing }}px;
+    padding: 0 20px;
+  }
+
+  .ai-collection-ticker-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.title_font_size }}px;
+    color: {{ block.settings.title_text_color }};
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .ai-collection-ticker-subtitle-{{ ai_gen_id }} {
+    font-size: {{ block.settings.subtitle_font_size }}px;
+    color: {{ block.settings.subtitle_text_color }};
+    margin: 8px 0 0 0;
+    opacity: 0.8;
+    line-height: 1.4;
+  }
+
+  .ai-collection-ticker-container-{{ ai_gen_id }} {
+    position: relative;
+    width: 100%;
+    /* NEW: be defensive against horizontal overflow */
+    overflow: hidden;
+    max-width: 100%;
+  }
+
+  .ai-collection-ticker-{{ ai_gen_id }} {
+    width: 100%;
+    /* NEW: this custom element defaults to inline; make it a block
+       and clip its huge track so it can’t extend the page */
+    display: block;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .ai-collection-ticker-track-{{ ai_gen_id }} {
+    display: flex;
+    width: max-content;
+    will-change: transform;
+    transition: transform 0.3s ease;
+  }
+
+  .ai-collection-ticker-{{ ai_gen_id }}:hover .ai-collection-ticker-track-{{ ai_gen_id }} {
+    {% if block.settings.pause_on_hover %} animation-play-state: paused; {% endif %}
+  }
+
+  .ai-collection-ticker-item-{{ ai_gen_id }} {
+    flex-shrink: 0;
+    margin-right: {{ block.settings.item_spacing }}px;
+    transition: transform 0.3s ease;
+    width: {{ block.settings.item_width }}px;
+  }
+
+  .ai-collection-ticker-item-{{ ai_gen_id }}:hover { transform: translateY(-{{ block.settings.hover_lift }}px); }
+
+  .ai-collection-ticker-card-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    width: 100%;
+    height: 100%;
+    background-color: {{ block.settings.card_background }};
+    border-radius: {{ block.settings.card_border_radius }}px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    transition: box-shadow .3s ease;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .ai-collection-ticker-card-{{ ai_gen_id }}:hover { box-shadow: 0 4px 16px rgba(0,0,0,.15); }
+  .ai-collection-ticker-card-{{ ai_gen_id }}:hover .ai-collection-ticker-view-link-{{ ai_gen_id }} { text-decoration: underline; color: {{ block.settings.link_hover_color }}; }
+
+  .ai-collection-ticker-image-wrapper-{{ ai_gen_id }} {
+    position: relative;
+    width: 100%;
+    height: {{ block.settings.image_height }}px;
+    overflow: hidden;
+    background-color: #ffffff;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: {{ block.settings.image_padding }}px;
+  }
+
+  .ai-collection-ticker-image-{{ ai_gen_id }} {
+    width: calc(100% - {{ block.settings.image_padding | times: 2 }}px);
+    height: calc(100% - {{ block.settings.image_padding | times: 2 }}px);
+    object-fit: {{ block.settings.image_fit }};
+    object-position: center;
+    transition: transform .3s ease;
+    display: block;
+    border-radius: {{ block.settings.image_border_radius }}px;
+  }
+
+  .ai-collection-ticker-card-{{ ai_gen_id }}:hover .ai-collection-ticker-image-{{ ai_gen_id }} { transform: scale(1.05); }
+
+  .ai-collection-ticker-placeholder-{{ ai_gen_id }} {
+    width: calc(100% - {{ block.settings.image_padding | times: 2 }}px);
+    height: calc(100% - {{ block.settings.image_padding | times: 2 }}px);
+    background-color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: {{ block.settings.image_border_radius }}px;
+  }
+  .ai-collection-ticker-placeholder-{{ ai_gen_id }} svg { width: 60%; height: 60%; opacity: .3; }
+
+  .ai-collection-ticker-content-{{ ai_gen_id }} {
+    padding: {{ block.settings.content_padding }}px;
+    text-align: {{ block.settings.text_alignment }};
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-grow: 1;
+    min-height: 100px;
+  }
+
+  .ai-collection-ticker-product-info-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .ai-collection-ticker-product-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.product_title_size }}px;
+    font-weight: 500;
+    color: {{ block.settings.product_title_color }};
+    margin: 0;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 2.6em;
+    order: 1;
+  }
+
+  .ai-collection-ticker-vendor-{{ ai_gen_id }} {
+    font-size: {{ block.settings.vendor_size }}px;
+    color: #999999;
+    margin: 0;
+    order: 2;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .ai-collection-ticker-price-badge-{{ ai_gen_id }} {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background-color: {{ block.settings.badge_color }};
+    color: {{ block.settings.badge_text_color }};
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    z-index: 2;
+    {% if block.settings.show_price_inline %} display: none; {% endif %}
+  }
+
+  .ai-collection-ticker-price-inline-{{ ai_gen_id }} {
+    font-size: {{ block.settings.price_inline_size }}px;
+    color: {{ block.settings.price_inline_color }};
+    font-weight: 600;
+    margin: 8px 0 4px 0;
+    order: 3;
+  }
+
+  .ai-collection-ticker-view-link-{{ ai_gen_id }} {
+    color: {{ block.settings.link_color }};
+    font-size: {{ block.settings.link_size }}px;
+    font-weight: 500;
+    text-decoration: none;
+    margin-top: auto;
+    transition: text-decoration .3s ease, color .3s ease;
+    display: inline-block;
+    order: 4;
+  }
+
+  .ai-collection-ticker-controls-{{ ai_gen_id }} {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+    {% if block.settings.show_controls %} opacity: 1; visibility: visible; {% else %} opacity: 0; visibility: hidden; {% endif %}
+    transition: opacity .3s ease, visibility .3s ease;
+  }
+  .ai-collection-ticker-wrapper-{{ ai_gen_id }}:hover .ai-collection-ticker-controls-{{ ai_gen_id }} { {% if block.settings.show_controls_on_hover %} opacity: 1; visibility: visible; {% endif %} }
+  .ai-collection-ticker-control-left-{{ ai_gen_id }}  { left: {{ block.settings.control_offset }}px; }
+  .ai-collection-ticker-control-right-{{ ai_gen_id }} { right: {{ block.settings.control_offset }}px; }
+
+  .ai-collection-ticker-control-btn-{{ ai_gen_id }} {
+    width: {{ block.settings.control_size }}px;
+    height: {{ block.settings.control_size }}px;
+    border-radius: 50%;
+    background-color: {{ block.settings.control_background }};
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    transition: all .3s ease;
+    color: {{ block.settings.control_color }};
+  }
+  .ai-collection-ticker-control-btn-{{ ai_gen_id }}:hover   { background-color: {{ block.settings.control_hover_background }}; color: {{ block.settings.control_hover_color }}; transform: scale(1.1); }
+  .ai-collection-ticker-control-btn-{{ ai_gen_id }}:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+  .ai-collection-ticker-control-btn-{{ ai_gen_id }} svg { width: 60%; height: 60%; }
+
+  .ai-collection-ticker-view-all-{{ ai_gen_id }} {
+    text-align: {{ block.settings.view_all_alignment }};
+    margin-top: {{ block.settings.view_all_spacing }}px;
+    padding: 0 20px {{ block.settings.view_all_bottom_spacing }}px 20px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .ai-collection-ticker-view-all-btn-{{ ai_gen_id }} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    min-height: 36px;
+    background-color: rgba(var(--color-button), 1);
+    color: rgba(var(--color-button-text), 1);
+    border: {{ settings.buttons_border_thickness }}px solid rgba(var(--color-button), {{ settings.buttons_border_opacity | divided_by: 100.0 }});
+    border-radius: {{ settings.buttons_radius }}px;
+    font-family: inherit;
+    font-size: 1.1rem;
+    font-weight: 500;
+    text-decoration: none;
+    letter-spacing: .06rem;
+    line-height: 1.2;
+    cursor: pointer;
+    transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba(var(--color-shadow), {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+    position: relative;
+    overflow: hidden;
+  }
+  .ai-collection-ticker-view-all-btn-{{ ai_gen_id }}:hover { background-color: rgba(var(--color-button), .85); border-color: rgba(var(--color-button), {{ settings.buttons_border_opacity | divided_by: 100.0 }}); }
+  .ai-collection-ticker-view-all-btn-{{ ai_gen_id }}:focus, .ai-collection-ticker-view-all-btn-{{ ai_gen_id }}:focus-visible {
+    outline: .2rem solid rgba(var(--color-foreground), .5);
+    outline-offset: .3rem;
+    box-shadow: 0 0 0 .3rem rgb(var(--color-background)), 0 0 .5rem .4rem rgba(var(--color-foreground), .3);
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-collection-ticker-wrapper-{{ ai_gen_id }} { padding: {{ block.settings.padding_vertical | times: 0.7 }}px 0; }
+    .ai-collection-ticker-header-{{ ai_gen_id }} { padding: 0 15px; margin-bottom: {{ block.settings.title_spacing | times: 0.8 }}px; }
+    .ai-collection-ticker-title-{{ ai_gen_id }} { font-size: {{ block.settings.title_font_size | times: 0.9 }}px; }
+    .ai-collection-ticker-subtitle-{{ ai_gen_id }} { font-size: {{ block.settings.subtitle_font_size | times: 0.9 }}px; }
+
+    .ai-collection-ticker-item-{{ ai_gen_id }} { width: {{ block.settings.item_width | times: 0.8 }}px; margin-right: {{ block.settings.item_spacing | times: 0.8 }}px; }
+    .ai-collection-ticker-image-wrapper-{{ ai_gen_id }} { height: {{ block.settings.image_height | times: 0.8 }}px; padding: {{ block.settings.image_padding | times: 0.8 }}px; }
+    .ai-collection-ticker-content-{{ ai_gen_id }} { padding: {{ block.settings.content_padding | times: 0.8 }}px; min-height: 80px; }
+
+    .ai-collection-ticker-product-title-{{ ai_gen_id }} { font-size: {{ block.settings.product_title_size | times: 0.9 }}px; }
+    .ai-collection-ticker-vendor-{{ ai_gen_id }}       { font-size: {{ block.settings.vendor_size | times: 0.9 }}px; }
+    .ai-collection-ticker-price-inline-{{ ai_gen_id }} { font-size: {{ block.settings.price_inline_size | times: 0.9 }}px; }
+    .ai-collection-ticker-view-link-{{ ai_gen_id }}    { font-size: {{ block.settings.link_size | times: 0.9 }}px; }
+
+    .ai-collection-ticker-controls-{{ ai_gen_id }} { display: none; }
+    .ai-collection-ticker-{{ ai_gen_id }} { touch-action: pan-x; -webkit-overflow-scrolling: touch; }
+    .ai-collection-ticker-item-{{ ai_gen_id }}:hover { transform: none; }
+    .ai-collection-ticker-card-{{ ai_gen_id }}:hover .ai-collection-ticker-image-{{ ai_gen_id }} { transform: none; }
+
+    .ai-collection-ticker-view-all-{{ ai_gen_id }} { padding: 0 15px {{ block.settings.view_all_bottom_spacing | times: 0.8 }}px 15px; margin-top: {{ block.settings.view_all_spacing | times: 0.8 }}px; }
+    .ai-collection-ticker-view-all-btn-{{ ai_gen_id }} { font-size: 1rem; padding: 6px 14px; min-height: 32px; }
+  }
+
+  @media screen and (max-width: 480px) {
+    .ai-collection-ticker-header-{{ ai_gen_id }} { padding: 0 10px; }
+    .ai-collection-ticker-title-{{ ai_gen_id }} { font-size: {{ block.settings.title_font_size | times: 0.8 }}px; }
+    .ai-collection-ticker-subtitle-{{ ai_gen_id }} { font-size: {{ block.settings.subtitle_font_size | times: 0.8 }}px; }
+
+    .ai-collection-ticker-item-{{ ai_gen_id }} { width: {{ block.settings.item_width | times: 0.7 }}px; margin-right: {{ block.settings.item_spacing | times: 0.7 }}px; }
+    .ai-collection-ticker-image-wrapper-{{ ai_gen_id }} { height: {{ block.settings.image_height | times: 0.7 }}px; padding: {{ block.settings.image_padding | times: 0.7 }}px; }
+    .ai-collection-ticker-content-{{ ai_gen_id }} { min-height: 70px; }
+
+    .ai-collection-ticker-price-inline-{{ ai_gen_id }} { font-size: {{ block.settings.price_inline_size | times: 0.8 }}px; }
+    .ai-collection-ticker-view-all-{{ ai_gen_id }} { padding: 0 10px {{ block.settings.view_all_bottom_spacing | times: 0.7 }}px 10px; }
+    .ai-collection-ticker-view-all-btn-{{ ai_gen_id }} { font-size: .95rem; padding: 6px 12px; min-height: 30px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ai-collection-ticker-track-{{ ai_gen_id }} { animation: none; }
+    .ai-collection-ticker-{{ ai_gen_id }} { overflow-x: auto; scrollbar-width: thin; }
+    .ai-collection-ticker-{{ ai_gen_id }}::-webkit-scrollbar { height: 6px; }
+    .ai-collection-ticker-{{ ai_gen_id }}::-webkit-scrollbar-track { background: #f1f1f1; }
+    .ai-collection-ticker-{{ ai_gen_id }}::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+  }
+{% endstyle %}
+
+<div class="ai-collection-ticker-wrapper-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  {% if block.settings.section_title != blank or block.settings.section_subtitle != blank %}
+    <div class="ai-collection-ticker-header-{{ ai_gen_id }}">
+      {% if block.settings.section_title != blank %}
+        <h2 class="ai-collection-ticker-title-{{ ai_gen_id }}">{{ block.settings.section_title }}</h2>
+      {% endif %}
+      {% if block.settings.section_subtitle != blank %}
+        <p class="ai-collection-ticker-subtitle-{{ ai_gen_id }}">{{ block.settings.section_subtitle }}</p>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="ai-collection-ticker-container-{{ ai_gen_id }}">
+    <collection-ticker-{{ ai_gen_id }}
+      class="ai-collection-ticker-{{ ai_gen_id }}"
+      data-speed="{{ block.settings.scroll_speed }}"
+      data-scroll-amount="{{ block.settings.scroll_amount }}"
+      data-direction="{{ block.settings.scroll_direction }}"
+    >
+      {% if block.settings.featured_collection != blank %}
+        {% assign collection = block.settings.featured_collection %}
+        {% assign products_to_show = collection.products | limit: 20 %}
+
+        <div class="ai-collection-ticker-track-{{ ai_gen_id }}">
+          {% for i in (1..3) %}
+            {% for product in products_to_show %}
+              <div class="ai-collection-ticker-item-{{ ai_gen_id }}">
+                <a href="{{ product.url }}" class="ai-collection-ticker-card-{{ ai_gen_id }}">
+                  <div class="ai-collection-ticker-image-wrapper-{{ ai_gen_id }}">
+                    {% if product.featured_image %}
+                      <img
+                        src="{{ product.featured_image | image_url: width: 400 }}"
+                        alt="{{ product.featured_image.alt | escape }}"
+                        class="ai-collection-ticker-image-{{ ai_gen_id }}"
+                        loading="lazy"
+                        width="400"
+                        height="{{ block.settings.image_height }}"
+                      >
+                    {% else %}
+                      <div class="ai-collection-ticker-placeholder-{{ ai_gen_id }}">
+                        {{ 'product-1' | placeholder_svg_tag }}
+                      </div>
+                    {% endif %}
+
+                    {% if block.settings.show_price_badge and block.settings.show_price_inline == false %}
+                      <div class="ai-collection-ticker-price-badge-{{ ai_gen_id }}">
+                        {{ product.price | money }}
+                      </div>
+                    {% endif %}
+                  </div>
+
+                  <div class="ai-collection-ticker-content-{{ ai_gen_id }}">
+                    <div class="ai-collection-ticker-product-info-{{ ai_gen_id }}">
+                      <h3 class="ai-collection-ticker-product-title-{{ ai_gen_id }}">{{ product.title }}</h3>
+
+                      {% if block.settings.show_vendor and product.vendor != blank %}
+                        <p class="ai-collection-ticker-vendor-{{ ai_gen_id }}">{{ product.vendor }}</p>
+                      {% endif %}
+
+                      {% if block.settings.show_price_inline %}
+                        <div class="ai-collection-ticker-price-inline-{{ ai_gen_id }}">{{ product.price | money }}</div>
+                      {% endif %}
+                    </div>
+
+                    {% if block.settings.show_view_link %}
+                      <span class="ai-collection-ticker-view-link-{{ ai_gen_id }}">{{ block.settings.link_text }}</span>
+                    {% endif %}
+                  </div>
+                </a>
+              </div>
+            {% endfor %}
+          {% endfor %}
+        </div>
+      {% endif %}
+    </collection-ticker-{{ ai_gen_id }}>
+
+    <div class="ai-collection-ticker-controls-{{ ai_gen_id }} ai-collection-ticker-control-left-{{ ai_gen_id }}">
+      <button class="ai-collection-ticker-control-btn-{{ ai_gen_id }}" data-direction="left" aria-label="Scroll left">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15,18 9,12 15,6"></polyline></svg>
+      </button>
+    </div>
+
+    <div class="ai-collection-ticker-controls-{{ ai_gen_id }} ai-collection-ticker-control-right-{{ ai_gen_id }}">
+      <button class="ai-collection-ticker-control-btn-{{ ai_gen_id }}" data-direction="right" aria-label="Scroll right">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9,18 15,12 9,6"></polyline></svg>
+      </button>
+    </div>
+  </div>
+
+  {% if block.settings.show_view_all and block.settings.featured_collection != blank %}
+    <div class="ai-collection-ticker-view-all-{{ ai_gen_id }}">
+      <a href="{{ block.settings.featured_collection.url }}" class="btn button ai-collection-ticker-view-all-btn-{{ ai_gen_id }}">
+        {{ block.settings.view_all_text | default: 'View All' }}
+      </a>
+    </div>
+  {% endif %}
+</div>
+
+<script>
+  (function() {
+    class CollectionTicker{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+        this.track = null;
+        this.isInitialized = false;
+        this.isPlaying = true;
+        this.isPaused = false;
+        this.userInteracting = false;
+        this.controlsHovered = false;
+        this.currentTransform = 0;
+        this.animationId = null;
+        this.scrollAmount = 0;
+        this.speed = 0;
+        this.lastTimestamp = 0;
+        this.isMobile = false;
+        this.touchStartX = 0;
+        this.touchStartY = 0;
+        this.touchCurrentX = 0;
+        this.touchCurrentY = 0;
+        this.isDragging = false;
+        this.dragStartTransform = 0;
+        this.swipeVelocity = 0;
+        this.lastTouchTime = 0;
+        this.lastTouchX = 0;
+        // schema: 'left' = LTR (track moves RIGHT), 'right' = RTL (track moves LEFT)
+        this.direction = 'left';
+        this.trackWidth = 0;
+        this.singleSetWidth = 0;
+      }
+
+      connectedCallback() {
+        try {
+          this.track = this.querySelector('.ai-collection-ticker-track-{{ ai_gen_id }}');
+          this.isMobile = window.innerWidth <= 749;
+
+          if (this.track && !this.isInitialized) {
+            this.speed = parseFloat(this.dataset.speed) || 150;       // higher = slower
+            this.scrollAmount = parseFloat(this.dataset.scrollAmount) || 1;
+            this.direction = this.dataset.direction || 'left';
+            this.calculateDimensions();
+            this.setInitialPosition();
+            this.initializeAnimation();
+            this.setupEventListeners();
+            this.handleReducedMotion();
+            this.isInitialized = true;
+          }
+        } catch (error) { console.error('CollectionTicker init error:', error); }
+      }
+
+      calculateDimensions() {
+        if (!this.track) return;
+        const items = this.track.children;
+        if (!items || !items.length) return;
+        // 3x duplicated product set to allow seamless loop
+        this.trackWidth = this.track.scrollWidth;
+        this.singleSetWidth = this.trackWidth / 3;
+      }
+
+      setInitialPosition() {
+        if (!this.track || !this.singleSetWidth) return;
+        // Keep position inside [-w, 0) so wrapping is invisible
+        this.currentTransform = (this.direction === 'left') ? (-this.singleSetWidth + 0.1) : (-0.1);
+        this.track.style.transform = `translateX(${this.currentTransform}px)`;
+      }
+
+      initializeAnimation() {
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+        this.startAnimation();
+      }
+
+      startAnimation() {
+        if (this.animationId) cancelAnimationFrame(this.animationId);
+
+        const animate = (timestamp) => {
+          if (!this.lastTimestamp) this.lastTimestamp = timestamp;
+          const deltaTime = timestamp - this.lastTimestamp;
+          this.lastTimestamp = timestamp;
+
+          if (!this.isPaused && !this.userInteracting && !this.controlsHovered && !this.isDragging) {
+            // Convert speed/amount into px using time delta
+            const moveDistance = (this.scrollAmount * deltaTime * 60) / (this.speed * 16);
+
+            // 'left' => LTR => track moves RIGHT (+X)
+            // 'right' => RTL => track moves LEFT (−X)
+            if (this.direction === 'left') this.currentTransform += moveDistance;
+            else                           this.currentTransform -= moveDistance;
+
+            this.normalizePosition();
+            if (this.track) this.track.style.transform = `translateX(${this.currentTransform}px)`;
+          }
+
+          if (this.isPlaying) this.animationId = requestAnimationFrame(animate);
+        };
+
+        this.animationId = requestAnimationFrame(animate);
+      }
+
+      // Normalize to range [-w, 0) for seamless loop
+      normalizePosition() {
+        if (!this.singleSetWidth) return;
+        const w = this.singleSetWidth;
+        this.currentTransform = ((this.currentTransform % w) + w) % w - w;
+      }
+
+      pauseAnimation() { this.isPaused = true; }
+      resumeAnimation() { this.isPaused = false; this.lastTimestamp = 0; }
+
+      stopAnimation() {
+        this.isPlaying = false;
+        if (this.animationId) { cancelAnimationFrame(this.animationId); this.animationId = null; }
+      }
+
+      // Manual step: left button moves track left (−), right button moves track right (+)
+      scrollManually(direction) {
+        this.userInteracting = true;
+        const itemWidth = {{ block.settings.item_width }} + {{ block.settings.item_spacing }};
+        const step = direction === 'left' ? -itemWidth : itemWidth;
+        this.currentTransform += step;
+        this.normalizePosition();
+        if (this.track) this.track.style.transform = `translateX(${this.currentTransform}px)`;
+        setTimeout(() => { this.userInteracting = false; }, 600);
+      }
+
+      // Mobile swipe
+      handleTouchStart(e) {
+        if (!this.isMobile) return;
+        this.touchStartX = e.touches[0].clientX;
+        this.touchStartY = e.touches[0].clientY;
+        this.touchCurrentX = this.touchStartX;
+        this.touchCurrentY = this.touchStartY;
+        this.dragStartTransform = this.currentTransform;
+        this.isDragging = false;
+        this.userInteracting = true;
+        this.lastTouchTime = Date.now();
+        this.lastTouchX = this.touchStartX;
+        if (this.track) this.track.style.transition = 'none';
+      }
+
+      handleTouchMove(e) {
+        if (!this.isMobile) return;
+        this.touchCurrentX = e.touches[0].clientX;
+        this.touchCurrentY = e.touches[0].clientY;
+
+        const deltaX = this.touchCurrentX - this.touchStartX;
+        const deltaY = this.touchCurrentY - this.touchStartY;
+
+        if (!this.isDragging && Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+          this.isDragging = true;
+          e.preventDefault();
+        }
+
+        if (this.isDragging) {
+          e.preventDefault();
+          this.currentTransform = this.dragStartTransform + deltaX;
+          if (this.track) this.track.style.transform = `translateX(${this.currentTransform}px)`;
+
+          const currentTime = Date.now();
+          const timeDelta = currentTime - this.lastTouchTime;
+          if (timeDelta > 0) this.swipeVelocity = (this.touchCurrentX - this.lastTouchX) / timeDelta;
+          this.lastTouchTime = currentTime;
+          this.lastTouchX = this.touchCurrentX;
+        }
+      }
+
+      handleTouchEnd() {
+        if (!this.isMobile || !this.isDragging) { this.userInteracting = false; return; }
+
+        let finalTransform = this.currentTransform;
+        if (Math.abs(this.swipeVelocity) > 0.5) finalTransform += this.swipeVelocity * 200; // simple momentum
+
+        this.currentTransform = finalTransform;
+        this.normalizePosition();
+        if (this.track) {
+          this.track.style.transition = 'transform .3s ease-out';
+          this.track.style.transform = `translateX(${this.currentTransform}px)`;
+        }
+
+        setTimeout(() => {
+          if (this.track) this.track.style.transition = 'transform .3s ease';
+          this.isDragging = false;
+          this.userInteracting = false;
+          this.swipeVelocity = 0;
+        }, 300);
+      }
+
+      setupEventListeners() {
+        try {
+          // 🔧 FIX: target the BUTTONS only (avoid matching the custom element's data-direction)
+          const leftBtn  = this.parentElement?.querySelector('.ai-collection-ticker-control-left-{{ ai_gen_id }} button[data-direction="left"]');
+          const rightBtn = this.parentElement?.querySelector('.ai-collection-ticker-control-right-{{ ai_gen_id }} button[data-direction="right"]');
+          const controls = this.parentElement?.querySelectorAll('.ai-collection-ticker-controls-{{ ai_gen_id }}');
+
+          // Autoplay continues in the perceived direction of the click
+          if (leftBtn)  leftBtn.addEventListener('click', () => { this.direction = 'right'; this.scrollManually('left');  this.resumeAnimation(); });
+          if (rightBtn) rightBtn.addEventListener('click', () => { this.direction = 'left';  this.scrollManually('right'); this.resumeAnimation(); });
+
+          if (controls) {
+            controls.forEach(control => {
+              control.addEventListener('mouseenter', () => { this.controlsHovered = true;  });
+              control.addEventListener('mouseleave', () => { this.controlsHovered = false; });
+            });
+          }
+
+          this.addEventListener('mouseenter', () => {
+            {% if block.settings.pause_on_hover %} if (!this.isMobile) this.pauseAnimation(); {% endif %}
+          });
+          this.addEventListener('mouseleave', () => {
+            {% if block.settings.pause_on_hover %} if (!this.isMobile && !this.userInteracting && !this.controlsHovered) this.resumeAnimation(); {% endif %}
+          });
+
+          this.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
+          this.addEventListener('touchmove',  (e) => this.handleTouchMove(e),  { passive: false });
+          this.addEventListener('touchend',  (e) => this.handleTouchEnd(e));
+          this.addEventListener('touchcancel', (e) => this.handleTouchEnd(e));
+
+          const resizeObserver = new ResizeObserver(() => {
+            const wasMobile = this.isMobile;
+            this.isMobile = window.innerWidth <= 749;
+            if (wasMobile !== this.isMobile) {
+              this.calculateDimensions();
+              this.setInitialPosition();
+              this.isDragging = false;
+              this.userInteracting = false;
+            }
+          });
+          resizeObserver.observe(this);
+
+          document.addEventListener('visibilitychange', () => {
+            if (document.hidden) this.pauseAnimation();
+            else if (!this.userInteracting && !this.controlsHovered && !this.isDragging) this.resumeAnimation();
+          });
+        } catch (error) { console.error('Event listener setup error:', error); }
+      }
+
+      handleReducedMotion() {
+        const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReducedMotion && this.track) {
+          this.stopAnimation();
+          this.track.style.transform = 'none';
+          this.style.overflowX = 'auto';
+        }
+      }
+    }
+
+    if (!customElements.get('collection-ticker-{{ ai_gen_id }}')) {
+      customElements.define('collection-ticker-{{ ai_gen_id }}', CollectionTicker{{ ai_gen_id }});
+    }
+  })();
+</script>
+
+
+
+{% schema %}
+{
+  "name": "Collection Ticker",
+  "tag": null,
+  "settings": [
+    { "type": "header", "content": "Section Title" },
+    { "type": "text", "id": "section_title", "label": "Title", "default": "Featured Products" },
+    { "type": "text", "id": "section_subtitle", "label": "Subtitle" },
+    {
+      "type": "select", "id": "title_alignment", "label": "Title alignment",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "center"
+    },
+    { "type": "range", "id": "title_font_size", "min": 18, "max": 48, "step": 2, "unit": "px", "label": "Title font size", "default": 32 },
+    { "type": "color", "id": "title_text_color", "label": "Title color", "default": "#000000" },
+    { "type": "range", "id": "subtitle_font_size", "min": 12, "max": 24, "step": 1, "unit": "px", "label": "Subtitle font size", "default": 16 },
+    { "type": "color", "id": "subtitle_text_color", "label": "Subtitle color", "default": "#666666" },
+    { "type": "range", "id": "title_spacing", "min": 10, "max": 60, "step": 5, "unit": "px", "label": "Title bottom spacing", "default": 30 },
+
+    { "type": "header", "content": "Collection" },
+    { "type": "collection", "id": "featured_collection", "label": "Featured collection" },
+    { "type": "checkbox", "id": "show_price_badge", "label": "Show price badge on image", "default": true },
+    { "type": "checkbox", "id": "show_price_inline", "label": "Show price inline in content", "default": false },
+    { "type": "checkbox", "id": "show_vendor", "label": "Show product vendor", "default": false },
+    { "type": "checkbox", "id": "show_view_link", "label": "Show view product link", "default": true },
+    { "type": "text", "id": "link_text", "label": "Link text", "default": "View Product" },
+
+    { "type": "header", "content": "View All Button" },
+    { "type": "checkbox", "id": "show_view_all", "label": "Show view all button", "default": true },
+    { "type": "text", "id": "view_all_text", "label": "View all button text", "default": "View All Products" },
+    {
+      "type": "select", "id": "view_all_alignment", "label": "View all button alignment",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "center"
+    },
+    { "type": "range", "id": "view_all_spacing", "min": 10, "max": 60, "step": 5, "unit": "px", "label": "View all button top spacing", "default": 30 },
+    { "type": "range", "id": "view_all_bottom_spacing", "min": 20, "max": 120, "step": 5, "unit": "px", "label": "View all button bottom spacing", "default": 60 },
+
+    { "type": "header", "content": "Animation" },
+    {
+      "type": "select", "id": "scroll_direction", "label": "Scroll direction",
+      "options": [
+        { "value": "left", "label": "Left to right" },
+        { "value": "right", "label": "Right to left" }
+      ],
+      "default": "left"
+    },
+    { "type": "range", "id": "scroll_speed", "min": 50, "max": 300, "step": 10, "label": "Scroll speed (higher = slower)", "default": 150 },
+    { "type": "range", "id": "scroll_amount", "min": 0.5, "max": 3, "step": 0.1, "label": "Scroll amount per frame", "default": 1 },
+    { "type": "checkbox", "id": "pause_on_hover", "label": "Pause on hover (desktop only)", "default": true },
+    { "type": "range", "id": "hover_lift", "min": 0, "max": 10, "step": 1, "unit": "px", "label": "Hover lift effect (desktop only)", "default": 4 },
+
+    { "type": "header", "content": "Controls (Desktop Only)" },
+    { "type": "checkbox", "id": "show_controls", "label": "Show arrow controls", "default": false },
+    { "type": "checkbox", "id": "show_controls_on_hover", "label": "Show controls on hover only", "default": true },
+    { "type": "range", "id": "control_size", "min": 30, "max": 60, "step": 2, "unit": "px", "label": "Control button size", "default": 40 },
+    { "type": "range", "id": "control_offset", "min": 10, "max": 40, "step": 2, "unit": "px", "label": "Control button offset", "default": 20 },
+    { "type": "color", "id": "control_background", "label": "Control background", "default": "#ffffff" },
+    { "type": "color", "id": "control_color", "label": "Control icon color", "default": "#000000" },
+    { "type": "color", "id": "control_hover_background", "label": "Control hover background", "default": "#f0f0f0" },
+    { "type": "color", "id": "control_hover_color", "label": "Control hover icon color", "default": "#333333" },
+
+    { "type": "header", "content": "Layout" },
+    { "type": "range", "id": "item_width", "min": 180, "max": 320, "step": 10, "unit": "px", "label": "Item width", "default": 220 },
+    { "type": "range", "id": "image_height", "min": 120, "max": 280, "step": 10, "unit": "px", "label": "Image height", "default": 180 },
+    { "type": "range", "id": "image_padding", "min": 8, "max": 32, "step": 2, "unit": "px", "label": "Image padding", "default": 16 },
+    { "type": "range", "id": "image_border_radius", "min": 0, "max": 20, "step": 2, "unit": "px", "label": "Image border radius", "default": 4 },
+    {
+      "type": "select", "id": "image_fit", "label": "Image fit",
+      "options": [
+        { "value": "cover", "label": "Cover (crop to fit)" },
+        { "value": "contain", "label": "Contain (fit within bounds)" },
+        { "value": "fill", "label": "Fill (stretch to fit)" }
+      ],
+      "default": "contain"
+    },
+    { "type": "range", "id": "item_spacing", "min": 10, "max": 40, "step": 2, "unit": "px", "label": "Item spacing", "default": 20 },
+    { "type": "range", "id": "padding_vertical", "min": 10, "max": 60, "step": 5, "unit": "px", "label": "Vertical padding", "default": 30 },
+    { "type": "range", "id": "content_padding", "min": 8, "max": 24, "step": 2, "unit": "px", "label": "Content padding", "default": 16 },
+
+    { "type": "header", "content": "Card Style" },
+    { "type": "color", "id": "background_color", "label": "Background color", "default": "#f8f8f8" },
+    { "type": "color", "id": "card_background", "label": "Card background", "default": "#ffffff" },
+    {
+      "type": "range", "id": "card_border_radius", "min": 0, "max": 20, "step": 2, "unit": "px", "label": "Card border radius", "default": 8
+    },
+    {
+      "type": "select", "id": "text_alignment", "label": "Text alignment",
+      "options": [
+        { "value": "left", "label": "Left" },
+        { "value": "center", "label": "Center" },
+        { "value": "right", "label": "Right" }
+      ],
+      "default": "center"
+    },
+
+    { "type": "header", "content": "Typography" },
+    { "type": "range", "id": "product_title_size", "min": 12, "max": 24, "step": 1, "unit": "px", "label": "Product title size", "default": 16 },
+    { "type": "color", "id": "product_title_color", "label": "Product title color", "default": "#000000" },
+    { "type": "range", "id": "vendor_size", "min": 10, "max": 18, "step": 1, "unit": "px", "label": "Vendor size", "default": 14 },
+
+    { "type": "header", "content": "Price Badge" },
+    { "type": "color", "id": "badge_color", "label": "Badge background", "default": "#000000" },
+    { "type": "color", "id": "badge_text_color", "label": "Badge text color", "default": "#ffffff" },
+
+    { "type": "header", "content": "Inline Price" },
+    { "type": "range", "id": "price_inline_size", "min": 12, "max": 20, "step": 1, "unit": "px", "label": "Inline price size", "default": 16 },
+    { "type": "color", "id": "price_inline_color", "label": "Inline price color", "default": "#000000" },
+
+    { "type": "header", "content": "View Link" },
+    { "type": "range", "id": "link_size", "min": 10, "max": 18, "step": 1, "unit": "px", "label": "Link size", "default": 14 },
+    { "type": "color", "id": "link_color", "label": "Link color", "default": "#000000" },
+    { "type": "color", "id": "link_hover_color", "label": "Link hover color", "default": "#666666" }
+  ],
+  "presets": [
+    { "name": "Collection Ticker" }
+  ]
+}
+{% endschema %}

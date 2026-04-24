@@ -1,0 +1,383 @@
+{% doc %}
+  @prompt
+    Convert the collection ticker from a block to a standalone section format while keeping all CSS, HTML, and functionality exactly the same. Apply the JavaScript fixes for custom element registration conflicts, error handling, variable definitions, event listeners, and router conflicts. Make this appear in the "Add section" menu as a complete section with all the same styling, markup, settings, and fixed JavaScript functionality.
+
+{% enddoc %}
+{% assign ai_gen_id = section.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-collection-ticker-{{ ai_gen_id }} {
+    width: 100%;
+    overflow: hidden;
+    background-color: {{ section.settings.background_color }};
+    padding: {{ section.settings.vertical_padding }}px 0;
+    position: relative;
+  }
+
+  .ai-collection-ticker-track-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    gap: {{ section.settings.gap_between_items }}px;
+    animation: ai-collection-ticker-scroll-{{ ai_gen_id }} {{ section.settings.animation_speed }}s linear infinite;will-change: transform;
+  }
+
+  .ai-collection-ticker-{{ ai_gen_id }}:hover .ai-collection-ticker-track-{{ ai_gen_id }} {
+    animation-play-state: paused;
+  }
+
+  @keyframes ai-collection-ticker-scroll-{{ ai_gen_id }} {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .ai-collection-ticker-item-{{ ai_gen_id }} {
+    flex-shrink: 0;
+    width: {{ section.settings.item_width }}px;
+    text-align: center;}
+
+  .ai-collection-ticker-image-{{ ai_gen_id }} {
+    width: 100%;
+    height: {{ section.settings.image_height }}px;
+    object-fit: cover;
+    border-radius: {{ section.settings.image_border_radius }}px;
+    margin-bottom: 8px;
+    transition: transform 0.3s ease;
+  }
+
+  .ai-collection-ticker-item-{{ ai_gen_id }}:hover .ai-collection-ticker-image-{{ ai_gen_id }} {
+    transform: scale(1.05);
+  }
+
+  .ai-collection-ticker-image-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: {{ section.settings.image_height }}px;
+    background-color: #f4f4f4;
+    border-radius: {{ section.settings.image_border_radius }}px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;}
+
+  .ai-collection-ticker-image-placeholder-{{ ai_gen_id }} svg {
+    width: 60%;
+    height: 60%;
+    opacity: 0.5;
+  }
+
+  .ai-collection-ticker-title-{{ ai_gen_id }} {
+    font-size: {{ section.settings.title_font_size }}px;
+    color: {{ section.settings.title_color }};
+    margin: 0;
+    font-weight: 600;
+    text-decoration: none;
+    display: block;
+  }
+
+  .ai-collection-ticker-title-{{ ai_gen_id }}:hover {
+    color: {{ section.settings.title_hover_color }};
+  }
+
+  @media screen and (max-width: 749px) {
+    .ai-collection-ticker-item-{{ ai_gen_id }} {
+      width: {{ section.settings.item_width | times: 0.8 }}px;
+    }
+
+    .ai-collection-ticker-image-{{ ai_gen_id }},
+    .ai-collection-ticker-image-placeholder-{{ ai_gen_id }} {
+      height: {{ section.settings.image_height | times: 0.8 }}px;
+    }
+  }
+{% endstyle %}
+
+<collection-ticker-{{ ai_gen_id }}
+  class="ai-collection-ticker-{{ ai_gen_id }}"
+  data-speed="{{ section.settings.animation_speed }}"
+  data-gap="{{ section.settings.gap_between_items }}"
+><div class="ai-collection-ticker-track-{{ ai_gen_id }}">
+    {% liquid
+      assign collections_to_show = collections | where: 'products_count', '>', 0
+      if section.settings.products_limit > 0
+        assign collections_to_show = collections_to_show | slice: 0, section.settings.products_limit
+      endif
+    %}
+
+    {% for collection in collections_to_show %}
+      <div class="ai-collection-ticker-item-{{ ai_gen_id }}">
+        {% if collection.featured_image %}
+          <img
+            src="{{ collection.featured_image | image_url: width: section.settings.item_width, height: section.settings.image_height }}"
+            alt="{{ collection.featured_image.alt | escape }}"
+            class="ai-collection-ticker-image-{{ ai_gen_id }}"
+            loading="lazy"width="{{ section.settings.item_width }}"
+            height="{{ section.settings.image_height }}"
+          >
+        {% else %}
+          <div class="ai-collection-ticker-image-placeholder-{{ ai_gen_id }}">
+            {{ 'collection-1' | placeholder_svg_tag }}
+          </div>
+        {% endif %}<a href="{{ collection.url }}" class="ai-collection-ticker-title-{{ ai_gen_id }}">
+          {{ collection.title }}
+        </a>
+      </div>
+    {% endfor %}
+
+    {% for collection in collections_to_show %}
+      <div class="ai-collection-ticker-item-{{ ai_gen_id }}">
+        {% if collection.featured_image %}
+          <img
+            src="{{ collection.featured_image | image_url: width: section.settings.item_width, height: section.settings.image_height }}"
+            alt="{{ collection.featured_image.alt | escape }}"
+            class="ai-collection-ticker-image-{{ ai_gen_id }}"
+            loading="lazy"
+            width="{{ section.settings.item_width }}"
+            height="{{ section.settings.image_height }}"
+          >
+        {% else %}
+          <div class="ai-collection-ticker-image-placeholder-{{ ai_gen_id }}">
+            {{ 'collection-1' | placeholder_svg_tag }}
+          </div>
+        {% endif %}
+        <a href="{{ collection.url }}" class="ai-collection-ticker-title-{{ ai_gen_id }}">
+          {{ collection.title }}
+        </a>
+      </div>
+    {% endfor %}
+  </div>
+</collection-ticker-{{ ai_gen_id }}>
+
+<script>
+  (function() {
+    const elementName = 'collection-ticker-{{ ai_gen_id }}';
+    
+    if (customElements.get(elementName)) {
+      return;
+    }
+
+    class CollectionTicker{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+        this.isInitialized = false;
+        this.animationId = null;
+        this.track = null;
+        this.speed = 0;
+        this.gap = 0;
+      }
+
+      connectedCallback() {
+        if (this.isInitialized) return;
+        
+        try {
+          this.init();
+          this.isInitialized = true;
+        } catch (error) {
+          console.warn('Collection ticker initialization failed:', error);
+        }
+      }
+
+      disconnectedCallback() {
+        this.cleanup();
+      }
+
+      init() {
+        this.track = this.querySelector('.ai-collection-ticker-track-{{ ai_gen_id }}');
+        if (!this.track) return;
+
+        this.speed = parseFloat(this.dataset.speed) || 20;
+        this.gap = parseFloat(this.dataset.gap) || 20;
+
+        this.setupAnimation();
+        this.setupEventListeners();
+      }
+
+      setupAnimation() {
+        if (!this.track) return;
+
+        const items = this.track.children;
+        if (items.length === 0) return;
+
+        const totalItems = items.length / 2;
+        let totalWidth = 0;
+
+        for (let i = 0; i < totalItems; i++) {
+          if (items[i]) {
+            totalWidth += items[i].offsetWidth + this.gap;
+          }
+        }
+
+        if (totalWidth > 0) {
+          this.track.style.animationDuration = `${(totalWidth / 50) * (this.speed / 20)}s`;
+        }
+      }
+
+      setupEventListeners() {
+        if (!this.track) return;
+
+        const handleMouseEnter = () => {
+          this.track.style.animationPlayState = 'paused';
+        };
+
+        const handleMouseLeave = () => {
+          this.track.style.animationPlayState = 'running';
+        };
+
+        this.addEventListener('mouseenter', handleMouseEnter);
+        this.addEventListener('mouseleave', handleMouseLeave);
+
+        this.cleanup = () => {
+          this.removeEventListener('mouseenter', handleMouseEnter);
+          this.removeEventListener('mouseleave', handleMouseLeave);
+          if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+            this.animationId = null;
+          }
+        };
+      }
+
+      cleanup() {
+        if (this.cleanup && typeof this.cleanup === 'function') {
+          this.cleanup();
+        }
+      }
+    }
+
+    try {
+      customElements.define(elementName, CollectionTicker{{ ai_gen_id }});
+    } catch (error) {
+      console.warn('Failed to define custom element:', error);
+    }
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Collection ticker",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Collections"
+    },
+    {
+      "type": "range",
+      "id": "products_limit",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "label": "Number of collections",
+      "default": 10,
+      "info": "Set to 0 to show all collections"
+    },
+    {
+      "type": "header",
+      "content": "Animation"
+    },
+    {
+      "type": "range",
+      "id": "animation_speed",
+      "min": 5,
+      "max": 50,
+      "step": 1,
+      "label": "Animation speed",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "gap_between_items",
+      "min": 10,
+      "max": 50,
+      "step": 2,
+      "unit": "px",
+      "label": "Gap between items",
+      "default": 20
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "item_width",
+      "min": 100,
+      "max": 300,
+      "step": 10,
+      "unit": "px",
+      "label": "Item width",
+      "default": 200
+    },
+    {
+      "type": "range",
+      "id": "image_height",
+      "min": 100,
+      "max": 300,
+      "step": 10,
+      "unit": "px",
+      "label": "Image height",
+      "default": 150
+    },
+    {
+      "type": "range",
+      "id": "image_border_radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Image border radius",
+      "default": 8
+    },
+    {
+      "type": "range",
+      "id": "vertical_padding",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Vertical padding",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Title color",
+      "default": "#000000"
+    },
+    {
+      "type": "color",
+      "id": "title_hover_color",
+      "label": "Title hover color",
+      "default": "#666666"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_font_size",
+      "min": 12,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Title font size",
+      "default": 16
+    }
+  ],
+  "presets": [
+    {
+      "name": "Collection ticker"
+    }
+  ]
+}
+{% endschema %}

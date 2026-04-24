@@ -1,0 +1,299 @@
+{% comment %}
+  Recently viewed products – uses localStorage to track handles and fetches product data via /products/{handle}.js
+  Renders only on product pages; product-full (or theme) should set window.__currentProductHandle and push to localStorage.
+{% endcomment %}
+{{ 'component-card.css' | asset_url | stylesheet_tag }}
+{{ 'component-price.css' | asset_url | stylesheet_tag }}
+
+{%- style -%}
+  .recently-viewed-{{ section.id }} {
+    padding-top: {{ section.settings.padding_top | times: 0.75 | round: 0 }}px;
+    padding-bottom: {{ section.settings.padding_bottom | times: 0.75 | round: 0 }}px;
+  }
+  @media screen and (min-width: 750px) {
+    .recently-viewed-{{ section.id }} {
+      padding-top: {{ section.settings.padding_top }}px;
+      padding-bottom: {{ section.settings.padding_bottom }}px;
+    }
+  }
+  .recently-viewed__grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(2, 1fr);
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  @media screen and (min-width: 750px) {
+    .recently-viewed__grid {
+      grid-template-columns: repeat({{ section.settings.columns_desktop }}, 1fr);
+    }
+  }
+  .recently-viewed__card {
+    background: #f7f6fb;
+    border: 1.5px solid #ede6ff;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(120,92,193,0.08);
+    transition: box-shadow 0.2s, border-color 0.2s;
+  }
+  .recently-viewed__card:hover {
+    box-shadow: 0 4px 20px rgba(120,92,193,0.12);
+    border-color: #d6ccf4;
+  }
+  .recently-viewed__card a {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+  }
+  .recently-viewed__card-img-wrap {
+    aspect-ratio: 1;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .recently-viewed__card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+  .recently-viewed__card-info {
+    padding: 1rem 1.1rem;
+  }
+  .recently-viewed__card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #211542;
+    margin: 0 0 0.35rem;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .recently-viewed__card-price {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #4B3F82;
+  }
+  .recently-viewed__heading {
+    margin: 0 0 1.5rem;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #211542;
+  }
+  .recently-viewed__empty {
+    display: none;
+    padding: 1rem 0;
+    color: #666;
+  }
+  .recently-viewed__empty.is-visible {
+    display: block;
+  }
+  .recently-viewed__loading {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+  }
+{%- endstyle -%}
+
+<div class="recently-viewed-{{ section.id }} color-{{ section.settings.color_scheme }} gradient page-width">
+  <h2 class="recently-viewed__heading {{ section.settings.heading_size }}">{{ section.settings.heading }}</h2>
+  <div id="recently-viewed-root-{{ section.id }}" class="recently-viewed__root" data-section-id="{{ section.id }}" data-money-format="{{ shop.money_format | escape }}" data-products-to-show="{{ section.settings.products_to_show }}" data-columns-mobile="{{ section.settings.columns_mobile }}">
+    <div class="recently-viewed__loading" id="recently-viewed-loading-{{ section.id }}">Loading…</div>
+    <p class="recently-viewed__empty" id="recently-viewed-empty-{{ section.id }}">{{ section.settings.empty_message }}</p>
+    <ul class="recently-viewed__grid" id="recently-viewed-grid-{{ section.id }}" role="list" aria-label="{{ section.settings.heading }}"></ul>
+  </div>
+</div>
+
+<script>
+(function() {
+  const SECTION_ID = '{{ section.id }}';
+  const root = document.getElementById('recently-viewed-root-' + SECTION_ID);
+  const grid = document.getElementById('recently-viewed-grid-' + SECTION_ID);
+  const loading = document.getElementById('recently-viewed-loading-' + SECTION_ID);
+  const empty = document.getElementById('recently-viewed-empty-' + SECTION_ID);
+  if (!root || !grid) return;
+
+  const moneyFormat = root.getAttribute('data-money-format') || '{{ amount }}';
+  const maxProducts = parseInt(root.getAttribute('data-products-to-show') || '4', 10);
+  const STORAGE_KEY = 'lwt_recently_viewed_handles';
+
+  function formatMoney(cents) {
+    if (cents == null) return '';
+    var amount = (cents / 100).toFixed(2);
+    var formatted = amount.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return moneyFormat.replace(/\{\{\s*amount\s*\}\}/, formatted).replace(/\{\{\s*amount_no_decimals\s*\}\}/, Math.round(cents / 100).toString());
+  }
+
+  function getRecentHandles() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function setRecentHandles(handles) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(handles.slice(0, 20)));
+    } catch (e) {}
+  }
+
+  var currentHandle = typeof window.__currentProductHandle === 'string' ? window.__currentProductHandle : null;
+  var handles = getRecentHandles().filter(function(h) { return h && h !== currentHandle; });
+  handles = handles.slice(0, maxProducts);
+
+  if (handles.length === 0) {
+    if (loading) loading.style.display = 'none';
+    if (empty) { empty.classList.add('is-visible'); empty.style.display = 'block'; }
+    return;
+  }
+
+  var loaded = 0;
+  var total = handles.length;
+
+  function renderCard(product) {
+    if (!product || !product.handle) return '';
+    var img = product.featured_image || (product.images && product.images[0]) || (product.variants && product.variants[0] && product.variants[0].featured_image);
+    var imgUrl = '';
+    if (img) {
+      if (typeof img === 'string') imgUrl = img;
+      else imgUrl = img.src || img.url || '';
+    }
+    var price = product.price != null ? product.price : (product.variants && product.variants[0] && product.variants[0].price);
+    var url = (window.Shopify && window.Shopify.routes && window.Shopify.routes.root ? window.Shopify.routes.root.replace(/\/$/, '') : '') + '/products/' + product.handle;
+    var title = (product.title || '').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    var priceHtml = price != null ? '<span class="recently-viewed__card-price">' + formatMoney(price) + '</span>' : '';
+    var imgTag = imgUrl ? '<img class="recently-viewed__card-img" src="' + imgUrl + '" alt="' + title + '" loading="lazy" width="360" height="360">' : '';
+    return '<div class="recently-viewed__card"><a href="' + url + '"><div class="recently-viewed__card-img-wrap">' + imgTag +
+      '</div><div class="recently-viewed__card-info"><h3 class="recently-viewed__card-title">' + title + '</h3>' + priceHtml + '</div></a></div>';
+  }
+
+  function done() {
+    loaded++;
+    if (loaded < total) return;
+    if (loading) loading.style.display = 'none';
+    if (grid.children.length === 0 && empty) {
+      empty.classList.add('is-visible');
+      empty.style.display = 'block';
+    }
+  }
+
+  handles.forEach(function(handle) {
+    var base = window.Shopify && window.Shopify.routes && window.Shopify.routes.root ? window.Shopify.routes.root : '';
+    if (base && base !== '/') base = base.replace(/\/$/, '');
+    fetch((base || '') + '/products/' + handle + '.js', { headers: { 'Accept': 'application/json' } })
+      .then(function(r) { return r.ok ? r.json() : null; })
+      .then(function(product) {
+        if (product) {
+          var li = document.createElement('li');
+          li.className = 'grid__item';
+          li.innerHTML = renderCard(product);
+          grid.appendChild(li);
+        }
+        done();
+      })
+      .catch(function() { done(); });
+  });
+})();
+</script>
+
+{% schema %}
+{
+  "name": "Recently viewed products",
+  "tag": "section",
+  "class": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Recently viewed"
+    },
+    {
+      "type": "select",
+      "id": "heading_size",
+      "label": "Heading size",
+      "options": [
+        { "value": "h0", "label": "Extra large" },
+        { "value": "h1", "label": "Large" },
+        { "value": "h2", "label": "Medium" }
+      ],
+      "default": "h2"
+    },
+    {
+      "type": "range",
+      "id": "products_to_show",
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "default": 4,
+      "label": "Maximum products to show"
+    },
+    {
+      "type": "range",
+      "id": "columns_desktop",
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "default": 4,
+      "label": "Columns (desktop)"
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "label": "Columns (mobile)",
+      "options": [
+        { "value": "1", "label": "1" },
+        { "value": "2", "label": "2" }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "text",
+      "id": "empty_message",
+      "label": "Message when no recent products",
+      "default": "You haven't viewed any other products yet."
+    },
+    {
+      "type": "color_scheme",
+      "id": "color_scheme",
+      "label": "Color scheme",
+      "default": "scheme-1"
+    },
+    {
+      "type": "header",
+      "content": "Section padding"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Top padding",
+      "default": 36
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Bottom padding",
+      "default": 36
+    }
+  ],
+  "presets": [
+    { "name": "Recently viewed products", "category": "Product pages" }
+  ]
+}
+{% endschema %}

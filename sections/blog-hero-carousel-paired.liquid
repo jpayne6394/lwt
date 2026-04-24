@@ -1,0 +1,400 @@
+{% comment %}
+  Medical News Hero + Paired Blog Carousel (Responsive: 2 cards per slide desktop, 1 card per slide mobile)
+{% endcomment %}
+<section class="paired-blog-carousel medical-hero">
+  <div class="medical-news-hero">
+    <span class="news-badge">Latest</span>
+    <span class="news-hero-heading">
+      {{ section.settings.heading }}
+    </span>
+    <div class="news-hero-subtitle">
+      {{ section.settings.subheading }}
+    </div>
+  </div>
+  <div class="carousel-container">
+    <slider-component class="slider-mobile-gutter">
+      <div class="slider-controls-outer">
+        <button type="button" class="slider-button slider-button--prev" name="previous" aria-label="{{ 'accessibility.previous_slide' | t }}">&#10094;</button>
+        <ul class="slider slider--mobile" id="PairedBlogCarousel-{{ section.id }}">
+          {% assign total_blocks = section.blocks.size %}
+          {% assign card_index = 0 %}
+          {% for block in section.blocks %}
+            <!-- Card 1 -->
+            <li class="slider__slide" data-slide="{{ card_index }}">
+              <div class="blog-card card-border">
+                <a href="{{ block.settings.post1_link }}">
+                  <img src="{{ block.settings.post1_image | img_url: '720x600' }}" alt="{{ block.settings.post1_title }}" />
+                  <div class="content">
+                    <h3>{{ block.settings.post1_title }}</h3>
+                    <p>{{ block.settings.post1_excerpt | strip_html | truncate: 100 }}</p>
+                    <span class="read-more">{{ block.settings.post1_cta_label }}</span>
+                  </div>
+                </a>
+              </div>
+            </li>
+            {% assign card_index = card_index | plus: 1 %}
+            <!-- Card 2 -->
+            <li class="slider__slide" data-slide="{{ card_index }}">
+              <div class="blog-card card-border">
+                <a href="{{ block.settings.post2_link }}">
+                  <img src="{{ block.settings.post2_image | img_url: '720x600' }}" alt="{{ block.settings.post2_title }}" />
+                  <div class="content">
+                    <h3>{{ block.settings.post2_title }}</h3>
+                    <p>{{ block.settings.post2_excerpt | strip_html | truncate: 100 }}</p>
+                    <span class="read-more">{{ block.settings.post2_cta_label }}</span>
+                  </div>
+                </a>
+              </div>
+            </li>
+            {% assign card_index = card_index | plus: 1 %}
+          {% endfor %}
+        </ul>
+        <button type="button" class="slider-button slider-button--next" name="next" aria-label="{{ 'accessibility.next_slide' | t }}">&#10095;</button>
+      </div>
+      <div class="slider-dots"></div>
+    </slider-component>
+  </div>
+</section>
+
+
+<style>
+.paired-blog-carousel.medical-hero {
+  background: linear-gradient(115deg, #f9f4fd 0%, #fcf6fa 100%);
+  padding-bottom: 3rem;
+}
+.medical-news-hero {
+  background: linear-gradient(90deg, #fdefff 0%, #faf5fc 100%);
+  margin: 2.1rem auto 2.8rem auto;
+  padding: 2.3rem 4vw 2rem 4vw;
+  border-radius: 26px;
+  box-shadow: 0 2px 18px rgba(144,96,224,0.05);
+  max-width: 1200px;
+  text-align: left;
+  border: none;
+  position: relative;
+}
+.news-badge {
+  background: #7b60c8;
+  color: #fff;
+  font-size: 0.99rem;
+  font-weight: 600;
+  padding: 0.13em 1.1em;
+  border-radius: 100px;
+  margin-bottom: 0.7rem;
+  display: inline-block;
+  box-shadow: 0 2px 8px rgba(123,96,200,0.09);
+  letter-spacing: 0.03em;
+}
+.news-hero-heading {
+  display: flex;
+  align-items: center;
+  font-size: 2.16rem;
+  font-weight: 700;
+  color: #6543a1;
+  gap: 0.7rem;
+  margin-top: 0.2rem;
+  margin-bottom: 0.78rem;
+  letter-spacing: -1px;
+}
+.news-hero-heading::after {
+  content: '';
+  display: block;
+  margin-left: 1em;
+  width: 72px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #c999ed 20%, #ee7dc2 100%);
+}
+.news-hero-subtitle {
+  color: #7a5d9a;
+  font-size: 1.17rem;
+  font-weight: 400;
+  opacity: 0.92;
+  max-width: 600px;
+}
+.carousel-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+.slider-controls-outer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 1050px;
+  margin: 0 auto;
+}
+.paired-blog-carousel .slider--mobile {
+  flex: 1 1 auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  min-width: 0;
+}
+.slider__slide {
+  flex: 0 0 50%;
+  max-width: 50%;
+  box-sizing: border-box;
+  padding: 0 1rem;
+  display: none;
+  position: relative;
+  transition: opacity 0.7s;
+}
+.slider__slide.active { display: block; }
+
+/* --- Modern Card Look --- */
+.blog-card.card-border {
+  background: #fff;
+  border: 2px solid #b89ae4;
+  border-radius: 28px;
+  box-shadow: 0 8px 32px rgba(187,160,232,0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin-bottom: 2rem;
+  transition: box-shadow .18s, border-color .16s;
+}
+.blog-card.card-border:hover {
+  box-shadow: 0 16px 32px rgba(187,160,232,0.15);
+  border-color: #a88fd2;
+}
+.blog-card img {
+  width: 100%;
+  object-fit: cover;
+  aspect-ratio: 3/2;
+  background: #f9f4fd;
+  border-radius: 24px 24px 0 0;
+}
+.blog-card .content {
+  padding: 1.2rem 1rem 1.5rem 1rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.blog-card h3 {
+  color: #7a5d9a;
+  font-size: 1.12rem;
+  font-weight: 600;
+  margin-bottom: 0.3em;
+  text-decoration: none !important;
+}
+.blog-card .content p { color: #7450b0; font-size: 1.05rem; margin: 0 0 0.3em 0; }
+.blog-card .read-more {
+  color: #9a5dcb;
+  font-size: 1rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* --- Controls --- */
+.slider-button {
+  position: relative;
+  z-index: 2;
+  background: #fff;
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  box-shadow: 0 2px 8px rgba(190,160,224,0.12);
+  border: 2px solid #b89ae4;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  margin: 0 1rem;
+  transition: background 0.3s, color 0.3s, border 0.3s;
+}
+.slider-button:hover {
+  background: #f4e6f7;
+  color: #a05dea;
+  border: 2px solid #a480d7;
+}
+.slider-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+.slider-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: none;
+  background: #b89ae4;
+  opacity: 0.5;
+  transition: background 0.25s, opacity 0.2s;
+  cursor: pointer;
+  outline: none;
+}
+.slider-dot.active {
+  background: linear-gradient(90deg, #a886d9 10%, #e87ac2 100%);
+  opacity: 1;
+}
+
+/* --- Desktop: 2 cards per slide --- */
+@media (min-width: 901px) {
+  .slider__slide { flex: 0 0 50%; max-width: 50%; }
+  .slider-button { display: flex !important; }
+  .slider-dots { display: flex !important; }
+}
+
+/* --- Mobile: One card at a time --- */
+@media (max-width: 900px) {
+  .slider-controls-outer { justify-content: center; }
+  .slider__slide { flex: 0 0 100%; max-width: 100%; padding: 0; }
+  .slider-button { display: none !important; }
+  .slider-dots { display: flex !important; }
+  .blog-card.card-border { margin-bottom: 1.2rem; }
+}
+
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const sliderComponent = document.querySelector('.paired-blog-carousel slider-component');
+  if (!sliderComponent) return;
+  const slider = sliderComponent.querySelector('.slider');
+  const slides = slider.querySelectorAll('.slider__slide');
+  const prevButton = sliderComponent.querySelector('.slider-button--prev');
+  const nextButton = sliderComponent.querySelector('.slider-button--next');
+  const dotsContainer = sliderComponent.querySelector('.slider-dots');
+  let current = 0;
+
+  // Cards per slide (2 on desktop, 1 on mobile)
+  function cardsPerSlide() {
+    return window.innerWidth > 900 ? 2 : 1;
+  }
+
+  function showSlide(index) {
+    let perSlide = cardsPerSlide();
+    slides.forEach((slide, i) => {
+      slide.classList.remove('active');
+      if (i >= index && i < index + perSlide) slide.classList.add('active');
+    });
+    updateDots();
+  }
+
+  function nextSlide() {
+    let perSlide = cardsPerSlide();
+    current += perSlide;
+    if (current >= slides.length) current = 0;
+    showSlide(current);
+  }
+  function prevSlide() {
+    let perSlide = cardsPerSlide();
+    current -= perSlide;
+    if (current < 0) current = slides.length - (slides.length % perSlide || perSlide);
+    showSlide(current);
+  }
+
+  function renderDots() {
+    let perSlide = cardsPerSlide();
+    let numDots = Math.ceil(slides.length / perSlide);
+    dotsContainer.innerHTML = '';
+    for (let i = 0; i < numDots; i++) {
+      const dot = document.createElement('button');
+      dot.className = 'slider-dot' + (i === Math.floor(current / perSlide) ? ' active' : '');
+      dot.setAttribute('aria-label', `Go to slide ${i+1}`);
+      dot.addEventListener('click', () => {
+        current = i * perSlide;
+        showSlide(current);
+      });
+      dotsContainer.appendChild(dot);
+    }
+  }
+  function updateDots() {
+    let perSlide = cardsPerSlide();
+    let dotIndex = Math.floor(current / perSlide);
+    Array.from(dotsContainer.children).forEach((dot, i) => {
+      dot.classList.toggle('active', i === dotIndex);
+    });
+  }
+
+  // Responsive
+  window.addEventListener('resize', () => {
+    current = 0;
+    renderDots();
+    showSlide(current);
+  });
+
+  // Init
+  renderDots();
+  showSlide(current);
+
+  nextButton.addEventListener('click', nextSlide);
+  prevButton.addEventListener('click', prevSlide);
+
+  // Slower autoplay: 7.5s on mobile, 6s on desktop
+  function getAutoplayDelay() {
+    return window.innerWidth <= 900 ? 7500 : 6000;
+  }
+  let interval = setInterval(nextSlide, getAutoplayDelay());
+  sliderComponent.addEventListener('mouseenter', ()=>clearInterval(interval));
+  sliderComponent.addEventListener('mouseleave', ()=>interval=setInterval(nextSlide,getAutoplayDelay()));
+  sliderComponent.addEventListener('focusin', ()=>clearInterval(interval));
+  sliderComponent.addEventListener('focusout', ()=>interval=setInterval(nextSlide,getAutoplayDelay()));
+
+  // Swipe support
+  let startX = null;
+  slider.addEventListener('touchstart', function(e) {
+    startX = e.touches[0].clientX;
+  });
+  slider.addEventListener('touchend', function(e) {
+    if (!startX) return;
+    let endX = e.changedTouches[0].clientX;
+    if (endX < startX - 50) nextSlide();
+    if (endX > startX + 50) prevSlide();
+    startX = null;
+  });
+});
+</script>
+
+{% schema %}
+{
+  "name": "Paired Blog Carousel",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Section Heading",
+      "default": "Daily Dose of Wellness/Annoucements"
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Simple ways to feel better every day — backed by real functional strategies."
+    }
+  ],
+  "blocks": [
+    {
+      "type": "article_pair",
+      "name": "Article Pair",
+      "settings": [
+        { "type": "text", "id": "post1_title", "label": "Post 1 Title" },
+        { "type": "textarea", "id": "post1_excerpt", "label": "Post 1 Excerpt" },
+        { "type": "url", "id": "post1_link", "label": "Post 1 Link" },
+        { "type": "image_picker", "id": "post1_image", "label": "Post 1 Image" },
+        { "type": "text", "id": "post1_cta_label", "label": "Post 1 Read More Label", "default": "Read More →" },
+        { "type": "text", "id": "post2_title", "label": "Post 2 Title" },
+        { "type": "textarea", "id": "post2_excerpt", "label": "Post 2 Excerpt" },
+        { "type": "url", "id": "post2_link", "label": "Post 2 Link" },
+        { "type": "image_picker", "id": "post2_image", "label": "Post 2 Image" },
+        { "type": "text", "id": "post2_cta_label", "label": "Post 2 Read More Label", "default": "Read More →" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Paired Blog Carousel",
+      "category": "Blog"
+    }
+  ]
+}
+{% endschema %}

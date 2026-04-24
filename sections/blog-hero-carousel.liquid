@@ -1,0 +1,192 @@
+{% schema %}
+{
+  "name": "Blog Hero Carousel",
+  "settings": [],
+  "blocks": [
+    {
+      "type": "slide",
+      "name": "Slide",
+      "settings": [
+        {
+          "type": "text",
+          "id": "headline",
+          "label": "Slide Headline",
+          "default": "The Living Well Journal"
+        },
+        {
+          "type": "text",
+          "id": "subheadline",
+          "label": "Subheadline",
+          "default": "This Week: 5 Immune Boosters for Summer"
+        },
+        {
+          "type": "textarea",
+          "id": "excerpt",
+          "label": "Short Description",
+          "default": "From smoothies to supplements — our favorite ways to stay resilient as the seasons change."
+        },
+        {
+          "type": "url",
+          "id": "button_link",
+          "label": "Button Link"
+        },
+        {
+          "type": "text",
+          "id": "button_label",
+          "label": "Button Text",
+          "default": "Read More →"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 5,
+  "presets": [
+    {
+      "name": "Blog Hero Carousel",
+      "category": "Blog"
+    }
+  ]
+}
+{% endschema %}
+
+<style>
+.blog-hub-hero-carousel {
+  background: #fdfaf6;
+  padding: 4rem 2rem;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.carousel-track {
+  display: flex;
+  transition: transform 0.5s ease-in-out;
+}
+.carousel-slide {
+  min-width: 100%;
+  box-sizing: border-box;
+  padding: 2rem;
+  display: none;
+  flex-shrink: 0;
+}
+.carousel-slide.active {
+  display: block;
+}
+.carousel-content h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.8rem;
+  margin-bottom: 1rem;
+  color: #3e2764;
+}
+.carousel-content h2 {
+  font-size: 1.6rem;
+  margin-bottom: 0.8rem;
+}
+.carousel-content p {
+  font-size: 1rem;
+  color: #555;
+  max-width: 600px;
+  margin: 0 auto 1.5rem;
+}
+.carousel-content .cta {
+  display: inline-block;
+  margin-top: 1rem;
+  font-weight: bold;
+  color: #3e2764;
+  text-decoration: underline;
+}
+.carousel-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1rem;
+  gap: 1rem;
+}
+.carousel-controls button {
+  background: none;
+  border: none;
+  font-size: 2rem;
+  color: #999;
+  cursor: pointer;
+}
+.carousel-dots {
+  display: flex;
+  gap: 0.5rem;
+}
+.carousel-dots .dot {
+  width: 10px;
+  height: 10px;
+  background: #bbb;
+  border-radius: 50%;
+  display: inline-block;
+}
+.carousel-dots .dot.active {
+  background: #3e2764;
+}
+</style>
+
+<div class="blog-hub-hero-carousel">
+  <div class="carousel-track">
+    {% for block in section.blocks %}
+      <div class="carousel-slide {% if forloop.first %}active{% endif %}">
+        <div class="carousel-content">
+          <h1>{{ block.settings.headline }}</h1>
+          <h2>{{ block.settings.subheadline }}</h2>
+          <p>{{ block.settings.excerpt }}</p>
+          {% if block.settings.button_link %}
+            <a href="{{ block.settings.button_link }}" class="cta">{{ block.settings.button_label }}</a>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="carousel-controls">
+    <button class="prev">‹</button>
+    <div class="carousel-dots">
+      {% for block in section.blocks %}
+        <span class="dot {% if forloop.first %}active{% endif %}"></span>
+      {% endfor %}
+    </div>
+    <button class="next">›</button>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const slides = document.querySelectorAll(".carousel-slide");
+  const dots = document.querySelectorAll(".carousel-dots .dot");
+  const prev = document.querySelector(".carousel-controls .prev");
+  const next = document.querySelector(".carousel-controls .next");
+  let index = 0;
+
+  function showSlide(i) {
+    slides.forEach((slide, idx) => {
+      slide.classList.toggle("active", idx === i);
+      dots[idx].classList.toggle("active", idx === i);
+    });
+  }
+
+  function nextSlide() {
+    index = (index + 1) % slides.length;
+    showSlide(index);
+  }
+
+  function prevSlide() {
+    index = (index - 1 + slides.length) % slides.length;
+    showSlide(index);
+  }
+
+  next.addEventListener("click", nextSlide);
+  prev.addEventListener("click", prevSlide);
+
+  dots.forEach((dot, i) => {
+    dot.addEventListener("click", () => {
+      index = i;
+      showSlide(index);
+    });
+  });
+
+  // Optional autoplay
+  setInterval(nextSlide, 8000);
+});
+</script>

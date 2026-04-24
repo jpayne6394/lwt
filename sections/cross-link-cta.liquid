@@ -1,0 +1,136 @@
+{% comment %}
+  Cross-link CTA: funnel users between consult and retail.
+  Style "consult" = show on product/collection: "Not sure? Book a consult"
+  Style "retail" = show on consult page: "Browse the shop"
+{% endcomment %}
+
+{%- liquid
+  assign style = section.settings.style
+  assign heading = section.settings.heading
+  assign link_text = section.settings.link_text
+  assign link_url = section.settings.link_url
+  if style == 'consult' and heading == blank
+    assign heading = 'Not sure what you need?'
+  endif
+  if style == 'consult' and link_text == blank
+    assign link_text = 'Book a consult'
+  endif
+  if style == 'consult' and link_url == blank
+    assign link_url = 'https://portal.livingwelltoday.co/widget/bookings/lwt-wellness-check-in'
+  endif
+  if style == 'retail' and heading == blank
+    assign heading = 'Browse the shop'
+  endif
+  if style == 'retail' and link_text == blank
+    assign link_text = 'Shop Wellness'
+  endif
+  if style == 'retail' and link_url == blank
+    assign link_url = '/pages/wellness-products'
+  endif
+-%}
+
+<section class="cross-link-cta lwt-section" id="cross-link-cta-{{ section.id }}">
+  <style>
+    .cross-link-cta {
+      background: var(--lwt-surface);
+      border-top: 1px solid var(--lwt-border);
+      border-bottom: 1px solid var(--lwt-border);
+      padding: var(--lwt-space-lg) var(--lwt-space-md);
+    }
+    .cross-link-cta__inner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: var(--lwt-space-md);
+      text-align: center;
+    }
+    .cross-link-cta__heading {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--lwt-text);
+      letter-spacing: var(--lwt-heading-letter-spacing);
+    }
+    .cross-link-cta__link {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.5em 1.25em;
+      background: var(--lwt-primary);
+      color: var(--lwt-text-on-primary);
+      font-weight: 600;
+      text-decoration: none;
+      border-radius: var(--lwt-radius-button);
+      box-shadow: var(--lwt-shadow-button);
+      transition: background-color var(--lwt-transition-base), box-shadow var(--lwt-transition-base), transform var(--lwt-transition-fast);
+    }
+    .cross-link-cta__link:hover {
+      background: var(--lwt-primary-dark);
+      box-shadow: var(--lwt-shadow-button-hover);
+      transform: translateY(-1px);
+      color: var(--lwt-text-on-primary);
+    }
+    .cross-link-cta__link:focus-visible {
+      outline: none;
+      box-shadow: var(--lwt-shadow-focus);
+    }
+  </style>
+
+  <div class="cross-link-cta__inner page-width">
+    {%- if heading != blank -%}
+      <p class="cross-link-cta__heading">{{ heading }}</p>
+    {%- endif -%}
+    {%- if link_text != blank and link_url != blank -%}
+      <a href="{{ link_url }}" class="cross-link-cta__link">{{ link_text }}</a>
+    {%- endif -%}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Cross-link CTA",
+  "tag": "section",
+  "class": "section",
+  "disabled_on": { "groups": ["header", "footer"] },
+  "settings": [
+    {
+      "type": "select",
+      "id": "style",
+      "label": "Style",
+      "default": "consult",
+      "options": [
+        { "value": "consult", "label": "Consult (Book a consult)" },
+        { "value": "retail", "label": "Retail (Browse the shop)" }
+      ],
+      "info": "Consult: use on product/collection pages. Retail: use on consult page."
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": ""
+    },
+    {
+      "type": "text",
+      "id": "link_text",
+      "label": "Button text",
+      "default": ""
+    },
+    {
+      "type": "url",
+      "id": "link_url",
+      "label": "Button URL"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Cross-link CTA (Consult)",
+      "settings": { "style": "consult" }
+    },
+    {
+      "name": "Cross-link CTA (Retail)",
+      "settings": { "style": "retail" }
+    }
+  ]
+}
+{% endschema %}

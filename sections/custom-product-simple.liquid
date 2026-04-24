@@ -1,0 +1,120 @@
+{% comment %}
+  sections/product-full.liquid
+  A fully responsive product page section (mobile + desktop) for Dawn
+{% endcomment %}
+
+<section
+  id="ProductFull-{{ section.id }}"
+  class="product-full-section"
+  data-section-id="{{ section.id }}"
+>
+  <style>
+    /* Reset & base */
+    .product-full-section { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+    .pf-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+    @media (min-width: 768px) { .pf-grid { grid-template-columns: 1fr 1fr; } }
+
+    /* Media gallery */
+    .pf-media { width: 100%; }
+    .pf-media img { width: 100%; display: block; border-radius: 8px; }
+
+    /* Info column */
+    .pf-info { display: flex; flex-direction: column; }
+    .pf-title { font-size: 1.6rem; margin: 0; }
+    .pf-price { font-size: 1.3rem; color: #4B3F82; margin: 0.5rem 0; }
+
+    /* Options & CTA */
+    .pf-options { display: flex; gap: 1rem; margin: 1rem 0; }
+    .pf-options label { flex: 1; font-size: 1rem; }
+    .pf-add { background: #4B3F82; color: #fff; border: none; padding: 0.75rem; font-size: 1rem; border-radius: 6px; cursor: pointer; }
+    .pf-add:hover { background: #3e2764; }
+
+    /* Trust & benefits */
+    .pf-trust { display: flex; gap: 1rem; font-size: 0.9rem; margin: 1rem 0; }
+    .pf-benefits { list-style: none; padding: 0; margin: 1rem 0; }
+    .pf-benefits li { display: flex; align-items: center; margin-bottom: 0.5rem; }
+    .pf-benefits svg { width: 1em; height: 1em; margin-right: 0.5rem; fill: currentColor; }
+
+    /* Accordion details */
+    .pf-accordion details { border-top: 1px solid #ddd; padding: 0.75rem 0; }
+    .pf-accordion summary { cursor: pointer; font-weight: 600; }
+    .pf-accordion p { padding-top: 0.5rem; color: #555; }
+
+    /* Related scroller */
+    .pf-related { display: flex; overflow-x: auto; gap: 0.75rem; padding: 1rem 0; }
+    .pf-related::-webkit-scrollbar { display: none; }
+    .pf-card { flex: 0 0 40%; text-align: center; }
+    .pf-card img { width: 100%; border-radius: 6px; }
+    .pf-card p { margin: 0.5rem 0; font-size: 0.9rem; }
+  </style>
+
+  {%- assign main_media = product.featured_media | default: product.images.first -%}
+  <div class="pf-grid">
+
+    <!-- Left: Gallery -->
+    <div class="pf-media">
+      {% if main_media.media_type == 'image' %}
+        <img src="{{ main_media | image_url: '720x' }}" alt="{{ product.title }}">
+      {% endif %}
+    </div>
+
+    <!-- Right: Info -->
+    <div class="pf-info">
+      <h1 class="pf-title">{{ product.title }}</h1>
+      <p class="pf-price">{{ product.price | money }}</p>
+
+      <form method="post" action="/cart/add">
+        <input type="hidden" name="id" value="{{ product.selected_or_first_available_variant.id }}">
+        <div class="pf-options">
+          <label><input type="radio" name="type" value="one_time" checked> One‑time</label>
+          <label><input type="radio" name="type" value="subscribe"> Subscribe & Save 10%</label>
+        </div>
+        <button type="submit" class="pf-add">Add to Cart</button>
+      </form>
+
+      <div class="pf-trust">
+        <span>✔ Doctor‑Formulated</span>
+        <span>✔ Non‑GMO</span>
+        <span>✔ 30‑day Guarantee</span>
+      </div>
+
+      <ul class="pf-benefits">
+        <li><svg viewBox="0 0 24 24"></svg>Fast histamine relief</li>
+        <li><svg viewBox="0 0 24 24"></svg>Clinically studied formula</li>
+        <li><svg viewBox="0 0 24 24"></svg>Gluten & GMO‑free</li>
+      </ul>
+
+      <div class="pf-accordion">
+        <details><summary>Product Info</summary><p>{{ product.description | truncatewords:50 }}</p></details>
+        <details><summary>Suggested Use</summary><p>Take 2 capsules daily with food.</p></details>
+        <details><summary>FAQs</summary><p>No sedation, non‑drowsy formula.</p></details>
+      </div>
+
+      {% if section.settings.show_recommendations %}
+        <div class="pf-related">
+          {% for rec in recommendations.products limit:4 %}
+            <div class="pf-card">
+              <a href="{{ rec.url }}">
+                <img src="{{ rec.featured_image | image_url:'200x' }}" alt="{{ rec.title }}">
+                <p>{{ rec.title }}</p>
+                <p>{{ rec.price | money }}</p>
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</section>
+
+{% schema %}
+{
+  "name": "Product full",
+  "settings": [
+    { "type":"checkbox", "id":"show_recommendations", "label":"Show related products", "default":true }
+  ]
+}
+{% endschema %}
+

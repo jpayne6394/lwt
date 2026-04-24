@@ -1,0 +1,253 @@
+{% style %}
+  {%- comment -%}
+    Map chosen font stacks to CSS families (no font_picker; avoids schema default errors)
+  {%- endcomment -%}
+  {%- assign heading_stack = section.settings.heading_font_stack | default: 'system-sans' -%}
+  {%- assign body_stack = section.settings.body_font_stack | default: 'system-sans' -%}
+
+  {%- case heading_stack -%}
+    {%- when 'system-serif' -%}{% assign heading_family = "Georgia, Cambria, 'Times New Roman', Times, serif" %}
+    {%- when 'mono' -%}{% assign heading_family = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" %}
+    {%- else -%}{% assign heading_family = "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" %}
+  {%- endcase -%}
+
+  {%- case body_stack -%}
+    {%- when 'system-serif' -%}{% assign body_family = "Georgia, Cambria, 'Times New Roman', Times, serif" %}
+    {%- when 'mono' -%}{% assign body_family = "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace" %}
+    {%- else -%}{% assign body_family = "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" %}
+  {%- endcase -%}
+
+  .trust-section {
+    --bg: #ffffff;
+    --text: #1a1a1a;
+    --heading-color: {{ section.settings.heading_color | default: '#5C3B8C' }};
+    --subheading-color: {{ section.settings.subheading_color | default: '#333333' }};
+    --feature-title-color: {{ section.settings.feature_title_color | default: '#1a1a1a' }};
+    --feature-text-color: {{ section.settings.feature_text_color | default: '#4a4a4a' }};
+
+    /* NEW: feature font-size controls */
+    --feature-title-size: {{ section.settings.feature_title_font_size | default: 20 }}px;
+    --feature-text-size: {{ section.settings.feature_text_font_size | default: 15 }}px;
+
+    background-color: var(--bg);
+    color: var(--text);
+    padding: 4rem 1rem 5.5rem;
+  }
+  .trust-section.gray     { --bg:#f7f7f9; }
+  .trust-section.lavender { --bg:#f6f3ff; }
+  .trust-section.dark     { --bg:#141124; --text:#f7f7f7; }
+
+  .trust-inner {
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+
+  /* Top row: Title | Divider | Subtext */
+  .trust-top{
+    display:flex;
+    align-items:center;
+    gap:2rem;
+    flex-wrap:nowrap;
+  }
+
+  .trust-title-wrapper{
+    display:flex;
+    align-items:center;
+    gap:1.25rem;
+  }
+  .trust-title-wrapper img{ max-height:72px; width:auto; }
+
+  .trust-title{
+    margin:0;
+    line-height:1.2;
+    white-space:nowrap;
+    font-size:2.5rem;
+    font-family: {{ heading_family }};
+    font-weight: {{ section.settings.heading_weight | default: 700 }};
+    {% if section.settings.heading_italic %}font-style: italic;{% else %}font-style: normal;{% endif %}
+    color: var(--heading-color);
+  }
+
+  .trust-divider{
+    width:2px;
+    height:56px;
+    background:#5C3B8C;
+    opacity:.25;
+    border-radius:1px;
+    flex:0 0 2px;
+  }
+
+  .trust-subtext{
+    margin:0;
+    max-width:600px;
+    font-size:1.15rem;
+    font-family: {{ body_family }};
+    font-weight: {{ section.settings.body_weight | default: 400 }};
+    {% if section.settings.body_italic %}font-style: italic;{% else %}font-style: normal;{% endif %}
+    color: var(--subheading-color);
+  }
+
+  /* Grid */
+  .trust-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2.5rem 2rem;
+    margin-top:.25rem;
+    margin-bottom:1.25rem;
+  }
+
+  .trust-item-title{
+    font-size: var(--feature-title-size); /* NEW */
+    margin-bottom:.3rem;
+    font-weight:600;
+    font-family: {{ body_family }};
+    color: var(--feature-title-color);
+  }
+  .trust-item-text{
+    font-size: var(--feature-text-size); /* NEW */
+    line-height:1.5;
+    font-family: {{ body_family }};
+    color: var(--feature-text-color);
+    opacity:.9;
+  }
+
+  /* Responsive */
+  @media (max-width:1024px){
+    .trust-top{ flex-direction:column; text-align:center; gap:1.25rem; }
+    .trust-divider{ display:none; }
+    .trust-title{ white-space:normal; font-size:2rem; }
+    .trust-subtext{ padding:0 1.25rem; font-size:1.05rem; }
+    .trust-grid{ grid-template-columns:repeat(2,1fr); gap:2rem; }
+  }
+  @media (max-width:480px){
+    .trust-grid{ grid-template-columns:1fr; gap:1.5rem; }
+    /* Optional gentle scale-down on very small screens */
+    .trust-item-title{ font-size: calc(var(--feature-title-size) - 2px); }
+    .trust-item-text{ font-size: calc(var(--feature-text-size) - 1px); }
+  }
+{% endstyle %}
+
+<section class="trust-section {{ section.settings.background_style }}">
+  <div class="trust-inner">
+    <div class="trust-top">
+      <div class="trust-title-wrapper">
+        {% if section.settings.logo %}
+          <img src="{{ section.settings.logo | image_url: width: 200 }}" alt="{{ shop.name }} logo">
+        {% endif %}
+        <h2 class="trust-title">{{ section.settings.heading }}</h2>
+      </div>
+      <span class="trust-divider" aria-hidden="true"></span>
+      <p class="trust-subtext">{{ section.settings.subheading }}</p>
+    </div>
+
+    <div class="trust-grid">
+      {% for block in section.blocks %}
+        <div class="trust-item" {{ block.shopify_attributes }}>
+          <div class="trust-item-title">{{ block.settings.title }}</div>
+          <div class="trust-item-text">{{ block.settings.description }}</div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "Trust Card Section",
+  "tag": "section",
+  "settings": [
+    { "type": "image_picker", "id": "logo", "label": "Logo (optional)" },
+    { "type": "text", "id": "heading", "label": "Main Heading", "default": "Care you can trust." },
+    { "type": "text", "id": "subheading", "label": "Subheading", "default": "Practitioner-led consults since 1999. Thoughtful intake, clear plans, steady follow-up." },
+
+    { "type": "select", "id": "background_style", "label": "Background Style", "default": "light",
+      "options": [
+        { "value": "light", "label": "White" },
+        { "value": "gray", "label": "Gray Background" },
+        { "value": "lavender", "label": "Lavender" },
+        { "value": "dark", "label": "Dark Mode" }
+      ]
+    },
+
+    { "type": "select", "id": "heading_font_stack", "label": "Heading font stack", "default": "system-sans",
+      "options": [
+        { "value": "system-sans", "label": "System Sans (default)" },
+        { "value": "system-serif", "label": "System Serif" },
+        { "value": "mono", "label": "Monospace" }
+      ]
+    },
+    { "type": "range", "id": "heading_weight", "label": "Heading weight", "min": 100, "max": 900, "step": 100, "default": 700 },
+    { "type": "checkbox", "id": "heading_italic", "label": "Heading italic", "default": false },
+
+    { "type": "select", "id": "body_font_stack", "label": "Body font stack", "default": "system-sans",
+      "options": [
+        { "value": "system-sans", "label": "System Sans (default)" },
+        { "value": "system-serif", "label": "System Serif" },
+        { "value": "mono", "label": "Monospace" }
+      ]
+    },
+    { "type": "range", "id": "body_weight", "label": "Body/feature weight", "min": 100, "max": 900, "step": 100, "default": 400 },
+    { "type": "checkbox", "id": "body_italic", "label": "Body italic", "default": false },
+
+    { "type": "color", "id": "heading_color", "label": "Heading color", "default": "#5C3B8C" },
+    { "type": "color", "id": "subheading_color", "label": "Subheading color", "default": "#333333" },
+    { "type": "color", "id": "feature_title_color", "label": "Feature title color", "default": "#1a1a1a" },
+    { "type": "color", "id": "feature_text_color", "label": "Feature text color", "default": "#4a4a4a" },
+
+    /* NEW: Feature font size controls */
+    { "type": "range", "id": "feature_title_font_size", "label": "Feature title font size", "min": 14, "max": 32, "step": 1, "unit": "px", "default": 20 },
+    { "type": "range", "id": "feature_text_font_size", "label": "Feature text font size", "min": 12, "max": 22, "step": 1, "unit": "px", "default": 15 }
+  ],
+  "blocks": [
+    {
+      "type": "trust_item",
+      "name": "Trust Feature",
+      "settings": [
+        { "type": "text", "id": "title", "label": "Title", "default": "Licensed & Experienced" },
+        { "type": "textarea", "id": "description", "label": "Description", "default": "Practitioner-led team with decades of clinical experience and careful follow-through." }
+      ]
+    }
+  ],
+  "max_blocks": 8,
+  "presets": [
+    {
+      "name": "Trust Card Section",
+      "category": "Text",
+      "blocks": [
+        {
+          "type": "trust_item",
+          "settings": {
+            "title": "Licensed & Experienced",
+            "description": "Practitioner-led team with decades of clinical experience and careful follow-through."
+          }
+        },
+        {
+          "type": "trust_item",
+          "settings": {
+            "title": "Root-Cause Approach",
+            "description": "We look beyond symptoms to patterns, triggers, and drivers to guide your plan."
+          }
+        },
+        {
+          "type": "trust_item",
+          "settings": {
+            "title": "Non-Invasive Insights",
+            "description": "No needles or lab draws—history + at-home biofeedback inform your plan."
+          }
+        },
+        {
+          "type": "trust_item",
+          "settings": {
+            "title": "Ongoing Support",
+            "description": "Follow-ups and adjustments as your body responds. No guesswork, no ghosting."
+          }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

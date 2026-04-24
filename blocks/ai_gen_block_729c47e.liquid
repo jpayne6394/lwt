@@ -1,0 +1,1150 @@
+{% doc %}
+  @prompt
+    Create a blog page hub with a rotating hero banner that showcases featured articles from three different blogs. Include navigation between the blogs, an attractive hero section that cycles through featured blog posts with images and excerpts, and a clean layout for displaying blog previews from all three blogs., a slide show of featured blogs, two per slide, with a title section, blogs are not rendering, incorrect, we want to link three blog articles to the slide show one per slide, make the arrows and dots more like my theme, hide arrows until hover, reduce read article button, style the title section better add a line/divider or a place to add the logo, i want to add the logo where the star is, the divider logo is not showing when image is selected, incorrect i want the logo to replace the star when selected, Add one card like the others but not liked to the articles for announcements, the announcement slide is not rendering. center read article on the button, incorrect just make 1 more slide, but have it be abled to be link to another page or product. or if no link the button is hidden, incorrect we want 4 slides in total, one non article three article linked
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-blog-slideshow-{{ ai_gen_id }} {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .ai-blog-slideshow-header-{{ ai_gen_id }} {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+  }
+
+  .ai-blog-slideshow-header-content-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 20px;
+  }
+
+  .ai-blog-slideshow-logo-section-{{ ai_gen_id }} {
+    flex-shrink: 0;
+  }
+
+  .ai-blog-slideshow-logo-{{ ai_gen_id }} {
+    width: {{ block.settings.logo_width }}px;
+    height: auto;
+    border-radius: {{ settings.media_radius }}px;
+  }
+
+  .ai-blog-slideshow-text-section-{{ ai_gen_id }} {
+    flex-grow: 1;
+    max-width: 600px;
+  }
+
+  .ai-blog-slideshow-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.title_size }}px;
+    font-weight: 700;
+    color: {{ block.settings.title_color }};
+    margin: 0 0 8px;
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+    line-height: 1.2;
+  }
+
+  .ai-blog-slideshow-subtitle-{{ ai_gen_id }} {
+    font-size: {{ block.settings.subtitle_size }}px;
+    color: {{ block.settings.subtitle_color }};
+    margin: 0;
+    opacity: 0.8;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    line-height: 1.4;
+  }
+
+  .ai-blog-slideshow-divider-{{ ai_gen_id }} {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      {{ block.settings.divider_color }} 20%,
+      {{ block.settings.divider_color }} 80%,
+      transparent 100%
+    );
+    margin: 20px 0 0;
+    position: relative;
+  }
+
+  .ai-blog-slideshow-divider-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background-color: {{ block.settings.divider_color }};
+    border-radius: 50%;
+  }
+
+  .ai-blog-slideshow-divider-decorative-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 20px 0 0;
+  }
+
+  .ai-blog-slideshow-divider-decorative-{{ ai_gen_id }}::before,
+  .ai-blog-slideshow-divider-decorative-{{ ai_gen_id }}::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent 0%,
+      {{ block.settings.divider_color }} 50%,
+      transparent 100%
+    );
+    max-width: 150px;
+  }
+
+  .ai-blog-slideshow-divider-logo-{{ ai_gen_id }} {
+    width: {{ block.settings.divider_logo_size }}px;
+    height: {{ block.settings.divider_logo_size }}px;
+    border-radius: 50%;
+    background-color: {{ block.settings.container_bg_color }};
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid {{ block.settings.divider_color }};
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .ai-blog-slideshow-divider-logo-{{ ai_gen_id }} img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .ai-blog-slideshow-divider-logo-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    background-color: #f4f4f4;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .ai-blog-slideshow-divider-logo-placeholder-{{ ai_gen_id }} svg {
+    width: 60%;
+    height: 60%;
+    opacity: 0.5;
+    color: {{ block.settings.divider_color }};
+  }
+
+  .ai-blog-slideshow-divider-icon-{{ ai_gen_id }} {
+    width: 24px;
+    height: 24px;
+    color: {{ block.settings.divider_color }};
+    opacity: 0.7;
+  }
+
+  .ai-blog-slideshow-container-{{ ai_gen_id }} {
+    position: relative;
+    background-color: {{ block.settings.container_bg_color }};
+    border-radius: {{ settings.text_boxes_radius }}px;
+    padding: 40px;
+    overflow: hidden;
+    border: {{ settings.text_boxes_border_thickness }}px solid rgba({{ settings.color_schemes.scheme-1.settings.text | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.text | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.text | color_extract: 'blue' }}, {{ settings.text_boxes_border_opacity | divided_by: 100.0 }});
+    box-shadow: {{ settings.text_boxes_shadow_horizontal_offset }}px {{ settings.text_boxes_shadow_vertical_offset }}px {{ settings.text_boxes_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.text_boxes_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-blog-slideshow-wrapper-{{ ai_gen_id }} {
+    position: relative;
+    height: {{ block.settings.slide_height }}px;
+  }
+
+  .ai-blog-slideshow-slide-{{ ai_gen_id }} {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.6s ease-in-out;
+    display: flex;
+    align-items: center;
+    gap: 40px;
+  }
+
+  .ai-blog-slideshow-slide-{{ ai_gen_id }}.active {
+    opacity: 1;
+  }
+
+  .ai-blog-slideshow-image-section-{{ ai_gen_id }} {
+    flex: 1;
+    height: 100%;
+    border-radius: {{ settings.media_radius }}px;
+    overflow: hidden;
+    border: {{ settings.media_border_thickness }}px solid rgba({{ settings.color_schemes.scheme-1.settings.text | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.text | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.text | color_extract: 'blue' }}, {{ settings.media_border_opacity | divided_by: 100.0 }});
+    box-shadow: {{ settings.media_shadow_horizontal_offset }}px {{ settings.media_shadow_vertical_offset }}px {{ settings.media_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.media_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-blog-slideshow-image-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+  }
+
+  .ai-blog-slideshow-slide-{{ ai_gen_id }}:hover .ai-blog-slideshow-image-{{ ai_gen_id }} {
+    {% if settings.animations_hover_elements == 'vertical-lift' %}
+      transform: translateY(-4px);
+    {% elsif settings.animations_hover_elements == '3d-lift' %}
+      transform: translateY(-4px) rotateX(5deg);
+    {% else %}
+      transform: scale(1.02);
+    {% endif %}
+  }
+
+  .ai-blog-slideshow-image-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    background-color: #f4f4f4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: {{ settings.media_radius }}px;
+  }
+
+  .ai-blog-slideshow-image-placeholder-{{ ai_gen_id }} svg {
+    width: 120px;
+    height: 120px;
+    opacity: 0.3;
+  }
+
+  .ai-blog-slideshow-content-section-{{ ai_gen_id }} {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 20px 0;
+  }
+
+  .ai-blog-slideshow-blog-label-{{ ai_gen_id }} {
+    font-size: 12px;
+    font-weight: 600;
+    color: {{ block.settings.blog_label_color }};
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+  }
+
+  .ai-blog-slideshow-custom-label-{{ ai_gen_id }} {
+    font-size: 12px;
+    font-weight: 600;
+    color: {{ block.settings.custom_label_color }};
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 12px;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    background-color: {{ block.settings.custom_label_bg }};
+    padding: 4px 12px;
+    border-radius: {{ settings.buttons_radius }}px;
+    display: inline-block;
+  }
+
+  .ai-blog-slideshow-article-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.article_title_size }}px;
+    font-weight: 700;
+    color: {{ block.settings.article_title_color }};
+    margin: 0 0 20px;
+    line-height: 1.2;
+    font-family: {{ settings.type_header_font.family }}, {{ settings.type_header_font.fallback_families }};
+  }
+
+  .ai-blog-slideshow-article-excerpt-{{ ai_gen_id }} {
+    font-size: {{ block.settings.article_excerpt_size }}px;
+    color: {{ block.settings.article_excerpt_color }};
+    line-height: 1.6;
+    margin: 0 0 24px;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+  }
+
+  .ai-blog-slideshow-article-meta-{{ ai_gen_id }} {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .ai-blog-slideshow-article-date-{{ ai_gen_id }} {
+    font-size: 14px;
+    color: {{ block.settings.article_date_color }};
+    opacity: 0.8;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+  }
+
+  .ai-blog-slideshow-article-author-{{ ai_gen_id }} {
+    font-size: 14px;
+    color: {{ block.settings.article_date_color }};
+    opacity: 0.8;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+  }
+
+  .ai-blog-slideshow-read-more-{{ ai_gen_id }} {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background-color: {{ block.settings.button_color }};
+    color: {{ block.settings.button_text_color }};
+    text-decoration: none;
+    border-radius: {{ settings.buttons_radius }}px;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    font-family: {{ settings.type_body_font.family }}, {{ settings.type_body_font.fallback_families }};
+    border: {{ settings.buttons_border_thickness }}px solid rgba({{ block.settings.button_color | color_extract: 'red' }}, {{ block.settings.button_color | color_extract: 'green' }}, {{ block.settings.button_color | color_extract: 'blue' }}, {{ settings.buttons_border_opacity | divided_by: 100.0 }});
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+    text-align: center;
+  }
+
+  .ai-blog-slideshow-read-more-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.button_hover_color }};
+    {% if settings.animations_hover_elements == 'vertical-lift' %}
+      transform: translateY(-2px);
+    {% elsif settings.animations_hover_elements == '3d-lift' %}
+      transform: translateY(-2px) rotateX(2deg);
+    {% endif %}
+  }
+
+  .ai-blog-slideshow-controls-{{ ai_gen_id }} {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    margin-top: 30px;
+  }
+
+  .ai-blog-slideshow-nav-{{ ai_gen_id }} {
+    background-color: {{ settings.color_schemes.scheme-1.settings.background }};
+    border: {{ settings.buttons_border_thickness }}px solid rgba({{ settings.color_schemes.scheme-1.settings.text | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.text | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.text | color_extract: 'blue' }}, {{ settings.buttons_border_opacity | divided_by: 100.0 }});
+    color: {{ settings.color_schemes.scheme-1.settings.text }};
+    width: 44px;
+    height: 44px;
+    border-radius: {{ settings.buttons_radius }}px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .ai-blog-slideshow-container-{{ ai_gen_id }}:hover .ai-blog-slideshow-nav-{{ ai_gen_id }} {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .ai-blog-slideshow-nav-{{ ai_gen_id }}:hover {
+    background-color: {{ settings.color_schemes.scheme-1.settings.button }};
+    color: {{ settings.color_schemes.scheme-1.settings.button_label }};
+    {% if settings.animations_hover_elements == 'vertical-lift' %}
+      transform: translateY(-2px);
+    {% elsif settings.animations_hover_elements == '3d-lift' %}
+      transform: translateY(-2px) rotateX(2deg);
+    {% endif %}
+  }
+
+  .ai-blog-slideshow-nav-{{ ai_gen_id }}:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  .ai-blog-slideshow-nav-{{ ai_gen_id }}:disabled:hover {
+    transform: none;
+    background-color: {{ settings.color_schemes.scheme-1.settings.background }};
+    color: {{ settings.color_schemes.scheme-1.settings.text }};
+  }
+
+  .ai-blog-slideshow-dots-{{ ai_gen_id }} {
+    display: flex;
+    gap: 8px;
+  }
+
+  .ai-blog-slideshow-dot-{{ ai_gen_id }} {
+    width: 12px;
+    height: 12px;
+    border-radius: {{ settings.buttons_radius }}px;
+    background-color: {{ settings.color_schemes.scheme-1.settings.background }};
+    border: {{ settings.buttons_border_thickness }}px solid rgba({{ settings.color_schemes.scheme-1.settings.text | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.text | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.text | color_extract: 'blue' }}, {{ settings.buttons_border_opacity | divided_by: 100.0 }});
+    opacity: 0.5;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: {{ settings.buttons_shadow_horizontal_offset }}px {{ settings.buttons_shadow_vertical_offset }}px {{ settings.buttons_shadow_blur }}px rgba({{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.shadow | color_extract: 'blue' }}, {{ settings.buttons_shadow_opacity | divided_by: 100.0 }});
+  }
+
+  .ai-blog-slideshow-dot-{{ ai_gen_id }}:hover {
+    opacity: 0.8;
+    {% if settings.animations_hover_elements == 'vertical-lift' %}
+      transform: translateY(-1px);
+    {% elsif settings.animations_hover_elements == '3d-lift' %}
+      transform: translateY(-1px) rotateX(2deg);
+    {% endif %}
+  }
+
+  .ai-blog-slideshow-dot-{{ ai_gen_id }}.active {
+    opacity: 1;
+    background-color: {{ settings.color_schemes.scheme-1.settings.button }};
+  }
+
+  .ai-blog-slideshow-progress-{{ ai_gen_id }} {
+    width: 100%;
+    height: 4px;
+    background-color: rgba({{ settings.color_schemes.scheme-1.settings.text | color_extract: 'red' }}, {{ settings.color_schemes.scheme-1.settings.text | color_extract: 'green' }}, {{ settings.color_schemes.scheme-1.settings.text | color_extract: 'blue' }}, 0.1);
+    border-radius: {{ settings.buttons_radius }}px;
+    overflow: hidden;
+    margin-top: 20px;
+  }
+
+  .ai-blog-slideshow-progress-bar-{{ ai_gen_id }} {
+    height: 100%;
+    background-color: {{ settings.color_schemes.scheme-1.settings.button }};
+    width: 0%;
+    transition: width 0.1s linear;
+    border-radius: {{ settings.buttons_radius }}px;
+  }
+
+  @media screen and (max-width: 768px) {
+    .ai-blog-slideshow-header-content-{{ ai_gen_id }} {
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .ai-blog-slideshow-logo-{{ ai_gen_id }} {
+      width: {{ block.settings.logo_width | times: 0.8 }}px;
+    }
+
+    .ai-blog-slideshow-divider-logo-{{ ai_gen_id }} {
+      width: {{ block.settings.divider_logo_size | times: 0.8 }}px;
+      height: {{ block.settings.divider_logo_size | times: 0.8 }}px;
+    }
+
+    .ai-blog-slideshow-slide-{{ ai_gen_id }} {
+      flex-direction: column;
+      gap: 20px;
+      text-align: center;
+    }
+
+    .ai-blog-slideshow-image-section-{{ ai_gen_id }} {
+      height: 250px;
+    }
+
+    .ai-blog-slideshow-wrapper-{{ ai_gen_id }} {
+      height: auto;
+      min-height: {{ block.settings.slide_height | times: 0.8 }}px;
+    }
+
+    .ai-blog-slideshow-container-{{ ai_gen_id }} {
+      padding: 20px;
+    }
+
+    .ai-blog-slideshow-title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.title_size | times: 0.8 }}px;
+    }
+
+    .ai-blog-slideshow-article-title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.article_title_size | times: 0.9 }}px;
+    }
+
+    .ai-blog-slideshow-nav-{{ ai_gen_id }} {
+      opacity: 1;
+      visibility: visible;
+    }
+  }
+{% endstyle %}
+
+<blog-slideshow-{{ ai_gen_id }} class="ai-blog-slideshow-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  {% if block.settings.title != blank or block.settings.subtitle != blank or block.settings.logo != blank %}
+    <div class="ai-blog-slideshow-header-{{ ai_gen_id }}">
+      <div class="ai-blog-slideshow-header-content-{{ ai_gen_id }}">
+        {% if block.settings.logo != blank %}
+          <div class="ai-blog-slideshow-logo-section-{{ ai_gen_id }}">
+            <img
+              src="{{ block.settings.logo | image_url: width: 400}}"
+              alt="{{ block.settings.logo.alt | escape }}"
+              loading="lazy"
+              width="{{ block.settings.logo_width }}"
+              height="auto"
+              class="ai-blog-slideshow-logo-{{ ai_gen_id }}"
+            >
+          </div>
+        {% endif %}
+
+        {% if block.settings.title != blank or block.settings.subtitle != blank %}
+          <div class="ai-blog-slideshow-text-section-{{ ai_gen_id }}">
+            {% if block.settings.title != blank %}
+              <h2 class="ai-blog-slideshow-title-{{ ai_gen_id }}">{{ block.settings.title }}</h2>
+            {% endif %}
+            {% if block.settings.subtitle != blank %}
+              <p class="ai-blog-slideshow-subtitle-{{ ai_gen_id }}">{{ block.settings.subtitle }}</p>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+
+      {% if block.settings.divider_style == 'line' %}
+        <div class="ai-blog-slideshow-divider-{{ ai_gen_id }}"></div>
+      {% elsif block.settings.divider_style == 'decorative' %}
+        <div class="ai-blog-slideshow-divider-decorative-{{ ai_gen_id }}">
+          {% if block.settings.divider_logo %}
+            <div class="ai-blog-slideshow-divider-logo-{{ ai_gen_id }}">
+              <img
+                src="{{ block.settings.divider_logo | image_url: width: 100 }}"
+                alt="{{ block.settings.divider_logo.alt | escape }}"
+                loading="lazy"
+              >
+            </div>
+          {% else %}
+            <svg class="ai-blog-slideshow-divider-icon-{{ ai_gen_id }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12,2 15.09,8.26 22,9 17,14.74 18.18,21.02 12,17.77 5.82,21.02 7,14.74 2,9 8.91,8.26"></polygon>
+            </svg>
+          {% endif %}
+        </div>
+      {% elsif block.settings.divider_style == 'logo' %}
+        <div class="ai-blog-slideshow-divider-decorative-{{ ai_gen_id }}">
+          <div class="ai-blog-slideshow-divider-logo-{{ ai_gen_id }}">
+            {% if block.settings.divider_logo %}
+              <img
+                src="{{ block.settings.divider_logo | image_url: width: 100 }}"
+                alt="{{ block.settings.divider_logo.alt | escape }}"
+                loading="lazy"
+              >
+            {% else %}
+              <div class="ai-blog-slideshow-divider-logo-placeholder-{{ ai_gen_id }}">
+                {{'image' | placeholder_svg_tag }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <div class="ai-blog-slideshow-container-{{ ai_gen_id }}">
+    <div class="ai-blog-slideshow-wrapper-{{ ai_gen_id }}">
+      {% assign current_slide_index = 0 %}
+      
+      {% if block.settings.custom_title != blank %}
+        <div class="ai-blog-slideshow-slide-{{ ai_gen_id }} {% if current_slide_index == 0 %}active{% endif %}" data-slide="{{ current_slide_index }}">
+          <div class="ai-blog-slideshow-image-section-{{ ai_gen_id }}">
+            {% if block.settings.custom_image %}
+              <img
+                src="{{ block.settings.custom_image | image_url: width: 800 }}"
+                alt="{{ block.settings.custom_image.alt | escape }}"
+                loading="lazy"
+                width="800"
+                height="{{ block.settings.slide_height }}"
+                class="ai-blog-slideshow-image-{{ ai_gen_id }}"
+              >
+            {% else %}
+              <div class="ai-blog-slideshow-image-placeholder-{{ ai_gen_id }}">
+                {{ 'blog-apparel-1' | placeholder_svg_tag }}
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="ai-blog-slideshow-content-section-{{ ai_gen_id }}">
+            {% if block.settings.custom_label != blank %}
+              <div class="ai-blog-slideshow-custom-label-{{ ai_gen_id }}">{{ block.settings.custom_label }}</div>
+            {% endif %}
+            <h3 class="ai-blog-slideshow-article-title-{{ ai_gen_id }}">{{ block.settings.custom_title }}</h3>
+            {% if block.settings.custom_text != blank %}
+              <div class="ai-blog-slideshow-article-excerpt-{{ ai_gen_id }}">
+                {{ block.settings.custom_text }}
+              </div>
+            {% endif %}
+            {% if block.settings.custom_date != blank %}
+              <div class="ai-blog-slideshow-article-meta-{{ ai_gen_id }}">
+                <time class="ai-blog-slideshow-article-date-{{ ai_gen_id }}">
+                  {{ block.settings.custom_date }}
+                </time>
+              </div>
+            {% endif %}
+            {% if block.settings.custom_link != blank %}
+              <a href="{{ block.settings.custom_link }}" class="ai-blog-slideshow-read-more-{{ ai_gen_id }}">
+                {{ block.settings.custom_button_text }}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="7" y1="17" x2="17" y2="7"></line>
+                  <polyline points="7,7 17,7 17,17"></polyline>
+                </svg>
+              </a>
+            {% endif %}
+          </div>
+        </div>
+        {% assign current_slide_index = current_slide_index | plus: 1 %}
+      {% endif %}
+
+      {% for i in (1..3) %}
+        {% assign article_setting = 'article_' | append: i %}
+        {% assign current_article = block.settings[article_setting] %}
+        {% if current_article != blank %}
+          <div class="ai-blog-slideshow-slide-{{ ai_gen_id }} {% if current_slide_index == 0 %}active{% endif %}" data-slide="{{ current_slide_index }}">
+            <div class="ai-blog-slideshow-image-section-{{ ai_gen_id }}">
+              {% if current_article.image %}
+                <img
+                  src="{{ current_article.image | image_url: width: 800 }}"
+                  alt="{{ current_article.image.alt | escape }}"
+                  loading="lazy"
+                  width="800"
+                  height="{{ block.settings.slide_height }}"
+                  class="ai-blog-slideshow-image-{{ ai_gen_id }}"
+                >
+              {% else %}
+                <div class="ai-blog-slideshow-image-placeholder-{{ ai_gen_id }}">
+                  {{ 'blog-apparel-1' | placeholder_svg_tag }}
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="ai-blog-slideshow-content-section-{{ ai_gen_id }}">
+              <div class="ai-blog-slideshow-blog-label-{{ ai_gen_id }}">{{ current_article.blog.title }}</div>
+              <h3 class="ai-blog-slideshow-article-title-{{ ai_gen_id }}">{{ current_article.title }}</h3>
+              <div class="ai-blog-slideshow-article-excerpt-{{ ai_gen_id }}">
+                {% if current_article.excerpt != blank %}
+                  {{ current_article.excerpt | strip_html | truncate: 200 }}
+                {% else %}
+                  {{ current_article.content | strip_html | truncate: 200 }}
+                {% endif %}
+              </div>
+              <div class="ai-blog-slideshow-article-meta-{{ ai_gen_id }}">
+                <time class="ai-blog-slideshow-article-date-{{ ai_gen_id }}">
+                  {{ current_article.published_at | date: '%B %d, %Y' }}
+                </time>
+                {% if current_article.author != blank %}
+                  <span class="ai-blog-slideshow-article-author-{{ ai_gen_id }}">
+                    By {{ current_article.author }}
+                  </span>
+                {% endif %}
+              </div>
+              <a href="{{ current_article.url }}" class="ai-blog-slideshow-read-more-{{ ai_gen_id }}">
+                {{ block.settings.button_text }}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="7" y1="17" x2="17" y2="7"></line>
+                  <polyline points="7,7 17,7 17,17"></polyline>
+                </svg>
+              </a>
+            </div>
+          </div>
+          {% assign current_slide_index = current_slide_index | plus: 1 %}
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    {% assign total_slides = current_slide_index %}
+    {% if total_slides > 1 %}
+      <div class="ai-blog-slideshow-controls-{{ ai_gen_id }}">
+        <button class="ai-blog-slideshow-nav-{{ ai_gen_id }} ai-blog-slideshow-prev-{{ ai_gen_id }}" aria-label="Previous slide">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15,18 9,12 15,6"></polyline>
+          </svg>
+        </button>
+        <div class="ai-blog-slideshow-dots-{{ ai_gen_id }}">
+          {% for i in (1..total_slides) %}
+            <button
+              class="ai-blog-slideshow-dot-{{ ai_gen_id }} {% if forloop.first %}active{% endif %}"
+              data-slide="{{ forloop.index0 }}"
+              aria-label="Go to slide {{ forloop.index }}"
+            ></button>
+          {% endfor %}
+        </div>
+        <button class="ai-blog-slideshow-nav-{{ ai_gen_id }} ai-blog-slideshow-next-{{ ai_gen_id }}" aria-label="Next slide">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9,18 15,12 9,6"></polyline>
+          </svg>
+        </button>
+      </div>
+      {% if block.settings.show_progress %}
+        <div class="ai-blog-slideshow-progress-{{ ai_gen_id }}">
+          <div class="ai-blog-slideshow-progress-bar-{{ ai_gen_id }}"></div>
+        </div>
+      {% endif %}
+    {% endif %}
+  </div>
+</blog-slideshow-{{ ai_gen_id }}>
+
+<script>
+  (function() {
+    class BlogSlideshow{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+        this.currentSlide = 0;
+        this.slides = [];
+        this.dots = [];
+        this.autoplayInterval = null;
+        this.progressInterval = null;
+        this.progressBar = null;
+        this.autoplayDuration = {{ block.settings.autoplay_duration | times: 1000 }};
+        this.progressStep = 0;
+      }
+
+      connectedCallback() {
+        this.slides = this.querySelectorAll('.ai-blog-slideshow-slide-{{ ai_gen_id }}');
+        this.dots = this.querySelectorAll('.ai-blog-slideshow-dot-{{ ai_gen_id }}');
+        this.progressBar = this.querySelector('.ai-blog-slideshow-progress-bar-{{ ai_gen_id }}');
+        this.prevButton = this.querySelector('.ai-blog-slideshow-prev-{{ ai_gen_id }}');
+        this.nextButton = this.querySelector('.ai-blog-slideshow-next-{{ ai_gen_id }}');
+
+        if (this.slides.length > 1) {
+          this.setupEventListeners();
+          this.updateNavigation();
+          if ({{ block.settings.enable_autoplay | json }}) {
+            this.startAutoplay();
+          }
+        }
+      }
+
+      disconnectedCallback() {
+        this.stopAutoplay();
+        this.stopProgress();
+      }
+
+      setupEventListeners() {
+        this.dots.forEach((dot, index) => {
+          dot.addEventListener('click', () => {
+            this.goToSlide(index);
+            this.resetAutoplay();
+          });
+        });
+
+        if (this.prevButton) {
+          this.prevButton.addEventListener('click', () => {
+            this.previousSlide();
+            this.resetAutoplay();
+          });
+        }
+
+        if (this.nextButton) {
+          this.nextButton.addEventListener('click', () => {
+            this.nextSlide();
+            this.resetAutoplay();
+          });
+        }
+
+        this.addEventListener('mouseenter', () => {
+          this.stopAutoplay();
+          this.stopProgress();
+        });
+
+        this.addEventListener('mouseleave', () => {
+          if ({{ block.settings.enable_autoplay | json }}) {
+            this.startAutoplay();
+          }
+        });
+      }
+
+      goToSlide(index) {
+        this.slides[this.currentSlide].classList.remove('active');
+        this.dots[this.currentSlide].classList.remove('active');
+        this.currentSlide = index;
+        this.slides[this.currentSlide].classList.add('active');
+        this.dots[this.currentSlide].classList.add('active');
+        this.updateNavigation();
+        this.resetProgress();
+      }
+
+      nextSlide() {
+        const nextIndex = this.currentSlide < this.slides.length - 1 ? this.currentSlide + 1 : 0;
+        this.goToSlide(nextIndex);
+      }
+
+      previousSlide() {
+        const prevIndex = this.currentSlide > 0 ? this.currentSlide - 1 : this.slides.length - 1;
+        this.goToSlide(prevIndex);
+      }
+
+      updateNavigation() {
+        if (this.prevButton && this.nextButton) {
+          this.prevButton.disabled = false;
+          this.nextButton.disabled = false;
+        }
+      }
+
+      startAutoplay() {
+        if (this.slides.length > 1) {
+          this.autoplayInterval = setInterval(() => {
+            this.nextSlide();
+          }, this.autoplayDuration);
+          this.startProgress();
+        }
+      }
+
+      stopAutoplay() {
+        if (this.autoplayInterval) {
+          clearInterval(this.autoplayInterval);
+          this.autoplayInterval = null;
+        }
+      }
+
+      resetAutoplay() {
+        this.stopAutoplay();
+        if ({{ block.settings.enable_autoplay | json }}) {
+          this.startAutoplay();
+        }
+      }
+
+      startProgress() {
+        if (this.progressBar && {{ block.settings.show_progress | json }}) {
+          this.progressStep = 0;
+          this.progressInterval = setInterval(() => {
+            this.progressStep += 100;
+            const percentage = (this.progressStep / this.autoplayDuration) * 100;
+            this.progressBar.style.width = percentage + '%';
+            
+            if (percentage >= 100) {
+              this.resetProgress();
+            }
+          }, 100);
+        }
+      }
+
+      stopProgress() {
+        if (this.progressInterval) {
+          clearInterval(this.progressInterval);
+          this.progressInterval = null;
+        }
+      }
+
+      resetProgress() {
+        this.stopProgress();
+        if (this.progressBar) {
+          this.progressBar.style.width = '0%';
+        }
+        if ({{ block.settings.enable_autoplay | json }} && this.autoplayInterval) {
+          this.startProgress();
+        }
+      }
+    }
+
+    customElements.define('blog-slideshow-{{ ai_gen_id }}', BlogSlideshow{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Blog Article Slideshow",
+  "tag": null,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Title Section"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "Title",
+      "default": "Featured Articles"
+    },
+    {
+      "type": "text",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "Discover our latest blog posts and insights"
+    },
+    {
+      "type": "image_picker",
+      "id": "logo",
+      "label": "Logo"
+    },
+    {
+      "type": "range",
+      "id": "logo_width",
+      "min": 60,
+      "max": 200,
+      "step": 10,
+      "unit": "px",
+      "label": "Logo width",
+      "default": 120
+    },
+    {
+      "type": "select",
+      "id": "divider_style",
+      "label": "Divider style",
+      "options": [
+        {
+          "value": "none",
+          "label": "None"
+        },
+        {
+          "value": "line",
+          "label": "Simple line"
+        },
+        {
+          "value": "decorative",
+          "label": "Decorative with logo or icon"
+        },
+        {
+          "value": "logo",
+          "label": "Logo only"
+        }
+      ],
+      "default": "decorative"
+    },
+    {
+      "type": "image_picker",
+      "id": "divider_logo",
+      "label": "Divider logo"
+    },
+    {
+      "type": "range",
+      "id": "divider_logo_size",
+      "min": 30,
+      "max": 80,
+      "step": 5,
+      "unit": "px",
+      "label": "Divider logo size",
+      "default": 50
+    },
+    {
+      "type": "color",
+      "id": "divider_color",
+      "label": "Divider color",
+      "default": "#cccccc"
+    },
+    {
+      "type": "header",
+      "content": "Custom Slide"
+    },
+    {
+      "type": "text",
+      "id": "custom_label",
+      "label": "Custom label"
+    },
+    {
+      "type": "text",
+      "id": "custom_title",
+      "label": "Custom title"
+    },
+    {
+      "type": "textarea",
+      "id": "custom_text",
+      "label": "Custom text"
+    },
+    {
+      "type": "text",
+      "id": "custom_date",
+      "label": "Custom date"
+    },
+    {
+      "type": "image_picker",
+      "id": "custom_image",
+      "label": "Custom image"
+    },
+    {
+      "type": "url",
+      "id": "custom_link",
+      "label": "Custom link"
+    },
+    {
+      "type": "text",
+      "id": "custom_button_text",
+      "label": "Custom button text",
+      "default": "Learn More"
+    },
+    {
+      "type": "color",
+      "id": "custom_label_color",
+      "label": "Custom label text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "custom_label_bg",
+      "label": "Custom label background",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "header",
+      "content": "Featured Articles"
+    },
+    {
+      "type": "article",
+      "id": "article_1",
+      "label": "First featured article"
+    },
+    {
+      "type": "article",
+      "id": "article_2",
+      "label": "Second featured article"
+    },
+    {
+      "type": "article",
+      "id": "article_3",
+      "label": "Third featured article"
+    },
+    {
+      "type": "text",
+      "id": "button_text",
+      "label": "Article button text",
+      "default": "Read Article"
+    },
+    {
+      "type": "header",
+      "content": "Slideshow Settings"
+    },
+    {
+      "type": "range",
+      "id": "slide_height",
+      "min": 400,
+      "max": 600,
+      "step": 50,
+      "unit": "px",
+      "label": "Slide height",
+      "default": 500
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_autoplay",
+      "label": "Enable autoplay",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "autoplay_duration",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "label": "Autoplay duration",
+      "default": 6
+    },
+    {
+      "type": "checkbox",
+      "id": "show_progress",
+      "label": "Show progress bar",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Colors"
+    },
+    {
+      "type": "color",
+      "id": "title_color",
+      "label": "Title color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "subtitle_color",
+      "label": "Subtitle color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "container_bg_color",
+      "label": "Container background color",
+      "default": "#f8f8f8"
+    },
+    {
+      "type": "color",
+      "id": "blog_label_color",
+      "label": "Blog label color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "article_title_color",
+      "label": "Article title color",
+      "default": "#333333"
+    },
+    {
+      "type": "color",
+      "id": "article_excerpt_color",
+      "label": "Article excerpt color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "article_date_color",
+      "label": "Article date color",
+      "default": "#999999"
+    },
+    {
+      "type": "color",
+      "id": "button_color",
+      "label": "Button color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_color",
+      "label": "Button hover color",
+      "default": "#3a2f6b"
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "title_size",
+      "min": 24,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Title size",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size",
+      "min": 14,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Subtitle size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "article_title_size",
+      "min": 24,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Article title size",
+      "default": 32
+    },
+    {
+      "type": "range",
+      "id": "article_excerpt_size",
+      "min": 14,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Article excerpt size",
+      "default": 16
+    }
+  ],
+  "presets": [
+    {
+      "name": "Blog Article Slideshow"
+    }
+  ]
+}
+{% endschema %}

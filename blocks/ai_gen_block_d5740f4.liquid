@@ -1,0 +1,773 @@
+{% doc %}
+  @prompt
+    Create a two-column section with a brands carousel on the left and trust badges on the right. Left side: "Top Brands" heading, horizontal logo carousel with white cards, left/right arrow navigation that appears on hover, and a purple "View All Brands" button below. Right side: "Why Choose Living Well Today?" heading with a two-column grid of checkmark bullet points for trust factors. Clean, modern design with proper spacing
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-brands-trust-section-{{ ai_gen_id }} {
+    padding: {{ block.settings.section_padding_top }}px 0 {{ block.settings.section_padding_bottom }}px;
+    background-color: {{ block.settings.background_color }};
+  }
+
+  .ai-brands-trust-container-{{ ai_gen_id }} {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .ai-brands-trust-grid-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: {{ block.settings.column_gap }}px;
+    align-items: start;
+  }
+
+  .ai-brands-column-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .ai-trust-column-{{ ai_gen_id }} {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .ai-brands-heading-{{ ai_gen_id }} {
+    font-size: {{ block.settings.brands_heading_size }}px;
+    font-weight: 600;
+    color: {{ block.settings.text_color }};
+    margin: 0;
+    text-align: {{ block.settings.brands_text_alignment }};
+  }
+
+  .ai-trust-heading-{{ ai_gen_id }} {
+    font-size: {{ block.settings.trust_heading_size }}px;
+    font-weight: 600;
+    color: {{ block.settings.text_color }};
+    margin: 0;
+    text-align: {{ block.settings.trust_text_alignment }};
+  }
+
+  .ai-brands-carousel-wrapper-{{ ai_gen_id }} {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-brands-carousel-{{ ai_gen_id }} {
+    display: flex;
+    gap: {{ block.settings.brand_card_gap }}px;
+    transition: transform 0.3s ease;
+    will-change: transform;
+  }
+
+  .ai-brand-card-{{ ai_gen_id }} {
+    flex: 0 0 {{ block.settings.brand_card_width }}px;
+    height: {{ block.settings.brand_card_height }}px;
+    background-color: {{ block.settings.brand_card_bg_color }};
+    border-radius: {{ block.settings.brand_card_radius }}px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease;
+  }
+
+  .ai-brand-card-{{ ai_gen_id }}:hover {
+    transform: translateY(-2px);
+  }
+
+  .ai-brand-card-{{ ai_gen_id }} img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+
+  .ai-brand-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .ai-carousel-nav-{{ ai_gen_id }} {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: {{ block.settings.nav_button_bg_color }};
+    color: {{ block.settings.nav_button_text_color }};
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease, background-color 0.2s ease;
+    z-index: 2;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .ai-brands-carousel-wrapper-{{ ai_gen_id }}:hover .ai-carousel-nav-{{ ai_gen_id }} {
+    opacity: 1;
+  }
+
+  .ai-carousel-nav-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.nav_button_hover_bg_color }};
+  }
+
+  .ai-carousel-nav-prev-{{ ai_gen_id }} {
+    left: -20px;
+  }
+
+  .ai-carousel-nav-next-{{ ai_gen_id }} {
+    right: -20px;
+  }
+
+  .ai-carousel-nav-{{ ai_gen_id }} svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .ai-view-all-button-{{ ai_gen_id }} {
+    background-color: {{ block.settings.button_bg_color }};
+    color: {{ block.settings.button_text_color }};
+    border: none;
+    padding: 12px 24px;
+    border-radius: {{ block.settings.button_radius }}px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    {% if block.settings.brands_text_alignment == 'center' %}
+      align-self: center;
+    {% elsif block.settings.brands_text_alignment == 'right' %}
+      align-self: flex-end;
+    {% else %}
+      align-self: flex-start;
+    {% endif %}
+  }
+
+  .ai-view-all-button-{{ ai_gen_id }}:hover {
+    background-color: {{ block.settings.button_hover_bg_color }};
+  }
+
+  .ai-trust-badges-grid-{{ ai_gen_id }} {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: {{ block.settings.trust_badge_gap }}px;
+  }
+
+  .ai-trust-badge-{{ ai_gen_id }} {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .ai-trust-icon-{{ ai_gen_id }} {
+    flex-shrink: 0;
+    width: {{ block.settings.trust_icon_size }}px;
+    height: {{ block.settings.trust_icon_size }}px;
+    background-color: {{ block.settings.trust_icon_bg_color }};
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 2px;
+  }
+
+  .ai-trust-icon-{{ ai_gen_id }} svg {
+    width: {{ block.settings.trust_icon_size | times: 0.6 }}px;
+    height: {{ block.settings.trust_icon_size | times: 0.6 }}px;
+    color: {{ block.settings.trust_icon_color }};
+  }
+
+  .ai-trust-text-{{ ai_gen_id }} {
+    color: {{ block.settings.text_color }};
+    font-size: {{ block.settings.trust_text_size }}px;
+    line-height: 1.4;
+    margin: 0;
+  }
+
+  @media screen and (max-width: 768px) {
+    .ai-brands-trust-grid-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: 40px;
+    }
+
+    .ai-brand-card-{{ ai_gen_id }} {
+      flex: 0 0 {{ block.settings.brand_card_width | times: 0.8 }}px;
+    }
+
+    .ai-trust-badges-grid-{{ ai_gen_id }} {
+      grid-template-columns: 1fr;
+      gap: {{ block.settings.trust_badge_gap | times: 0.8 }}px;
+    }
+
+    .ai-carousel-nav-prev-{{ ai_gen_id }} {
+      left: 10px;
+    }
+
+    .ai-carousel-nav-next-{{ ai_gen_id }} {
+      right: 10px;
+    }
+  }
+{% endstyle %}
+
+<brands-trust-section-{{ ai_gen_id }}
+  class="ai-brands-trust-section-{{ ai_gen_id }}"
+  {{ block.shopify_attributes }}
+>
+  <div class="ai-brands-trust-container-{{ ai_gen_id }}">
+    <div class="ai-brands-trust-grid-{{ ai_gen_id }}">
+      <div class="ai-brands-column-{{ ai_gen_id }}">
+        <h2 class="ai-brands-heading-{{ ai_gen_id }}">{{ block.settings.brands_heading }}</h2>
+        
+        <div class="ai-brands-carousel-wrapper-{{ ai_gen_id }}">
+          <div class="ai-brands-carousel-{{ ai_gen_id }}" data-carousel>
+            {% for i in (1..8) %}
+              {% liquid
+                assign brand_image_key = 'brand_image_' | append: i
+                assign brand_image = block.settings[brand_image_key]
+              %}
+              
+              <div class="ai-brand-card-{{ ai_gen_id }}">
+                {% if brand_image %}
+                  <img
+                    src="{{ brand_image | image_url: width: 200 }}"
+                    alt="{{ brand_image.alt | escape }}"
+                    loading="lazy"
+                    width="200"
+                    height="100"
+                  >
+                {% else %}
+                  <div class="ai-brand-placeholder-{{ ai_gen_id }}">
+                    Brand Logo {{ i }}
+                  </div>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          
+          <button
+            class="ai-carousel-nav-{{ ai_gen_id }} ai-carousel-nav-prev-{{ ai_gen_id }}"
+            data-carousel-prev
+            aria-label="Previous brands"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <button
+            class="ai-carousel-nav-{{ ai_gen_id }} ai-carousel-nav-next-{{ ai_gen_id }}"
+            data-carousel-next
+            aria-label="Next brands"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+        
+        {% if block.settings.view_all_button_text != blank %}
+          <a
+            href="{{ block.settings.view_all_button_link }}"
+            class="ai-view-all-button-{{ ai_gen_id }}"
+          >
+            {{ block.settings.view_all_button_text }}
+          </a>
+        {% endif %}
+      </div>
+      
+      <div class="ai-trust-column-{{ ai_gen_id }}">
+        <h2 class="ai-trust-heading-{{ ai_gen_id }}">{{ block.settings.trust_heading }}</h2>
+        
+        <div class="ai-trust-badges-grid-{{ ai_gen_id }}">
+          {% for i in (1..6) %}
+            {% liquid
+              assign trust_text_key = 'trust_text_' | append: i
+              assign trust_text = block.settings[trust_text_key]
+            %}
+            
+            {% if trust_text != blank %}
+              <div class="ai-trust-badge-{{ ai_gen_id }}">
+                <div class="ai-trust-icon-{{ ai_gen_id }}">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <p class="ai-trust-text-{{ ai_gen_id }}">{{ trust_text }}</p>
+              </div>
+            {% endif %}
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</brands-trust-section-{{ ai_gen_id }}>
+
+<script>
+  (function() {
+    class BrandsTrustSection{{ ai_gen_id }} extends HTMLElement {
+      constructor() {
+        super();
+        this.currentIndex = 0;
+        this.visibleCards = 3;
+        this.totalCards = 8;
+      }
+
+      connectedCallback() {
+        this.carousel = this.querySelector('[data-carousel]');
+        this.prevButton = this.querySelector('[data-carousel-prev]');
+        this.nextButton = this.querySelector('[data-carousel-next]');
+        
+        this.setupCarousel();
+        this.setupEventListeners();
+        this.updateCarousel();
+      }
+
+      setupCarousel() {
+        this.updateVisibleCards();
+        window.addEventListener('resize', () => this.updateVisibleCards());
+      }
+
+      updateVisibleCards() {
+        if (window.innerWidth <= 768) {
+          this.visibleCards = 2;
+        } else {
+          this.visibleCards = 3;
+        }
+        this.updateCarousel();
+      }
+
+      setupEventListeners() {
+        this.prevButton.addEventListener('click', () => this.prevSlide());
+        this.nextButton.addEventListener('click', () => this.nextSlide());
+      }
+
+      prevSlide() {
+        if (this.currentIndex > 0) {
+          this.currentIndex--;
+          this.updateCarousel();
+        }
+      }
+
+      nextSlide() {
+        const maxIndex = Math.max(0, this.totalCards - this.visibleCards);
+        if (this.currentIndex < maxIndex) {
+          this.currentIndex++;
+          this.updateCarousel();
+        }
+      }
+
+      updateCarousel() {
+        const cardWidth = {{ block.settings.brand_card_width }};
+        const gap = {{ block.settings.brand_card_gap }};
+        const translateX = -(this.currentIndex * (cardWidth + gap));
+        
+        this.carousel.style.transform = `translateX(${translateX}px)`;
+        
+        this.prevButton.style.opacity = this.currentIndex === 0 ? '0.5' : '1';
+        this.prevButton.disabled = this.currentIndex === 0;
+        
+        const maxIndex = Math.max(0, this.totalCards - this.visibleCards);
+        this.nextButton.style.opacity = this.currentIndex >= maxIndex ? '0.5' : '1';
+        this.nextButton.disabled = this.currentIndex >= maxIndex;
+      }
+    }
+
+    customElements.define('brands-trust-section-{{ ai_gen_id }}', BrandsTrustSection{{ ai_gen_id }});
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "Brands and trust section",
+  "tag": null,
+  "settings": [
+    {
+      "type": "header",
+      "content": "Section settings"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#121212"
+    },
+    {
+      "type": "range",
+      "id": "section_padding_top",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Top padding",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "section_padding_bottom",
+      "min": 0,
+      "max": 100,
+      "step": 4,
+      "unit": "px",
+      "label": "Bottom padding",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "column_gap",
+      "min": 20,
+      "max": 80,
+      "step": 4,
+      "unit": "px",
+      "label": "Column gap",
+      "default": 60
+    },
+    {
+      "type": "header",
+      "content": "Brands section"
+    },
+    {
+      "type": "text",
+      "id": "brands_heading",
+      "label": "Heading",
+      "default": "Top Brands"
+    },
+    {
+      "type": "range",
+      "id": "brands_heading_size",
+      "min": 16,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Heading size",
+      "default": 28
+    },
+    {
+      "type": "select",
+      "id": "brands_text_alignment",
+      "label": "Text alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "text",
+      "id": "view_all_button_text",
+      "label": "Button text",
+      "default": "View All Brands"
+    },
+    {
+      "type": "url",
+      "id": "view_all_button_link",
+      "label": "Button link"
+    },
+    {
+      "type": "color",
+      "id": "button_bg_color",
+      "label": "Button background",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "button_text_color",
+      "label": "Button text color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "button_hover_bg_color",
+      "label": "Button hover background",
+      "default": "#3d3268"
+    },
+    {
+      "type": "range",
+      "id": "button_radius",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "unit": "px",
+      "label": "Button border radius",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "Brand cards"
+    },
+    {
+      "type": "range",
+      "id": "brand_card_width",
+      "min": 120,
+      "max": 200,
+      "step": 10,
+      "unit": "px",
+      "label": "Card width",
+      "default": 160
+    },
+    {
+      "type": "range",
+      "id": "brand_card_height",
+      "min": 60,
+      "max": 120,
+      "step": 10,
+      "unit": "px",
+      "label": "Card height",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "brand_card_gap",
+      "min": 8,
+      "max": 32,
+      "step": 4,
+      "unit": "px",
+      "label": "Card gap",
+      "default": 16
+    },
+    {
+      "type": "color",
+      "id": "brand_card_bg_color",
+      "label": "Card background",
+      "default": "#ffffff"
+    },
+    {
+      "type": "range",
+      "id": "brand_card_radius",
+      "min": 0,
+      "max": 20,
+      "step": 2,
+      "unit": "px",
+      "label": "Card border radius",
+      "default": 8
+    },
+    {
+      "type": "header",
+      "content": "Navigation buttons"
+    },
+    {
+      "type": "color",
+      "id": "nav_button_bg_color",
+      "label": "Background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "nav_button_text_color",
+      "label": "Icon color",
+      "default": "#121212"
+    },
+    {
+      "type": "color",
+      "id": "nav_button_hover_bg_color",
+      "label": "Hover background",
+      "default": "#f5f5f5"
+    },
+    {
+      "type": "header",
+      "content": "Brand images"
+    },
+    {
+      "type": "image_picker",
+      "id": "brand_image_1",
+      "label": "Brand image 1"
+    },
+    {
+      "type": "image_picker",
+      "id": "brand_image_2",
+      "label": "Brand image 2"
+    },
+    {
+      "type": "image_picker",
+      "id": "brand_image_3",
+      "label": "Brand image 3"
+    },
+    {
+      "type": "image_picker",
+      "id": "brand_image_4",
+      "label": "Brand image 4"
+    },
+    {
+      "type": "image_picker",
+      "id": "brand_image_5",
+      "label": "Brand image 5"
+    },
+    {
+      "type": "image_picker",
+      "id": "brand_image_6",
+      "label": "Brand image 6"
+    },
+    {
+      "type": "image_picker",
+      "id": "brand_image_7",
+      "label": "Brand image 7"
+    },
+    {
+      "type": "image_picker",
+      "id": "brand_image_8",
+      "label": "Brand image 8"
+    },
+    {
+      "type": "header",
+      "content": "Trust section"
+    },
+    {
+      "type": "text",
+      "id": "trust_heading",
+      "label": "Heading",
+      "default": "Why Choose Living Well Today?"
+    },
+    {
+      "type": "range",
+      "id": "trust_heading_size",
+      "min": 16,
+      "max": 48,
+      "step": 2,
+      "unit": "px",
+      "label": "Heading size",
+      "default": 28
+    },
+    {
+      "type": "select",
+      "id": "trust_text_alignment",
+      "label": "Text alignment",
+      "options": [
+        {
+          "value": "left",
+          "label": "Left"
+        },
+        {
+          "value": "center",
+          "label": "Center"
+        },
+        {
+          "value": "right",
+          "label": "Right"
+        }
+      ],
+      "default": "left"
+    },
+    {
+      "type": "range",
+      "id": "trust_badge_gap",
+      "min": 12,
+      "max": 32,
+      "step": 4,
+      "unit": "px",
+      "label": "Badge gap",
+      "default": 20
+    },
+    {
+      "type": "range",
+      "id": "trust_text_size",
+      "min": 12,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Text size",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "trust_icon_size",
+      "min": 16,
+      "max": 32,
+      "step": 2,
+      "unit": "px",
+      "label": "Icon size",
+      "default": 24
+    },
+    {
+      "type": "color",
+      "id": "trust_icon_bg_color",
+      "label": "Icon background",
+      "default": "#74d935"
+    },
+    {
+      "type": "color",
+      "id": "trust_icon_color",
+      "label": "Icon color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "header",
+      "content": "Trust factors"
+    },
+    {
+      "type": "text",
+      "id": "trust_text_1",
+      "label": "Trust factor 1",
+      "default": "Free shipping on orders over $50"
+    },
+    {
+      "type": "text",
+      "id": "trust_text_2",
+      "label": "Trust factor 2",
+      "default": "30-day money back guarantee"
+    },
+    {
+      "type": "text",
+      "id": "trust_text_3",
+      "label": "Trust factor 3",
+      "default": "Expert customer support"
+    },
+    {
+      "type": "text",
+      "id": "trust_text_4",
+      "label": "Trust factor 4",
+      "default": "Secure payment processing"
+    },
+    {
+      "type": "text",
+      "id": "trust_text_5",
+      "label": "Trust factor 5",
+      "default": "Trusted by thousands of customers"
+    },
+    {
+      "type": "text",
+      "id": "trust_text_6",
+      "label": "Trust factor 6",
+      "default": "Fast and reliable delivery"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Brands and trust section"
+    }
+  ]
+}
+{% endschema %}

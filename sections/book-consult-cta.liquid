@@ -1,0 +1,251 @@
+{% schema %}
+{
+  "name": "Book Consult CTA Diagonal",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading_line1",
+      "label": "Heading Line 1",
+      "default": "Ready to Take the"
+    },
+    {
+      "type": "text",
+      "id": "heading_line2",
+      "label": "Heading Line 2",
+      "default": "First Step Toward"
+    },
+    {
+      "type": "text",
+      "id": "heading_line3",
+      "label": "Heading Line 3",
+      "default": "Wellness?"
+    },
+    {
+      "type": "textarea",
+      "id": "subheading",
+      "label": "Subheading",
+      "default": "Book a consult and take the first step toward real healing."
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Primary button label",
+      "default": "Book Now"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Primary button URL"
+    },
+    {
+      "type": "text",
+      "id": "second_button_label",
+      "label": "Secondary button label",
+      "default": "Meet Our Team"
+    },
+    {
+      "type": "url",
+      "id": "second_button_link",
+      "label": "Secondary button URL"
+    },
+    {
+      "type": "image_picker",
+      "id": "gif_image",
+      "label": "Animated GIF (optional)"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Calendar Image"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Diagonal Book Consult CTA",
+      "category": "Call to Action"
+    }
+  ]
+}
+{% endschema %}
+
+<div class="consult-cta-modern">
+  <div class="consult-cta-row">
+    <div class="consult-cta-text">
+      <h2>
+        <span>{{ section.settings.heading_line1 }}</span><br>
+        <span>{{ section.settings.heading_line2 }} {{ section.settings.heading_line3 }}</span>
+      </h2>
+      <p class="subheading">{{ section.settings.subheading }}</p>
+      <div class="consult-cta-buttons">
+        <a href="{{ section.settings.button_link }}" class="button main" role="button">{{ section.settings.button_label }}</a>
+        <a href="{{ section.settings.second_button_link }}" class="button alt" role="button">{{ section.settings.second_button_label }}</a>
+      </div>
+    </div>
+    <div class="consult-cta-art">
+      <div class="art-box">
+        {% if section.settings.gif_image != blank %}
+          <img src="{{ section.settings.gif_image | image_url: width: 900 }}" alt="Animated Calendar" loading="lazy" />
+        {% elsif section.settings.image != blank %}
+          <img src="{{ section.settings.image | image_url: width: 900 }}" alt="Calendar" loading="lazy" />
+        {% else %}
+          <div class="calendar-placeholder">?</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.consult-cta-modern {
+  background:
+    linear-gradient(120deg, var(--lwt-surface) 78%, var(--lwt-surface-alt) 100%),
+    repeating-linear-gradient(0deg, rgba(75, 63, 130, 0.06) 0, rgba(75, 63, 130, 0.06) 2px, transparent 2px, transparent 32px),
+    repeating-linear-gradient(90deg, rgba(75, 63, 130, 0.06) 0, rgba(75, 63, 130, 0.06) 2px, transparent 2px, transparent 32px);
+  border-radius: var(--lwt-radius-lg);
+  box-shadow: var(--lwt-shadow-card);
+  padding: var(--lwt-space-xl) var(--lwt-section-padding-x);
+  margin: var(--lwt-space-xl) auto var(--lwt-space-lg) auto;
+  max-width: var(--lwt-content-max-width);
+  position: relative;
+}
+.consult-cta-row {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: var(--lwt-space-xl);
+}
+.consult-cta-text {
+  flex: 1.2 1 0%;
+  min-width: 270px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.consult-cta-text h2 {
+  font-size: var(--lwt-heading-h3);
+  font-weight: 900;
+  color: var(--lwt-primary-dark);
+  line-height: var(--lwt-line-height-tight);
+  margin-bottom: var(--lwt-space-sm);
+}
+.consult-cta-text .subheading {
+  color: var(--lwt-primary);
+  font-size: 1.13rem;
+  margin-bottom: var(--lwt-space-lg);
+}
+.consult-cta-buttons {
+  display: flex;
+  gap: var(--lwt-space-sm);
+}
+.button.main, .button.alt {
+  font-size: 1.13rem;
+  font-weight: 700;
+  border-radius: var(--lwt-radius-button);
+  padding: var(--lwt-space-sm) var(--lwt-space-lg);
+  transition: background var(--lwt-transition-base), color var(--lwt-transition-base), box-shadow var(--lwt-transition-base), transform var(--lwt-transition-fast);
+  outline: none;
+}
+.button.main {
+  background: var(--lwt-primary);
+  color: var(--lwt-text-on-primary);
+  box-shadow: var(--lwt-shadow-button);
+  border: none;
+}
+.button.main:hover, .button.main:focus {
+  background: var(--lwt-primary-dark);
+  box-shadow: var(--lwt-shadow-card-hover);
+  outline: 2px solid var(--lwt-primary-light);
+  outline-offset: 2px;
+}
+.button.main:active, .button.alt:active {
+  transform: scale(0.98);
+  box-shadow: var(--lwt-shadow-card);
+}
+.button.alt {
+  background: var(--lwt-surface-white);
+  color: var(--lwt-primary);
+  border: 2px solid var(--lwt-primary);
+}
+.button.alt:hover, .button.alt:focus {
+  background: var(--lwt-surface);
+  color: var(--lwt-primary-dark);
+  outline: 2px solid var(--lwt-primary-light);
+  outline-offset: 2px;
+}
+
+/* The ART BOX */
+.consult-cta-art {
+  flex: 1 1 0%;
+  min-width: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  
+}
+.art-box {
+  width: 340px;
+  height: 190px;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 2px 18px 0 rgba(120,80,180,0.07);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.art-box img {
+  max-width: 93%;
+  max-height: 93%;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  background: transparent;
+  transition: filter 0.2s;
+  z-index: 1;
+  position: relative;
+  opacity: 0;
+  animation: artFadeIn 0.7s ease-in forwards;
+  min-height: 30px;
+}
+@keyframes artFadeIn {
+  to { opacity: 1; }
+}
+.art-box:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  background: radial-gradient(circle, #ecdffb 50%, transparent 100%);
+  z-index: 0;
+  filter: blur(18px) opacity(0.65);
+}
+.calendar-placeholder {
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: #f5eefd;
+  color: #6c48a2;
+  font-size: 2.5rem;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700;
+  z-index: 2;
+}
+
+/* Responsive: shrink the art box on smaller screens */
+@media (max-width: 1100px) {
+  .art-box { width: 220px; height: 122px; }
+}
+@media (max-width: 900px) {
+  .consult-cta-modern { padding: 1.2rem 0.5rem 1.8rem 0.5rem; }
+  .consult-cta-row { flex-direction: column-reverse; gap: 2.2rem; }
+  .consult-cta-text { text-align: center; }
+  .art-box { width: 120px; height: 65px; }
+}
+@media (max-width: 600px) {
+  .consult-cta-modern { padding: 1rem 0.2rem 1rem 0.2rem; }
+  .consult-cta-text h2 { font-size: 1.28rem; }
+  .button.main, .button.alt { font-size: 0.99rem; padding: 0.78rem 1.5rem; }
+  .art-box { width: 64px; height: 38px; }
+}
+</style>

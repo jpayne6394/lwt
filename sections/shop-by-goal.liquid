@@ -1,0 +1,184 @@
+<style>
+/* ───────────── WRAPPER ───────────── */
+.shop-by-goal{
+  background:#fefaf8;
+  border-radius:24px;
+  box-shadow:0 8px 24px rgba(0,0,0,.08);
+  max-width:1650px;
+  margin:2rem auto;
+  padding:20px clamp(1rem,3vw,80px);
+  text-align:center;
+}
+.shop-by-goal h2{
+  font-size:clamp(1.75rem,2vw+1rem,2.2rem);
+  font-weight:650;
+  margin-bottom:2.5rem;
+}
+
+/* ───────────── GRID ───────────── */
+.goal-grid{
+  display:grid;
+  gap:1.5rem;
+  grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+  max-width:1100px;
+  margin:0 auto 1.5rem;
+  justify-items:center;
+}
+
+/* ───────────── CARD ───────────── */
+.goal-card{
+  width:120px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-decoration:none;
+  transition:transform .25s;
+}
+.goal-card:hover{ transform:translateY(-3px); }
+
+/* circular button */
+.goal-icon{
+  --size:80px;                    /* ← master knob (desktop)  */
+  width:var(--size);
+  height:var(--size);
+  border-radius:50%;
+  overflow:hidden;
+  position:relative;
+  background:#fdeee9;
+  box-shadow:0 2px 8px rgba(0,0,0,.10);
+  transition:box-shadow .25s, transform .25s;
+}
+.goal-card:hover .goal-icon{
+  transform:translateY(-2px);
+  box-shadow:0 5px 14px rgba(0,0,0,.16);
+}
+.goal-icon img{
+  position:absolute;
+  top:50%;left:50%;
+  width:120%;
+  height:120%;
+  transform:translate(-50.5%,-50.5%);
+  object-fit:contain;
+}
+
+/* label */
+.goal-label{
+  margin-top:.55rem;
+  font-size: 1.1rem;
+  font-weight:500;
+  color:#333;
+}
+
+/* CTA */
+.goal-cta{
+  background:#3e2764;
+  color:#fff;
+  padding:.55rem 1.6rem;
+  border-radius:999px;
+  font-size:.95rem;
+  text-decoration:none;
+  transition:background .25s;
+}
+.goal-cta:hover{ background:#281a44; }
+
+
+
+
+/* ───────────── BREAKPOINTS ───────────── */
+@media(max-width:1024px){ .goal-icon{ --size:68px; } }
+@media(max-width:768px){
+  .goal-icon{ --size:60px; }
+  .goal-card{ width:100px; }
+  .goal-label{ font-size:.85rem; }
+  .shop-by-goal h2{ font-size:2rem;margin-bottom:2rem; }
+}
+
+
+
+
+</style>
+
+
+
+
+<div class="shop-by-goal">
+  <!-- edit heading text via section setting -->
+  <h2>{{ section.settings.heading }}</h2>
+
+  <div class="goal-grid">
+    {% for block in section.blocks %}
+      <a href="{{ block.settings.link }}" class="goal-card">
+        <div class="goal-icon">
+          <!-- edit icon in Goal block settings -->
+          <img
+            src="{{ block.settings.icon | image_url: width: 72 }}"
+            alt="{{ block.settings.label }}"
+            loading="lazy"
+          >
+        </div>
+        <div class="goal-label">{{ block.settings.label }}</div>
+      </a>
+    {% endfor %}
+  </div>
+
+  {% if section.settings.button_link %}
+    <a href="{{ section.settings.button_link }}" class="goal-cta">
+      {{ section.settings.button_label }}
+    </a>
+  {% endif %}
+</div>
+
+{% schema %}
+{
+  "name": "Health Goals",
+  "settings": [
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Section Heading",
+      "default": "Shop by Health Goal"
+    },
+    {
+      "type": "url",
+      "id": "button_link",
+      "label": "Explore Button Link"
+    },
+    {
+      "type": "text",
+      "id": "button_label",
+      "label": "Explore Button Label",
+      "default": "Explore"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "goal",
+      "name": "Goal",
+      "settings": [
+        {
+          "type": "image_picker",
+          "id": "icon",
+          "label": "Goal Icon"
+        },
+        {
+          "type": "text",
+          "id": "label",
+          "label": "Goal Label"
+        },
+        {
+          "type": "url",
+          "id": "link",
+          "label": "Goal Link"
+        }
+      ]
+    }
+  ],
+  "max_blocks": 8,
+  "presets": [
+    {
+      "name": "Shop by Goal",
+      "category": "Custom"
+    }
+  ]
+}
+{% endschema %}

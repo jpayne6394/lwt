@@ -1,0 +1,973 @@
+{% doc %}
+  @prompt
+    Create an elegant "Meet the Experts" section that matches a luxury wellness brand aesthetic. Include expert profiles with photos, names, credentials, and brief descriptions. Design should be sophisticated and professional with clean typography, proper spacing, and a premium feel that complements a wellness/health brand., add control over the amount of cards, fill the sapce better with only two cards per row, add button that matches site theme to cards, add button color control, make button match the site theme, add underline of view profile on hover, add underline to button text on card hover, add cursor change on hover, remove button adn have a text link, add cursor animation on  card hover, only underline the length of the text link, add spacing control for title and sub title
+
+{% enddoc %}
+{% assign ai_gen_id = block.id | replace: '_', '' | downcase %}
+
+{% style %}
+  .ai-meet-experts-{{ ai_gen_id }} {
+    padding: {{ block.settings.section_padding_top }}px 0 {{ block.settings.section_padding_bottom }}px;
+    background-color: {{ block.settings.background_color }};
+  }
+
+  .ai-meet-experts-container-{{ ai_gen_id }} {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .ai-meet-experts-header-{{ ai_gen_id }} {
+    text-align: center;
+    margin-bottom: {{ block.settings.header_bottom_spacing }}px;
+  }
+
+  .ai-meet-experts-title-{{ ai_gen_id }} {
+    font-size: {{ block.settings.heading_size }}px;
+    color: {{ block.settings.heading_color }};
+    margin: 0 0 {{ block.settings.title_bottom_spacing }}px;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+  }
+
+  .ai-meet-experts-subtitle-{{ ai_gen_id }} {
+    font-size: {{ block.settings.subtitle_size }}px;
+    color: {{ block.settings.text_color }};
+    margin: 0;
+    font-weight: 400;
+    line-height: 1.6;
+    max-width: 600px;margin: 0 auto;
+    opacity: 0.8;
+  }
+
+  .ai-meet-experts-grid-{{ ai_gen_id }} {
+    display: grid;
+    {% if block.settings.experts_per_row == '1' %}
+      grid-template-columns: 1fr;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    {% elsif block.settings.experts_per_row == '2' %}
+      grid-template-columns: repeat(2, 1fr);
+      max-width: 1000px;
+      margin-left: auto;
+      margin-right: auto;
+    {% elsif block.settings.experts_per_row == '3' %}
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    {% else %}
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    {% endif %}
+    gap: 50px;
+    margin-top: {{ block.settings.content_top_spacing }}px;
+  }
+
+  .ai-expert-card-{{ ai_gen_id }} {
+    background-color: {{ block.settings.card_background_color }};
+    border-radius: {{ block.settings.card_border_radius }}px;
+    padding: 50px 40px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .ai-expert-card-{{ ai_gen_id }}:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+
+  .ai-expert-card-{{ ai_gen_id }}::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    background: radial-gradient(circle, {{ block.settings.cursor_animation_color }}, transparent70%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    transition: all 0.6s ease;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .ai-expert-card-{{ ai_gen_id }}:hover::before {
+    transform: translate(-50%, -50%) scale({{ block.settings.cursor_animation_scale }});
+    opacity: {{ block.settings.cursor_animation_opacity | divided_by: 100.0 }};
+  }
+
+  .ai-expert-image-wrapper-{{ ai_gen_id }} {
+    width: {{ block.settings.image_size }}px;
+    height: {{ block.settings.image_size }}px;
+    margin: 0 auto 30px;
+    border-radius:50%;
+    overflow: hidden;
+    border: 3px solid {{ block.settings.image_border_color }};
+    position: relative;
+    flex-shrink: 0;
+    z-index: 2;
+  }
+
+  .ai-expert-image-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .ai-expert-image-placeholder-{{ ai_gen_id }} {
+    width: 100%;
+    height: 100%;
+    background-color: #f8f8f8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .ai-expert-image-placeholder-{{ ai_gen_id }} svg {
+    width: 60%;
+    height: 60%;
+    opacity: 0.3;
+    color: #ccc;
+  }
+
+  .ai-expert-empty-state-{{ ai_gen_id }} {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-style: italic;
+  }
+
+  .ai-expert-content-{{ ai_gen_id }} {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 2;
+  }
+
+  .ai-expert-name-{{ ai_gen_id }} {
+    font-size: {{ block.settings.name_size }}px;
+    color: {{ block.settings.heading_color }};
+    margin: 0 0 12px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+  }
+
+  .ai-expert-credentials-{{ ai_gen_id }} {
+    font-size: {{ block.settings.credentials_size }}px;
+    color: {{ block.settings.accent_color }};
+    margin: 0 0 24px;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .ai-expert-description-{{ ai_gen_id }} {
+    font-size: {{ block.settings.description_size }}px;
+    color: {{ block.settings.text_color }};
+    line-height: 1.7;
+    margin: 0 0 30px;
+    font-weight: 300;
+    flex-grow: 1;
+  }
+
+  .ai-expert-description-{{ ai_gen_id }} p {
+    margin: 0;}
+
+  .ai-expert-link-{{ ai_gen_id }} {
+    color: {{ block.settings.link_color }};
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    display: inline-block;
+    width: fit-content;
+    margin: 0 auto;
+  }
+
+  .ai-expert-link-{{ ai_gen_id }}::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background-color: {{ block.settings.link_color }};
+    transition: width 0.3s ease;
+  }
+
+  .ai-expert-card-{{ ai_gen_id }}:hover .ai-expert-link-{{ ai_gen_id }} {
+    color: {{ block.settings.link_hover_color }};
+  }
+
+  .ai-expert-card-{{ ai_gen_id }}:hover .ai-expert-link-{{ ai_gen_id }}::after {
+    width: 100%;
+    background-color: {{ block.settings.link_hover_color }};
+  }
+
+  .ai-expert-link-{{ ai_gen_id }}:focus {
+    outline: 2px solid {{ block.settings.link_color }};
+    outline-offset: 2px;
+  }
+
+  @media screen and (max-width: 768px) {
+    .ai-meet-experts-{{ ai_gen_id }} {
+      padding: {{ block.settings.section_padding_top | times: 0.7 }}px 0 {{ block.settings.section_padding_bottom | times: 0.7 }}px;
+    }
+
+    .ai-meet-experts-container-{{ ai_gen_id }} {
+      padding: 0 16px;
+    }
+
+    .ai-meet-experts-header-{{ ai_gen_id }} {
+      margin-bottom: {{ block.settings.header_bottom_spacing | times: 0.7 }}px;
+    }
+
+    .ai-meet-experts-title-{{ ai_gen_id }} {
+      font-size: {{ block.settings.heading_size | times: 0.8 }}px;
+      margin-bottom: {{ block.settings.title_bottom_spacing | times: 0.8 }}px;
+    }
+
+    .ai-meet-experts-subtitle-{{ ai_gen_id }} {
+      font-size: {{ block.settings.subtitle_size | times: 0.9 }}px;
+    }
+
+    .ai-meet-experts-grid-{{ ai_gen_id }} {
+      grid-template-columns: repeat({{ block.settings.columns_mobile }}, 1fr) !important;
+      gap: 30px;
+      margin-top: {{ block.settings.content_top_spacing | times: 0.7 }}px;
+      max-width: none !important;
+    }
+
+    .ai-expert-card-{{ ai_gen_id }} {
+      padding: 35px 25px;
+    }
+
+    .ai-expert-image-wrapper-{{ ai_gen_id }} {
+      width: {{ block.settings.image_size | times: 0.8 }}px;
+      height: {{ block.settings.image_size | times: 0.8 }}px;
+      margin-bottom: 24px;
+    }
+
+    .ai-expert-card-{{ ai_gen_id }}::before {
+      display: none;
+    }
+  }
+
+  @media screen and (max-width: 480px) {
+    .ai-meet-experts-grid-{{ ai_gen_id }} {
+      grid-template-columns: 1fr !important;
+    }
+
+    .ai-expert-card-{{ ai_gen_id }} {
+      padding: 30px 20px;
+    }
+  }
+{% endstyle %}<div class="ai-meet-experts-{{ ai_gen_id }}" {{ block.shopify_attributes }}>
+  <div class="ai-meet-experts-container-{{ ai_gen_id }}">
+    <div class="ai-meet-experts-header-{{ ai_gen_id }}">
+      {% if block.settings.heading != blank %}
+        <h2 class="ai-meet-experts-title-{{ ai_gen_id }}">{{ block.settings.heading }}</h2>
+      {% endif %}
+      {% if block.settings.subtitle != blank %}
+        <div class="ai-meet-experts-subtitle-{{ ai_gen_id }}">{{ block.settings.subtitle }}</div>
+      {% endif %}
+    </div>
+
+    <div class="ai-meet-experts-grid-{{ ai_gen_id }}">
+      {% for i in (1..block.settings.number_of_experts) %}
+        {% liquid
+          assign expert_name_key = 'expert_' | append: i | append: '_name'
+          assign expert_image_key = 'expert_' | append: i | append: '_image'
+          assign expert_credentials_key = 'expert_' | append: i | append: '_credentials'
+          assign expert_description_key = 'expert_' | append: i | append: '_description'
+          assign expert_link_text_key = 'expert_' | append: i | append: '_link_text'
+          assign expert_link_url_key = 'expert_' | append: i | append: '_link_url'
+
+          assign expert_name = block.settings[expert_name_key]
+          assign expert_image = block.settings[expert_image_key]
+          assign expert_credentials = block.settings[expert_credentials_key]
+          assign expert_description = block.settings[expert_description_key]
+          assign expert_link_text = block.settings[expert_link_text_key]
+          assign expert_link_url = block.settings[expert_link_url_key]
+        %}
+
+        <div class="ai-expert-card-{{ ai_gen_id }}">
+          <div class="ai-expert-image-wrapper-{{ ai_gen_id }}">
+            {% if expert_image %}
+              <img
+                src="{{ expert_image | image_url: width: 400 }}"
+                alt="{{ expert_image.alt | default: expert_name | escape }}"
+                class="ai-expert-image-{{ ai_gen_id }}"
+                loading="lazy"
+                width="400"
+                height="400"
+              >
+            {% else %}
+              <div class="ai-expert-image-placeholder-{{ ai_gen_id }}">
+                {{ 'image' | placeholder_svg_tag }}<div class="ai-expert-empty-state-{{ ai_gen_id }}">
+                  Add expert photo
+                </div>
+              </div>
+            {% endif %}
+          </div>
+
+          <div class="ai-expert-content-{{ ai_gen_id }}">
+            {% if expert_name != blank %}
+              <h3 class="ai-expert-name-{{ ai_gen_id }}">{{ expert_name }}</h3>
+            {% else %}
+              <h3 class="ai-expert-name-{{ ai_gen_id }}">Expert {{ i }}</h3>
+            {% endif %}
+
+            {% if expert_credentials != blank %}
+              <div class="ai-expert-credentials-{{ ai_gen_id }}">{{ expert_credentials }}</div>
+            {% else %}
+              <div class="ai-expert-credentials-{{ ai_gen_id }}">Add credentials</div>
+            {% endif %}
+
+            {% if expert_description != blank %}
+              <div class="ai-expert-description-{{ ai_gen_id }}">{{ expert_description }}</div>
+            {% else %}
+              <div class="ai-expert-description-{{ ai_gen_id }}"><p style="color: #999; font-style: italic;">Add expert description here</p></div>
+            {% endif %}
+
+            {% if block.settings.show_links %}
+              {% if expert_link_url != blank %}
+                <a href="{{ expert_link_url }}" class="ai-expert-link-{{ ai_gen_id }}">
+                  {% if expert_link_text != blank %}
+                    {{ expert_link_text }}
+                  {% else %}
+                    Learn More
+                  {% endif %}
+                </a>
+              {% else %}
+                <span class="ai-expert-link-{{ ai_gen_id }}" style="opacity: 0.5; cursor: default;">
+                  {% if expert_link_text != blank %}
+                    {{ expert_link_text }}
+                  {% else %}
+                    Add link URL
+                  {% endif %}
+                </span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "Meet the experts",
+  "settings": [
+    {
+      "type": "header",
+      "content": "Section content"
+    },
+    {
+      "type": "inline_richtext",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Meet Our Wellness Experts"
+    },
+    {
+      "type": "richtext",
+      "id": "subtitle",
+      "label": "Subtitle",
+      "default": "<p>Our team of certified professionals brings decades of experience in holistic wellness, nutrition, and therapeutic care to guide you on your journey to optimal health.</p>"
+    },
+    {
+      "type": "header",
+      "content": "Header spacing"
+    },
+    {
+      "type": "range",
+      "id": "title_bottom_spacing",
+      "min": 0,
+      "max": 60,
+      "step": 4,
+      "unit": "px",
+      "label": "Title bottom spacing",
+      "default": 16
+    },
+    {
+      "type": "range",
+      "id": "header_bottom_spacing",
+      "min": 20,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Header bottom spacing",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "content_top_spacing",
+      "min": 20,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Content top spacing",
+      "default": 60
+    },
+    {
+      "type": "header",
+      "content": "Layout settings"
+    },
+    {
+      "type": "range",
+      "id": "number_of_experts",
+      "min": 1,
+      "max": 8,
+      "step": 1,
+      "label": "Number of experts",
+      "default": 4
+    },
+    {
+      "type": "select",
+      "id": "experts_per_row",
+      "label": "Experts per row",
+      "options": [
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        },
+        {
+          "value": "3",
+          "label": "3"
+        },
+        {
+          "value": "4",
+          "label": "4"
+        }
+      ],
+      "default": "2"
+    },
+    {
+      "type": "select",
+      "id": "columns_mobile",
+      "label": "Columns on mobile",
+      "options": [
+        {
+          "value": "1",
+          "label": "1"
+        },
+        {
+          "value": "2",
+          "label": "2"
+        }
+      ],
+      "default": "1"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_links",
+      "label": "Show links",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "Expert1"
+    },
+    {
+      "type": "image_picker",
+      "id": "expert_1_image",
+      "label": "Photo"
+    },
+    {
+      "type": "text",
+      "id": "expert_1_name",
+      "label": "Name",
+      "default": "Dr. Sarah Chen"
+    },
+    {
+      "type": "text",
+      "id": "expert_1_credentials",
+      "label": "Credentials",
+      "default": "MD, Integrative Medicine"
+    },
+    {
+      "type": "richtext",
+      "id": "expert_1_description",
+      "label": "Description",
+      "default": "<p>With over 15 years of experience in integrative medicine, Dr. Chen specializes in combining traditional healing practices with modern medical approaches to create personalized wellness plans that address the root causes of health concerns.</p>"
+    },
+    {
+      "type": "text",
+      "id": "expert_1_link_text",
+      "label": "Link text",
+      "default": "View Profile"
+    },
+    {
+      "type": "url",
+      "id": "expert_1_link_url",
+      "label": "Link URL"
+    },
+    {
+      "type": "header",
+      "content": "Expert 2"
+    },
+    {
+      "type": "image_picker",
+      "id": "expert_2_image",
+      "label": "Photo"
+    },
+    {
+      "type": "text",
+      "id": "expert_2_name",
+      "label": "Name",
+      "default": "Michael Rodriguez"
+    },
+    {
+      "type": "text",
+      "id": "expert_2_credentials",
+      "label": "Credentials",
+      "default": "RD, Certified Nutritionist"
+    },
+    {
+      "type": "richtext",
+      "id": "expert_2_description",
+      "label": "Description",
+      "default": "<p>A registered dietitian and certified nutritionist, Michael helps clients develop sustainable eating habits that support long-term health and vitality through evidence-based nutrition strategies and personalized meal planning.</p>"
+    },
+    {
+      "type": "text",
+      "id": "expert_2_link_text",
+      "label": "Link text",
+      "default": "View Profile"
+    },
+    {
+      "type": "url",
+      "id": "expert_2_link_url",
+      "label": "Link URL"
+    },
+    {
+      "type": "header",
+      "content": "Expert 3"
+    },
+    {
+      "type": "image_picker",
+      "id": "expert_3_image",
+      "label": "Photo"
+    },
+    {
+      "type": "text",
+      "id": "expert_3_name",
+      "label": "Name",
+      "default": "Emma Thompson"
+    },
+    {
+      "type": "text",
+      "id": "expert_3_credentials",
+      "label": "Credentials",
+      "default": "LMT, Wellness Coach"
+    },
+    {
+      "type": "richtext",
+      "id": "expert_3_description",
+      "label": "Description",
+      "default": "<p>Licensed massage therapist and certified wellness coach, Emma brings a holistic approach to stress management and physical recovery through therapeutic bodywork, mindfulness practices, and lifestyle optimization.</p>"
+    },
+    {
+      "type": "text",
+      "id": "expert_3_link_text",
+      "label": "Link text",
+      "default": "View Profile"
+    },
+    {
+      "type": "url",
+      "id": "expert_3_link_url",
+      "label": "Link URL"
+    },
+    {
+      "type": "header",
+      "content": "Expert 4"
+    },
+    {
+      "type": "image_picker",
+      "id": "expert_4_image",
+      "label": "Photo"
+    },
+    {
+      "type": "text",
+      "id": "expert_4_name",
+      "label": "Name",
+      "default": "Dr. James Wilson"
+    },
+    {
+      "type": "text",
+      "id": "expert_4_credentials",
+      "label": "Credentials",
+      "default": "PhD, Exercise Physiology"
+    },
+    {
+      "type": "richtext",
+      "id": "expert_4_description",
+      "label": "Description",
+      "default": "<p>With a doctorate in exercise physiology, Dr. Wilson designs evidence-based fitness programs that enhance physical performance, promote longevity, and support overall wellness through movement and recovery protocols.</p>"
+    },
+    {
+      "type": "text",
+      "id": "expert_4_link_text",
+      "label": "Link text",
+      "default": "View Profile"
+    },
+    {
+      "type": "url",
+      "id": "expert_4_link_url",
+      "label": "Link URL"
+    },
+    {
+      "type": "header",
+      "content": "Expert 5"
+    },
+    {
+      "type": "image_picker",
+      "id": "expert_5_image",
+      "label": "Photo"
+    },
+    {
+      "type": "text",
+      "id": "expert_5_name",
+      "label": "Name"
+    },
+    {
+      "type": "text",
+      "id": "expert_5_credentials",
+      "label": "Credentials"
+    },
+    {
+      "type": "richtext",
+      "id": "expert_5_description",
+      "label": "Description"
+    },
+    {
+      "type": "text",
+      "id": "expert_5_link_text",
+      "label": "Link text"
+    },
+    {
+      "type": "url",
+      "id": "expert_5_link_url",
+      "label": "Link URL"
+    },
+    {
+      "type": "header",
+      "content": "Expert 6"
+    },
+    {
+      "type": "image_picker",
+      "id": "expert_6_image",
+      "label": "Photo"
+    },
+    {
+      "type": "text",
+      "id": "expert_6_name",
+      "label": "Name"
+    },
+    {
+      "type": "text",
+      "id": "expert_6_credentials",
+      "label": "Credentials"
+    },
+    {
+      "type": "richtext",
+      "id": "expert_6_description",
+      "label": "Description"
+    },
+    {
+      "type": "text",
+      "id": "expert_6_link_text",
+      "label": "Link text"
+    },
+    {
+      "type": "url",
+      "id": "expert_6_link_url",
+      "label": "Link URL"
+    },
+    {
+      "type": "header",
+      "content": "Expert 7"
+    },
+    {
+      "type": "image_picker",
+      "id": "expert_7_image",
+      "label": "Photo"
+    },
+    {
+      "type": "text",
+      "id": "expert_7_name",
+      "label": "Name"
+    },
+    {
+      "type": "text",
+      "id": "expert_7_credentials",
+      "label": "Credentials"
+    },
+    {
+      "type": "richtext",
+      "id": "expert_7_description",
+      "label": "Description"
+    },
+    {
+      "type": "text",
+      "id": "expert_7_link_text",
+      "label": "Link text"
+    },
+    {
+      "type": "url",
+      "id": "expert_7_link_url",
+      "label": "Link URL"
+    },
+    {
+      "type": "header",
+      "content": "Expert 8"
+    },
+    {
+      "type": "image_picker",
+      "id": "expert_8_image",
+      "label": "Photo"
+    },
+    {
+      "type": "text",
+      "id": "expert_8_name",
+      "label": "Name"
+    },
+    {
+      "type": "text",
+      "id": "expert_8_credentials",
+      "label": "Credentials"
+    },
+    {
+      "type": "richtext",
+      "id": "expert_8_description",
+      "label": "Description"
+    },
+    {
+      "type": "text",
+      "id": "expert_8_link_text",
+      "label": "Link text"
+    },
+    {
+      "type": "url",
+      "id": "expert_8_link_url",
+      "label": "Link URL"
+    },
+    {
+      "type": "header",
+      "content": "Design"
+    },
+    {
+      "type": "color",
+      "id": "background_color",
+      "label": "Background color",
+      "default": "#fafafa"
+    },
+    {
+      "type": "color",
+      "id": "card_background_color",
+      "label": "Card background color",
+      "default": "#ffffff"
+    },
+    {
+      "type": "color",
+      "id": "heading_color",
+      "label": "Heading color",
+      "default": "#2c2c2c"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "Text color",
+      "default": "#666666"
+    },
+    {
+      "type": "color",
+      "id": "accent_color",
+      "label": "Accent color",
+      "default": "#8b7355"
+    },
+    {
+      "type": "color",
+      "id": "image_border_color",
+      "label": "Image border color",
+      "default": "#e8e8e8"
+    },
+    {
+      "type": "header",
+      "content": "Link style"
+    },
+    {
+      "type": "color",
+      "id": "link_color",
+      "label": "Link color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "color",
+      "id": "link_hover_color",
+      "label": "Link hover color",
+      "default": "#3a2f66"
+    },
+    {
+      "type": "header",
+      "content": "Cursor animation"
+    },
+    {
+      "type": "color",
+      "id": "cursor_animation_color",
+      "label": "Animation color",
+      "default": "#4b3f82"
+    },
+    {
+      "type": "range",
+      "id": "cursor_animation_scale",
+      "min": 5,
+      "max": 30,
+      "step": 1,
+      "label": "Animation size",
+      "default": 15
+    },
+    {
+      "type": "range",
+      "id": "cursor_animation_opacity",
+      "min": 5,
+      "max": 50,
+      "step": 5,
+      "unit": "%",
+      "label": "Animation opacity",
+      "default": 20
+    },
+    {
+      "type": "header",
+      "content": "Typography"
+    },
+    {
+      "type": "range",
+      "id": "heading_size",
+      "min": 24,
+      "max": 60,
+      "step": 2,
+      "unit": "px",
+      "label": "Main heading size",
+      "default": 42
+    },
+    {
+      "type": "range",
+      "id": "subtitle_size",
+      "min": 14,
+      "max": 24,
+      "step": 1,
+      "unit": "px",
+      "label": "Subtitle size",
+      "default": 18
+    },
+    {
+      "type": "range",
+      "id": "name_size",
+      "min": 16,
+      "max": 32,
+      "step": 1,
+      "unit": "px",
+      "label": "Expert name size",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "credentials_size",
+      "min": 12,
+      "max": 18,
+      "step": 1,
+      "unit": "px",
+      "label": "Credentials size",
+      "default": 14
+    },
+    {
+      "type": "range",
+      "id": "description_size",
+      "min": 14,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "Description size",
+      "default": 16
+    },
+    {
+      "type": "header",
+      "content": "Layout"
+    },
+    {
+      "type": "range",
+      "id": "section_padding_top",
+      "min": 20,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Top padding",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "section_padding_bottom",
+      "min": 20,
+      "max": 120,
+      "step": 4,
+      "unit": "px",
+      "label": "Bottom padding",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "image_size",
+      "min": 100,
+      "max": 200,
+      "step": 10,
+      "unit": "px",
+      "label": "Expert photo size",
+      "default": 140
+    },
+    {
+      "type": "range",
+      "id": "card_border_radius",
+      "min": 0,
+      "max": 30,
+      "step": 2,
+      "unit": "px",
+      "label": "Card border radius",
+      "default": 12
+    }
+  ],
+  "presets": [
+    {
+      "name": "Meet the experts"
+    }
+  ],
+  "tag": null
+}
+{% endschema %}
