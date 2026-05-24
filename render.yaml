@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: supplier-ops-agent
+    runtime: node
+    plan: free
+    rootDir: supplier-ops-agent
+    buildCommand: npm install
+    startCommand: npm run start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.0
+      - key: SHOPIFY_API_VERSION
+        value: 2026-01
+      - key: WEEKLY_SYNC_INTERVAL_MS
+        value: "604800000"
