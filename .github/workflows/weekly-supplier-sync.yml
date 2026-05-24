@@ -1,0 +1,71 @@
+name: Weekly supplier sync
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run without writing changes to Shopify"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+  schedule:
+    - cron: "15 10 * * 1"
+
+jobs:
+  supplier-sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24.14.0"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npm test
+
+      - name: Run supplier sync
+        env:
+          SHOPIFY_SHOP: ${{ secrets.SHOPIFY_SHOP }}
+          SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+          SHOPIFY_API_VERSION: "2026-01"
+          EMAIL_WEBHOOK_URL: ${{ secrets.EMAIL_WEBHOOK_URL }}
+          SUPPLIER_FEED_URL_EMERSON_ECOLOGICS: ${{ secrets.SUPPLIER_FEED_URL_EMERSON_ECOLOGICS }}
+          SUPPLIER_FEED_URL_BIORESOURCE_PEKANA: ${{ secrets.SUPPLIER_FEED_URL_BIORESOURCE_PEKANA }}
+          SUPPLIER_FEED_URL_SYSTEMIC_FORMULAS: ${{ secrets.SUPPLIER_FEED_URL_SYSTEMIC_FORMULAS }}
+          SUPPLIER_FEED_URL_RESEARCH_NUTRITIONALS: ${{ secrets.SUPPLIER_FEED_URL_RESEARCH_NUTRITIONALS }}
+          SUPPLIER_FEED_URL_WORLD_HEALTH_MALL: ${{ secrets.SUPPLIER_FEED_URL_WORLD_HEALTH_MALL }}
+          SUPPLIER_FEED_URL_DESBIO: ${{ secrets.SUPPLIER_FEED_URL_DESBIO }}
+          SUPPLIER_WEBSITE_CONFIG_EMERSON_ECOLOGICS: ${{ secrets.SUPPLIER_WEBSITE_CONFIG_EMERSON_ECOLOGICS }}
+          SUPPLIER_WEBSITE_CONFIG_BIORESOURCE_PEKANA: ${{ secrets.SUPPLIER_WEBSITE_CONFIG_BIORESOURCE_PEKANA }}
+          SUPPLIER_WEBSITE_CONFIG_SYSTEMIC_FORMULAS: ${{ secrets.SUPPLIER_WEBSITE_CONFIG_SYSTEMIC_FORMULAS }}
+          SUPPLIER_WEBSITE_CONFIG_RESEARCH_NUTRITIONALS: ${{ secrets.SUPPLIER_WEBSITE_CONFIG_RESEARCH_NUTRITIONALS }}
+          SUPPLIER_WEBSITE_CONFIG_WORLD_HEALTH_MALL: ${{ secrets.SUPPLIER_WEBSITE_CONFIG_WORLD_HEALTH_MALL }}
+          SUPPLIER_WEBSITE_CONFIG_DESBIO: ${{ secrets.SUPPLIER_WEBSITE_CONFIG_DESBIO }}
+          SUPPLIER_USERNAME_EMERSON_ECOLOGICS: ${{ secrets.SUPPLIER_USERNAME_EMERSON_ECOLOGICS }}
+          SUPPLIER_PASSWORD_EMERSON_ECOLOGICS: ${{ secrets.SUPPLIER_PASSWORD_EMERSON_ECOLOGICS }}
+          SUPPLIER_USERNAME_BIORESOURCE_PEKANA: ${{ secrets.SUPPLIER_USERNAME_BIORESOURCE_PEKANA }}
+          SUPPLIER_PASSWORD_BIORESOURCE_PEKANA: ${{ secrets.SUPPLIER_PASSWORD_BIORESOURCE_PEKANA }}
+          SUPPLIER_USERNAME_SYSTEMIC_FORMULAS: ${{ secrets.SUPPLIER_USERNAME_SYSTEMIC_FORMULAS }}
+          SUPPLIER_PASSWORD_SYSTEMIC_FORMULAS: ${{ secrets.SUPPLIER_PASSWORD_SYSTEMIC_FORMULAS }}
+          SUPPLIER_USERNAME_RESEARCH_NUTRITIONALS: ${{ secrets.SUPPLIER_USERNAME_RESEARCH_NUTRITIONALS }}
+          SUPPLIER_PASSWORD_RESEARCH_NUTRITIONALS: ${{ secrets.SUPPLIER_PASSWORD_RESEARCH_NUTRITIONALS }}
+          SUPPLIER_USERNAME_WORLD_HEALTH_MALL: ${{ secrets.SUPPLIER_USERNAME_WORLD_HEALTH_MALL }}
+          SUPPLIER_PASSWORD_WORLD_HEALTH_MALL: ${{ secrets.SUPPLIER_PASSWORD_WORLD_HEALTH_MALL }}
+          SUPPLIER_USERNAME_DESBIO: ${{ secrets.SUPPLIER_USERNAME_DESBIO }}
+          SUPPLIER_PASSWORD_DESBIO: ${{ secrets.SUPPLIER_PASSWORD_DESBIO }}
+        run: |
+          if [ "${{ github.event.inputs.dry_run || 'true' }}" = "false" ]; then
+            npm run worker
+          else
+            npm run worker -- --dry-run
+          fi
