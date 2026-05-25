@@ -12,7 +12,6 @@
     "check": "node --test --experimental-strip-types \"tests/**/*.test.ts\""
   },
   "dependencies": {
-    "@shopify/app-bridge": "^4.1.6",
     "pg": "^8.13.1",
     "playwright": "^1.50.0"
   },

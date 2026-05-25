@@ -19,6 +19,7 @@ test("admin UI renders the required Shopify app sections and run-now control", (
     changes: [],
     issues: [],
     alerts: [],
+    shopifyApiKey: "test-api-key",
   });
 
   for (const label of ["Dashboard", "Suppliers", "Runs", "Change Ledger", "Match Issues", "Settings"]) {
@@ -27,4 +28,5 @@ test("admin UI renders the required Shopify app sections and run-now control", (
 
   assert.match(html, /Run weekly sync now/);
   assert.match(html, /app-bridge/);
+  assert.match(html, /<meta name="shopify-api-key" content="test-api-key">/);
 });
