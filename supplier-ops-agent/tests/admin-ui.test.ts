@@ -143,3 +143,100 @@ test("admin UI shows supplier and Shopify context for blocked issues", () => {
   assert.match(html, /InflaQuell 180 caps by Researched Nutritionals/);
   assert.match(html, /matchConfidence/);
 });
+
+test("dashboard renders a command center with sub-agent selection and prioritized actions", () => {
+  const html = renderAdminPage({
+    activePath: "/",
+    activeAgent: "product_ops",
+    suppliers: [
+      {
+        id: "emerson-ecologics",
+        name: "Emerson Ecologics",
+        mode: "website",
+        brands: ["Emerson"],
+        notes: "Main supplier.",
+      },
+    ],
+    runs: [
+      {
+        id: "run_2",
+        dryRun: true,
+        status: "completed_with_issues",
+        startedAt: "2026-05-25T17:20:00.000Z",
+        completedAt: "2026-05-25T17:22:00.000Z",
+        supplierCount: 4,
+        changeCount: 221,
+        issueCount: 84,
+      },
+    ],
+    changes: [],
+    issues: [
+      {
+        id: "issue_1",
+        runId: "run_2",
+        kind: "match_uncertain",
+        reason: "Supplier product resembles an existing Shopify product but not confidently enough to automate",
+        createdAt: "2026-05-25T17:21:00.000Z",
+      },
+      {
+        id: "issue_2",
+        runId: "run_2",
+        kind: "price_guardrail",
+        reason: "Price change exceeds 25% guardrail",
+        createdAt: "2026-05-25T17:21:00.000Z",
+      },
+    ],
+    productOpsOutputs: [
+      {
+        id: "product_ops_2",
+        runId: "run_2",
+        createdAt: "2026-05-25T17:22:00.000Z",
+        agent: "product_ops",
+        runType: "full_product_ops_check",
+        mode: "dry_run",
+        startedAt: "2026-05-25T17:20:00.000Z",
+        finishedAt: "2026-05-25T17:22:00.000Z",
+        summary: {
+          productsChecked: 241,
+          variantsChecked: 4538,
+          suppliersChecked: 4,
+          promoteReady: 0,
+          lowStock: 0,
+          outOfStock: 47,
+          needsDataCleanup: 0,
+          badPage: 0,
+          doNotPromote: 22,
+          reviewRequired: 172,
+          errors: 0,
+        },
+        productsToPromote: [],
+        productsToAvoid: [],
+        promotionTasks: [],
+        cleanupTasks: [],
+        reviewTasks: [
+          {
+            actionType: "REVIEW",
+            title: "Supplier match uncertain or guardrail blocked for Magnesium.",
+            detail: "Supplier match is not confident enough for promotion.",
+            promotionStatus: "REVIEW_REQUIRED",
+          },
+        ],
+        errors: [],
+        plannedChanges: [],
+        blockedIssues: [],
+      },
+    ],
+    alerts: [],
+    shopifyApiKey: "test-api-key",
+    applyChangesEnabled: false,
+  });
+
+  for (const label of ["Store Health", "BI Analyst", "Inventory Ops", "Product Ops", "Campaign Planner", "Blog Publisher"]) {
+    assert.match(html, new RegExp(label));
+  }
+
+  assert.match(html, /Action Queue/);
+  assert.match(html, /Review uncertain matches/);
+  assert.match(html, /68|172|84/);
+  assert.match(html, /Product Ops is selected/);
+});

@@ -4,6 +4,7 @@ import { URL } from "node:url";
 import type { AlertService } from "../alerts/alert-service.ts";
 import type { SupplierOpsRepository } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
+import type { ActiveAgent } from "./admin-ui.ts";
 import { renderAdminPage } from "./admin-ui.ts";
 
 export type ServerContext = {
@@ -80,6 +81,7 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
 
   const html = renderAdminPage({
     activePath: url.pathname,
+    activeAgent: parseActiveAgent(url.searchParams.get("agent")),
     suppliers: context.suppliers,
     runs,
     changes,
@@ -108,4 +110,11 @@ function wantsJson(request: IncomingMessage): boolean {
   const accept = String(request.headers.accept ?? "");
   const requestedWith = String(request.headers["x-requested-with"] ?? "");
   return accept.includes("application/json") || requestedWith === "supplier-ops-fetch";
+}
+
+function parseActiveAgent(value: string | null): ActiveAgent {
+  if (value === "bi" || value === "inventory" || value === "product_ops" || value === "campaign" || value === "blog") {
+    return value;
+  }
+  return "product_ops";
 }
