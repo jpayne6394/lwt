@@ -10,12 +10,14 @@ export type RuntimeConfig = {
   weeklySyncIntervalMs: number;
 };
 
+export const DEFAULT_SHOPIFY_API_KEY = "11a896486e45ed90e06e632a3e0bacec";
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig {
   return {
     port: Number(env.PORT ?? 8080),
     host: env.HOST ?? "0.0.0.0",
     databaseUrl: env.DATABASE_URL,
-    shopifyApiKey: env.SHOPIFY_API_KEY ?? env.SHOPIFY_CLIENT_ID,
+    shopifyApiKey: env.SHOPIFY_API_KEY ?? env.SHOPIFY_CLIENT_ID ?? DEFAULT_SHOPIFY_API_KEY,
     shopifyShop: env.SHOPIFY_SHOP,
     shopifyAccessToken: env.SHOPIFY_ACCESS_TOKEN,
     shopifyApiVersion: env.SHOPIFY_API_VERSION ?? "2026-01",
