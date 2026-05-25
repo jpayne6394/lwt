@@ -130,7 +130,6 @@ async function loadShopifyVariants(
       body: issue.reason,
       email: true,
     });
-    await input.repository.recordBlockedIssues(runId, [issue]);
     return input.repository.listShopifyVariants();
   }
 }
