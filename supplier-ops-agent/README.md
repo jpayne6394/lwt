@@ -4,7 +4,7 @@ Embedded Shopify admin app and background worker for supplier-driven inventory a
 
 ## What v1 does
 
-- Checks Emerson Ecologics, BioResource/Pekana, Systemic Formulas, Research Nutritionals, World Health Mall, and DesBio through supplier adapters.
+- Checks Emerson Ecologics, BioResource/Pekana, Systemic Formulas, Research Nutritionals, World Health Mall, DesBio, and Physicians' Standard through supplier adapters.
 - Normalizes supplier stock, cost, MSRP/list price, sale price, SKU, UPC, product URL, and images.
 - Matches products by manual mapping, exact SKU, exact UPC, then high-confidence vendor/title matching.
 - Updates existing Shopify variants automatically, across active, draft, and archived products.
@@ -39,6 +39,14 @@ Use website automation only when no feed/API exists:
 SUPPLIER_WEBSITE_CONFIG_DESBIO={"loginUrl":"https://portal.example.com/login","productsUrl":"https://portal.example.com/products","selectors":{"username":"#email","password":"#password","submit":"button[type=submit]","productRows":"[data-product-row]"}}
 SUPPLIER_USERNAME_DESBIO=portal-user
 SUPPLIER_PASSWORD_DESBIO=portal-password
+```
+
+Physicians' Standard uses the `PHYSICIANS_STANDARD` environment suffix:
+
+```bash
+SUPPLIER_FEED_URL_PHYSICIANS_STANDARD=https://example.com/physicians-standard-products.json
+SUPPLIER_USERNAME_PHYSICIANS_STANDARD=portal-user
+SUPPLIER_PASSWORD_PHYSICIANS_STANDARD=portal-password
 ```
 
 Website product rows should expose `data-*` fields such as `data-title`, `data-sku`, `data-upc`, `data-available`, `data-quantity`, `data-cost`, `data-msrp`, and `data-sale-price`.

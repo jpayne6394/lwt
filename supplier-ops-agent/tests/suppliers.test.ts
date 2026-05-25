@@ -53,6 +53,15 @@ test("supplier registry includes the v1 supplier coverage", () => {
       "research-nutritionals",
       "world-health-mall",
       "desbio",
+      "physicians-standard",
     ],
   );
+});
+
+test("supplier registry exposes Physicians' Standard environment suffix", () => {
+  const supplier = createSupplierRegistry().find((item) => item.id === "physicians-standard");
+
+  assert.equal(supplier?.name, "Physicians' Standard");
+  assert.deepEqual(supplier?.brands, ["Physicians' Standard"]);
+  assert.equal(supplier?.credentialEnvVar, "SUPPLIER_CREDENTIAL_PHYSICIANS_STANDARD");
 });
