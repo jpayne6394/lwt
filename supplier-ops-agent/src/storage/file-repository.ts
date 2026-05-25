@@ -46,7 +46,12 @@ export class FileRepository implements SupplierOpsRepository {
   }
 
   static async connect(filePath: string): Promise<FileRepository> {
-    return new FileRepository(filePath, await readState(filePath));
+    const state = recoverInterruptedRuns(await readState(filePath));
+    const repository = new FileRepository(filePath, state);
+    if (state.runs.some((run) => run.status === "failed" && run.completedAt)) {
+      await repository.#persist();
+    }
+    return repository;
   }
 
   async createSyncRun(input: CreateSyncRunInput): Promise<SyncRun> {
@@ -147,6 +152,23 @@ export class FileRepository implements SupplierOpsRepository {
     });
     return this.#persistQueue;
   }
+}
+
+function recoverInterruptedRuns(state: FileRepositoryState): FileRepositoryState {
+  const completedAt = new Date().toISOString();
+  return {
+    ...state,
+    runs: state.runs.map((run) =>
+      run.status === "running"
+        ? {
+            ...run,
+            status: "failed",
+            completedAt,
+            issueCount: Math.max(run.issueCount, 1),
+          }
+        : run,
+    ),
+  };
 }
 
 async function readState(filePath: string): Promise<FileRepositoryState> {

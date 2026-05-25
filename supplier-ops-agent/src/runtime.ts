@@ -22,15 +22,32 @@ export async function createRuntime() {
   const adapters = createAdaptersFromEnv(suppliers);
   const shopify = createShopifyClients(config);
 
-  const runNow = async (dryRun: boolean) => {
-    await runSupplierSync({
+  let activeRun: Promise<void> | null = null;
+  const startRun = (dryRun: boolean) => {
+    if (activeRun) {
+      return false;
+    }
+
+    activeRun = runSupplierSync({
       adapters,
       repository,
       alerts,
       shopifyCatalogClient: shopify.catalogClient,
       shopifyClient: shopify.syncClient,
       dryRun,
-    });
+    })
+      .catch((error) => {
+        console.error("Supplier sync failed", error);
+      })
+      .finally(() => {
+        activeRun = null;
+      });
+    return true;
+  };
+
+  const runNow = async (dryRun: boolean) => {
+    startRun(dryRun);
+    await activeRun;
   };
 
   const serverContext: ServerContext = {
@@ -38,6 +55,7 @@ export async function createRuntime() {
     suppliers,
     alerts,
     runNow,
+    startRun,
     shopifyApiKey: config.shopifyApiKey,
   };
 

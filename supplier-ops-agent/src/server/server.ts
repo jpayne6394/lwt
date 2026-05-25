@@ -11,6 +11,7 @@ export type ServerContext = {
   suppliers: SupplierConfig[];
   alerts: AlertService;
   runNow: (dryRun: boolean) => Promise<void>;
+  startRun: (dryRun: boolean) => boolean;
   shopifyApiKey?: string;
 };
 
@@ -38,24 +39,14 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
 
   if (request.method === "POST" && url.pathname === "/api/runs") {
     const dryRun = url.searchParams.get("dryRun") === "true";
-    try {
-      await context.runNow(dryRun);
-    } catch (error) {
-      if (wantsJson(request)) {
-        sendJson(response, 500, {
-          ok: false,
-          error: error instanceof Error ? error.message : String(error),
-        });
-        return;
-      }
-
-      throw error;
-    }
+    const started = context.startRun(dryRun);
 
     if (wantsJson(request)) {
-      sendJson(response, 200, {
+      sendJson(response, started ? 202 : 200, {
         ok: true,
         dryRun,
+        started,
+        alreadyRunning: !started,
         redirect: "/runs",
       });
       return;

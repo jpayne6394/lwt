@@ -72,3 +72,22 @@ test("file repository persists runs, variants, changes, and issues across instan
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("file repository marks interrupted running runs as failed on restart", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "supplier-ops-agent-"));
+  const filePath = join(directory, "store.json");
+
+  try {
+    const repository = await FileRepository.connect(filePath);
+    await repository.createSyncRun({ dryRun: true, supplierCount: 1 });
+
+    const reloaded = await FileRepository.connect(filePath);
+    const [run] = await reloaded.recentRuns();
+
+    assert.equal(run.status, "failed");
+    assert.equal(run.issueCount, 1);
+    assert.ok(run.completedAt);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});

@@ -384,7 +384,7 @@ function clientScript(): string {
           if (!response.ok || !body.ok) {
             throw new Error(body.error || "Sync failed");
           }
-          syncStatus.textContent = "Sync finished. Opening Runs...";
+          syncStatus.textContent = body.started ? "Sync started. Opening Runs..." : "Sync already running. Opening Runs...";
           window.location.assign(body.redirect || "/runs");
         } catch (error) {
           syncStatus.classList.add("error");
