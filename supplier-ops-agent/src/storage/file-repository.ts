@@ -32,8 +32,8 @@ const EMPTY_STATE: FileRepositoryState = {
 
 const MAX_RUNS = 50;
 const MAX_SNAPSHOTS = 20;
-const MAX_CHANGES = 1_000;
-const MAX_ISSUES = 1_000;
+const MAX_CHANGES = 300;
+const MAX_ISSUES = 300;
 
 export class FileRepository implements SupplierOpsRepository {
   readonly #filePath: string;
@@ -91,7 +91,6 @@ export class FileRepository implements SupplierOpsRepository {
 
   async saveShopifyVariants(variants: ShopifyVariant[]): Promise<void> {
     this.#state.shopifyVariants = [...variants];
-    await this.#persist();
   }
 
   async listMappings(): Promise<ProductMapping[]> {
@@ -145,7 +144,15 @@ export class FileRepository implements SupplierOpsRepository {
   }
 
   async #persist(): Promise<void> {
-    const state = JSON.stringify(this.#state, null, 2);
+    const state = JSON.stringify(
+      {
+        ...this.#state,
+        shopifyVariants: [],
+        snapshots: [],
+      },
+      null,
+      2,
+    );
     this.#persistQueue = this.#persistQueue.then(async () => {
       await mkdir(dirname(this.#filePath), { recursive: true });
       await writeFile(this.#filePath, state);

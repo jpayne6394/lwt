@@ -23,7 +23,7 @@ const variant: ShopifyVariant = {
   status: "active",
 };
 
-test("file repository persists runs, variants, changes, and issues across instances", async () => {
+test("file repository persists runs, changes, and issues across instances", async () => {
   const directory = await mkdtemp(join(tmpdir(), "supplier-ops-agent-"));
   const filePath = join(directory, "store.json");
 
@@ -65,7 +65,7 @@ test("file repository persists runs, variants, changes, and issues across instan
     const reloaded = await FileRepository.connect(filePath);
 
     assert.equal((await reloaded.recentRuns())[0].status, "completed_with_issues");
-    assert.equal((await reloaded.listShopifyVariants())[0].variantId, variant.variantId);
+    assert.deepEqual(await reloaded.listShopifyVariants(), []);
     assert.equal((await reloaded.recentChanges())[0].type, "inventory");
     assert.equal((await reloaded.recentIssues())[0].kind, "price_guardrail");
   } finally {
