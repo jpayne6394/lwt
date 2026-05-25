@@ -46,6 +46,7 @@ export type SupplierOpsRepository = {
   createSyncRun(input: CreateSyncRunInput): Promise<SyncRun>;
   completeSyncRun(runId: string, input: CompleteSyncRunInput): Promise<SyncRun>;
   listShopifyVariants(): Promise<ShopifyVariant[]>;
+  saveShopifyVariants?(variants: ShopifyVariant[]): Promise<void>;
   listMappings(): Promise<ProductMapping[]>;
   saveSupplierSnapshot(snapshot: SupplierSnapshot): Promise<void>;
   recordAppliedChanges(runId: string, changes: PlannedChange[]): Promise<void>;

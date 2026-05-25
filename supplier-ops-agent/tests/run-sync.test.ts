@@ -60,6 +60,69 @@ test("runSupplierSync records snapshots, changes, issues, and applies writes out
   assert.equal(applied.length, 3);
 });
 
+test("runSupplierSync refreshes Shopify catalog before planning changes", async () => {
+  const product: SupplierProduct = {
+    supplierId: "desbio",
+    supplierName: "DesBio",
+    sku: "MOLD",
+    title: "MOLD:PLUS by DesBio",
+    stockStatus: "in_stock",
+    cost: 18,
+    msrp: 40,
+    capturedAt: "2026-05-24T12:00:00.000Z",
+  };
+  const repository = new MemoryRepository();
+  const alerts = new AlertService();
+
+  const result = await runSupplierSync({
+    adapters: [successfulAdapter(product)],
+    repository,
+    alerts,
+    shopifyCatalogClient: {
+      listVariants: async () => [shopifyVariant],
+    },
+    shopifyClient: {
+      applyChanges: async () => {},
+    },
+    dryRun: true,
+  });
+
+  assert.deepEqual(result.plan.changes.map((change) => change.type), ["inventory", "cost", "price"]);
+  assert.equal((await repository.listShopifyVariants())[0].variantId, shopifyVariant.variantId);
+});
+
+test("runSupplierSync blocks planning when configured Shopify catalog refresh returns no variants", async () => {
+  const product: SupplierProduct = {
+    supplierId: "desbio",
+    supplierName: "DesBio",
+    sku: "MOLD",
+    title: "MOLD:PLUS by DesBio",
+    stockStatus: "in_stock",
+    capturedAt: "2026-05-24T12:00:00.000Z",
+  };
+  const repository = new MemoryRepository();
+  const alerts = new AlertService();
+
+  const result = await runSupplierSync({
+    adapters: [successfulAdapter(product)],
+    repository,
+    alerts,
+    shopifyCatalogClient: {
+      listVariants: async () => [],
+    },
+    shopifyClient: {
+      applyChanges: async () => {
+        throw new Error("should not write");
+      },
+    },
+    dryRun: false,
+  });
+
+  assert.equal(result.plan.changes.length, 0);
+  assert.equal(result.run.status, "completed_with_issues");
+  assert.equal(repository.listBlockedIssues()[0].kind, "shopify_error");
+});
+
 test("runSupplierSync alerts and records failed supplier adapters", async () => {
   const sentEmails: unknown[] = [];
   const repository = new MemoryRepository({

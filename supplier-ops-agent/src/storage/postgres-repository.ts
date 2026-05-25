@@ -52,6 +52,34 @@ export class PostgresRepository implements SupplierOpsRepository {
     return result.rows.map((row: any) => row.payload as ShopifyVariant);
   }
 
+  async saveShopifyVariants(variants: ShopifyVariant[]): Promise<void> {
+    for (const variant of variants) {
+      await this.#pool.query(
+        `insert into shopify_variants (variant_id, product_id, sku, barcode, vendor, title, status, payload, updated_at)
+         values ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, now())
+         on conflict (variant_id) do update set
+           product_id = excluded.product_id,
+           sku = excluded.sku,
+           barcode = excluded.barcode,
+           vendor = excluded.vendor,
+           title = excluded.title,
+           status = excluded.status,
+           payload = excluded.payload,
+           updated_at = now()`,
+        [
+          variant.variantId,
+          variant.productId,
+          variant.sku || null,
+          variant.barcode || null,
+          variant.vendor,
+          variant.title,
+          variant.status,
+          JSON.stringify(variant),
+        ],
+      );
+    }
+  }
+
   async listMappings(): Promise<ProductMapping[]> {
     const result = await this.#pool.query(
       `select supplier_id, supplier_sku, supplier_upc, supplier_title, shopify_variant_id from product_mappings`,

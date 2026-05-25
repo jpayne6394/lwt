@@ -3,6 +3,7 @@ import { createWebhookEmailSender } from "./alerts/email.ts";
 import { loadConfig } from "./server/config.ts";
 import type { ServerContext } from "./server/server.ts";
 import { ShopifyAdminGraphqlClient } from "./shopify/admin-graphql-client.ts";
+import { ShopifyCatalogClient } from "./shopify/catalog-client.ts";
 import { ShopifySyncClient } from "./shopify/shopify-sync-client.ts";
 import { MemoryRepository } from "./storage/memory-repository.ts";
 import { PostgresRepository } from "./storage/postgres-repository.ts";
@@ -19,14 +20,15 @@ export async function createRuntime() {
   });
   const repository = await createRepository(config.databaseUrl);
   const adapters = createAdaptersFromEnv(suppliers);
-  const shopifyClient = createShopifyClient(config);
+  const shopify = createShopifyClients(config);
 
   const runNow = async (dryRun: boolean) => {
     await runSupplierSync({
       adapters,
       repository,
       alerts,
-      shopifyClient,
+      shopifyCatalogClient: shopify.catalogClient,
+      shopifyClient: shopify.syncClient,
       dryRun,
     });
   };
@@ -54,13 +56,16 @@ async function createRepository(databaseUrl: string | undefined): Promise<Suppli
   return PostgresRepository.connect(databaseUrl);
 }
 
-function createShopifyClient(config: ReturnType<typeof loadConfig>) {
+function createShopifyClients(config: ReturnType<typeof loadConfig>) {
   if (!config.shopifyShop || !config.shopifyAccessToken) {
-    return new ShopifySyncClient({
-      graphql: async () => {
-        throw new Error("Shopify credentials are not configured");
-      },
-    });
+    return {
+      catalogClient: undefined,
+      syncClient: new ShopifySyncClient({
+        graphql: async () => {
+          throw new Error("Shopify credentials are not configured");
+        },
+      }),
+    };
   }
 
   const admin = new ShopifyAdminGraphqlClient({
@@ -68,8 +73,12 @@ function createShopifyClient(config: ReturnType<typeof loadConfig>) {
     accessToken: config.shopifyAccessToken,
     apiVersion: config.shopifyApiVersion,
   });
+  const graphql = (query: string, variables: Record<string, unknown>) => admin.graphql(query, variables);
 
-  return new ShopifySyncClient({
-    graphql: (query, variables) => admin.graphql(query, variables),
-  });
+  return {
+    catalogClient: new ShopifyCatalogClient(graphql),
+    syncClient: new ShopifySyncClient({
+      graphql,
+    }),
+  };
 }

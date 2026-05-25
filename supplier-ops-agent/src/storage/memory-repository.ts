@@ -59,6 +59,10 @@ export class MemoryRepository implements SupplierOpsRepository {
     return [...this.#shopifyVariants];
   }
 
+  async saveShopifyVariants(variants: ShopifyVariant[]): Promise<void> {
+    this.#shopifyVariants.splice(0, this.#shopifyVariants.length, ...variants);
+  }
+
   async listMappings(): Promise<ProductMapping[]> {
     return [...this.#mappings];
   }

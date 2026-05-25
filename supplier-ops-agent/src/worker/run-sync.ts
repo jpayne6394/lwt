@@ -1,6 +1,6 @@
 import { AlertService } from "../alerts/alert-service.ts";
 import { planSupplierSync } from "../domain/sync-planner.ts";
-import type { BlockedIssue, PlannedChange, SupplierProduct, SyncPlan } from "../domain/types.ts";
+import type { BlockedIssue, PlannedChange, ShopifyVariant, SupplierProduct, SyncPlan } from "../domain/types.ts";
 import type { ShopifySyncClient } from "../shopify/shopify-sync-client.ts";
 import type { SupplierOpsRepository, SyncRun } from "../storage/repository.ts";
 import type { SupplierAdapter } from "../suppliers/types.ts";
@@ -8,10 +8,15 @@ import { SupplierAdapterError } from "../suppliers/types.ts";
 
 export type SyncWritableShopifyClient = Pick<ShopifySyncClient, "applyChanges">;
 
+export type SyncReadableShopifyCatalogClient = {
+  listVariants(): Promise<ShopifyVariant[]>;
+};
+
 export type RunSupplierSyncInput = {
   adapters: SupplierAdapter[];
   repository: SupplierOpsRepository;
   alerts: AlertService;
+  shopifyCatalogClient?: SyncReadableShopifyCatalogClient;
   shopifyClient: SyncWritableShopifyClient;
   dryRun: boolean;
 };
@@ -51,7 +56,24 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
     }
   }
 
-  const shopifyVariants = await input.repository.listShopifyVariants();
+  const shopifyVariants = await loadShopifyVariants(input, run.id, issues);
+  if (input.shopifyCatalogClient && shopifyVariants.length === 0) {
+    const allIssues = [...issues, ...shopifyCatalogUnavailableIssue()];
+    await input.repository.recordBlockedIssues(run.id, allIssues);
+    const completed = await input.repository.completeSyncRun(run.id, {
+      status: "completed_with_issues",
+      changeCount: 0,
+      issueCount: allIssues.length,
+    });
+    return {
+      run: completed,
+      plan: {
+        changes: [],
+        issues: allIssues,
+      },
+    };
+  }
+
   const mappings = await input.repository.listMappings();
   const plan = planSupplierSync({
     supplierProducts,
@@ -80,6 +102,46 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
       issues: allIssues,
     },
   };
+}
+
+async function loadShopifyVariants(
+  input: RunSupplierSyncInput,
+  runId: string,
+  issues: BlockedIssue[],
+): Promise<ShopifyVariant[]> {
+  if (!input.shopifyCatalogClient) {
+    return input.repository.listShopifyVariants();
+  }
+
+  try {
+    const variants = await input.shopifyCatalogClient.listVariants();
+    await input.repository.saveShopifyVariants?.(variants);
+    return variants;
+  } catch (error) {
+    const issue: BlockedIssue = {
+      kind: "shopify_error",
+      reason: `Shopify catalog refresh failed: ${error instanceof Error ? error.message : String(error)}`,
+    };
+    issues.push(issue);
+    await input.alerts.raise({
+      severity: "error",
+      kind: "shopify_catalog_refresh_failed",
+      title: "Shopify catalog refresh failed",
+      body: issue.reason,
+      email: true,
+    });
+    await input.repository.recordBlockedIssues(runId, [issue]);
+    return input.repository.listShopifyVariants();
+  }
+}
+
+function shopifyCatalogUnavailableIssue(): BlockedIssue[] {
+  return [
+    {
+      kind: "shopify_error",
+      reason: "Shopify catalog refresh returned no variants, so supplier planning was blocked to prevent draft-only writes.",
+    },
+  ];
 }
 
 async function applyShopifyChanges(
