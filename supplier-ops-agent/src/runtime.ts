@@ -5,7 +5,7 @@ import type { ServerContext } from "./server/server.ts";
 import { ShopifyAdminGraphqlClient } from "./shopify/admin-graphql-client.ts";
 import { ShopifyCatalogClient } from "./shopify/catalog-client.ts";
 import { ShopifySyncClient } from "./shopify/shopify-sync-client.ts";
-import { MemoryRepository } from "./storage/memory-repository.ts";
+import { FileRepository } from "./storage/file-repository.ts";
 import { PostgresRepository } from "./storage/postgres-repository.ts";
 import type { SupplierOpsRepository } from "./storage/repository.ts";
 import { createAdaptersFromEnv } from "./suppliers/factory.ts";
@@ -18,7 +18,7 @@ export async function createRuntime() {
   const alerts = new AlertService({
     sendEmail: createWebhookEmailSender(config.emailWebhookUrl),
   });
-  const repository = await createRepository(config.databaseUrl);
+  const repository = await createRepository(config.databaseUrl, config.storagePath);
   const adapters = createAdaptersFromEnv(suppliers);
   const shopify = createShopifyClients(config);
 
@@ -48,9 +48,9 @@ export async function createRuntime() {
   };
 }
 
-async function createRepository(databaseUrl: string | undefined): Promise<SupplierOpsRepository> {
+async function createRepository(databaseUrl: string | undefined, storagePath: string): Promise<SupplierOpsRepository> {
   if (!databaseUrl) {
-    return new MemoryRepository();
+    return FileRepository.connect(storagePath);
   }
 
   return PostgresRepository.connect(databaseUrl);

@@ -16,3 +16,11 @@ test("loadConfig allows Render environment variables to override the Shopify API
 
   assert.equal(config.shopifyApiKey, "env-api-key");
 });
+
+test("loadConfig uses a free file-backed store when Postgres is not configured", () => {
+  const config = loadConfig({
+    SUPPLIER_OPS_DATA_PATH: "/tmp/custom-supplier-store.json",
+  });
+
+  assert.equal(config.storagePath, "/tmp/custom-supplier-store.json");
+});
