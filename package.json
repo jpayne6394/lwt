@@ -1,0 +1,15 @@
+{
+  "name": "lwt-render-entrypoint",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "supplier-ops-agent"
+  ],
+  "scripts": {
+    "start": "npm --prefix supplier-ops-agent run start",
+    "test": "npm --prefix supplier-ops-agent test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
