@@ -44,9 +44,14 @@ export function renderAdminPage(model: AdminPageModel): string {
             <h1>${pageTitle(model.activePath)}</h1>
             <p>${pageSubtitle(model.activePath)}</p>
           </div>
-          <form method="post" action="/api/runs">
-            <button type="submit">Run weekly sync now</button>
-          </form>
+          <div class="run-actions">
+            <form method="post" action="/api/runs?dryRun=true">
+              <button type="submit">Dry run sync</button>
+            </form>
+            <form method="post" action="/api/runs">
+              <button class="secondary" type="submit">Run write sync</button>
+            </form>
+          </div>
         </header>
         ${renderContent(model)}
       </main>
@@ -269,6 +274,8 @@ function styles(): string {
     p { margin: 0; color: var(--muted); }
     button { border: 0; background: var(--accent); color: white; min-height: 40px; padding: 0 16px; border-radius: 6px; font-size: 14px; font-weight: 650; cursor: pointer; }
     button:hover { background: var(--accent-strong); }
+    button.secondary { background: #36485c; }
+    .run-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
     .metric, .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
     .metric { padding: 16px; display: grid; gap: 10px; }
