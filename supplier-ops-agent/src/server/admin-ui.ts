@@ -92,8 +92,8 @@ function renderDashboard(model: AdminPageModel): string {
     <section class="metrics">
       ${metric("Suppliers", model.suppliers.length)}
       ${metric("Recent Runs", model.runs.length)}
-      ${metric("Planned Changes", model.changes.length)}
-      ${metric("Open Issues", model.issues.length)}
+      ${metric("Latest Changes", latestRun?.changeCount ?? 0)}
+      ${metric("Latest Issues", latestRun?.issueCount ?? 0)}
     </section>
     <section class="panel">
       <h2>Latest run</h2>

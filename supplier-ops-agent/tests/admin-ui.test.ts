@@ -15,7 +15,18 @@ test("admin UI renders the required Shopify app sections and run-now control", (
         notes: "Direct supplier portal.",
       },
     ],
-    runs: [],
+    runs: [
+      {
+        id: "run_1",
+        dryRun: true,
+        status: "completed_with_issues",
+        startedAt: "2026-05-25T04:00:00.000Z",
+        completedAt: "2026-05-25T04:05:00.000Z",
+        supplierCount: 4,
+        changeCount: 206,
+        issueCount: 98,
+      },
+    ],
     changes: [],
     issues: [],
     alerts: [],
@@ -30,6 +41,10 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /Run write sync/);
   assert.match(html, /action="\/api\/runs\?dryRun=true"/);
   assert.match(html, /id="sync-status"/);
+  assert.match(html, /Latest Changes/);
+  assert.match(html, /<strong>206<\/strong>/);
+  assert.match(html, /Latest Issues/);
+  assert.match(html, /<strong>98<\/strong>/);
   assert.match(html, /data-run-form/);
   assert.match(html, /fetch\(form.action/);
   assert.match(html, /app-bridge/);
