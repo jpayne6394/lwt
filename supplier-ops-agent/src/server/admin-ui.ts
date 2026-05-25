@@ -45,17 +45,19 @@ export function renderAdminPage(model: AdminPageModel): string {
             <p>${pageSubtitle(model.activePath)}</p>
           </div>
           <div class="run-actions">
-            <form method="post" action="/api/runs?dryRun=true">
+            <form method="post" action="/api/runs?dryRun=true" data-run-form data-running-label="Running dry sync...">
               <button type="submit">Dry run sync</button>
             </form>
-            <form method="post" action="/api/runs">
+            <form method="post" action="/api/runs" data-run-form data-running-label="Running write sync...">
               <button class="secondary" type="submit">Run write sync</button>
             </form>
           </div>
+          <div id="sync-status" class="sync-status" role="status" aria-live="polite"></div>
         </header>
         ${renderContent(model)}
       </main>
     </div>
+    <script>${clientScript()}</script>
   </body>
 </html>`;
 }
@@ -276,6 +278,8 @@ function styles(): string {
     button:hover { background: var(--accent-strong); }
     button.secondary { background: #36485c; }
     .run-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .sync-status { min-height: 22px; color: var(--muted); font-size: 13px; flex-basis: 100%; }
+    .sync-status.error { color: var(--error); }
     .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
     .metric, .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
     .metric { padding: 16px; display: grid; gap: 10px; }
@@ -302,5 +306,51 @@ function styles(): string {
       .topbar { align-items: flex-start; flex-direction: column; }
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
+  `;
+}
+
+function clientScript(): string {
+  return `
+    const syncStatus = document.getElementById("sync-status");
+    const runForms = Array.from(document.querySelectorAll("[data-run-form]"));
+    runForms.forEach((form) => {
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const buttons = runForms.flatMap((candidate) => Array.from(candidate.querySelectorAll("button")));
+        buttons.forEach((button) => {
+          button.disabled = true;
+          button.dataset.originalText = button.textContent || "";
+        });
+        const submitter = event.submitter || form.querySelector("button");
+        if (submitter) {
+          submitter.textContent = form.dataset.runningLabel || "Running sync...";
+        }
+        syncStatus.classList.remove("error");
+        syncStatus.textContent = form.dataset.runningLabel || "Running sync...";
+
+        try {
+          const response = await fetch(form.action, {
+            method: "POST",
+            headers: {
+              accept: "application/json",
+              "x-requested-with": "supplier-ops-fetch",
+            },
+          });
+          const body = await response.json();
+          if (!response.ok || !body.ok) {
+            throw new Error(body.error || "Sync failed");
+          }
+          syncStatus.textContent = "Sync finished. Opening Runs...";
+          window.location.assign(body.redirect || "/runs");
+        } catch (error) {
+          syncStatus.classList.add("error");
+          syncStatus.textContent = error instanceof Error ? error.message : "Sync failed";
+          buttons.forEach((button) => {
+            button.disabled = false;
+            button.textContent = button.dataset.originalText || button.textContent || "Run sync";
+          });
+        }
+      });
+    });
   `;
 }

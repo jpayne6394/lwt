@@ -38,7 +38,29 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
 
   if (request.method === "POST" && url.pathname === "/api/runs") {
     const dryRun = url.searchParams.get("dryRun") === "true";
-    await context.runNow(dryRun);
+    try {
+      await context.runNow(dryRun);
+    } catch (error) {
+      if (wantsJson(request)) {
+        sendJson(response, 500, {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return;
+      }
+
+      throw error;
+    }
+
+    if (wantsJson(request)) {
+      sendJson(response, 200, {
+        ok: true,
+        dryRun,
+        redirect: "/runs",
+      });
+      return;
+    }
+
     response.writeHead(303, { Location: "/runs" });
     response.end();
     return;
@@ -83,4 +105,10 @@ function sendJson(response: ServerResponse, status: number, body: unknown): void
 function sendText(response: ServerResponse, status: number, body: string): void {
   response.writeHead(status, { "Content-Type": "text/plain; charset=utf-8" });
   response.end(body);
+}
+
+function wantsJson(request: IncomingMessage): boolean {
+  const accept = String(request.headers.accept ?? "");
+  const requestedWith = String(request.headers["x-requested-with"] ?? "");
+  return accept.includes("application/json") || requestedWith === "supplier-ops-fetch";
 }

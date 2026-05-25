@@ -29,6 +29,9 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /Dry run sync/);
   assert.match(html, /Run write sync/);
   assert.match(html, /action="\/api\/runs\?dryRun=true"/);
+  assert.match(html, /id="sync-status"/);
+  assert.match(html, /data-run-form/);
+  assert.match(html, /fetch\(form.action/);
   assert.match(html, /app-bridge/);
   assert.match(html, /<meta name="shopify-api-key" content="test-api-key">/);
 });
