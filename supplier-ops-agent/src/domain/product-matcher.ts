@@ -141,12 +141,18 @@ function findManualMapping(
 
 function findTitleVendorMatch(supplierProduct: SupplierProduct, shopifyVariants: ShopifyVariant[]): MatchResult {
   const supplierBrand = canonicalBrand(supplierProduct.brand ?? supplierProduct.supplierName);
+  const requiresDesbioPhaseFamily =
+    supplierProduct.supplierId === "desbio" && isDesbioPhaseSymptomRelief(supplierProduct.title);
   const scored = shopifyVariants
     .map((variant) => {
       const titleStopWords = titleStopWordsForBrands(supplierBrand, variant.vendor);
       const supplierTokens = tokenizeProductTitle(supplierProduct.title, titleStopWords);
-      const titleScore = tokenOverlapScore(supplierTokens, tokenizeProductTitle(variant.title, titleStopWords));
       const vendorMatches = brandMatches(supplierBrand, variant);
+      if (requiresDesbioPhaseFamily && !isDesbioPhaseSymptomRelief(variant.title)) {
+        return { variant, score: 0, vendorMatches };
+      }
+
+      const titleScore = tokenOverlapScore(supplierTokens, tokenizeProductTitle(variant.title, titleStopWords));
       const score = vendorMatches ? titleScore : titleScore * 0.65;
       return { variant, score, vendorMatches };
     })
@@ -269,6 +275,11 @@ function canonicalizeBrandAliases(value: string): string {
 
 function isQuantityFormatToken(token: string): boolean {
   return /^\d+$/.test(token) || /^\d+(caps?|capsules?|tabs?|tablets?|ct|count|ml|oz|floz|fl|g|grams?|vcaps?|vegcaps?|softgels?|vials?)$/.test(token);
+}
+
+function isDesbioPhaseSymptomRelief(value: string): boolean {
+  const normalized = normalizeText(value);
+  return /\bphase\b/.test(normalized) && /\bsymptom\b/.test(normalized) && /\brelief\b/.test(normalized);
 }
 
 function escapeRegExp(value: string): string {

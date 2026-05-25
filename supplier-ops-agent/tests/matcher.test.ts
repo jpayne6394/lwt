@@ -222,6 +222,43 @@ test("matcher ignores DesBio Phase Symptom Relief family words when the remedy c
   });
 });
 
+test("matcher does not confuse DesBio Phase Symptom Relief products with other DesBio families", () => {
+  const result = matchSupplierProduct(
+    {
+      supplierId: "desbio",
+      supplierName: "DesBio",
+      brand: "DesBio",
+      sku: "SPHASE2-CYTO",
+      title: "CYTO Phase 2 Symptom Relief",
+      stockStatus: "in_stock",
+      capturedAt: "2026-05-24T12:00:00.000Z",
+    },
+    [
+      {
+        productId: "gid://shopify/Product/32",
+        variantId: "gid://shopify/ProductVariant/32",
+        inventoryItemId: "gid://shopify/InventoryItem/32",
+        locationId: "gid://shopify/Location/1",
+        handle: "cytomegalovirus-remedy-1-fl-oz-by-desbio",
+        title: "CYTO:HOMO 1 fl oz by DesBio",
+        vendor: "DesBio",
+        sku: "CYTO:HOMO",
+        barcode: "DESBIO456044",
+        price: 39.99,
+        compareAtPrice: null,
+        cost: 17.95,
+        status: "active",
+      },
+    ],
+    [],
+  );
+
+  assert.deepEqual(result, {
+    status: "unmatched",
+    reason: "No matching Shopify product found",
+  });
+});
+
 test("matcher still accepts the same DesBio Phase Symptom Relief remedy by title", () => {
   const result = matchSupplierProduct(
     {
