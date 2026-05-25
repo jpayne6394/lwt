@@ -92,6 +92,8 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /fetch\(form.action/);
   assert.match(html, /app-bridge/);
   assert.match(html, /<meta name="shopify-api-key" content="test-api-key">/);
+  assert.match(html, /class="app-tabs"/);
+  assert.doesNotMatch(html, /class="sidebar"/);
 });
 
 test("admin UI shows supplier and Shopify context for blocked issues", () => {
@@ -359,7 +361,12 @@ test("admin UI renders blog, campaign, flow, and source workbench controls", () 
 
   const flowHtml = renderAdminPage({ ...baseModel, activeAgent: "flow" });
   assert.match(flowHtml, /Flow Launchpad/);
-  assert.match(flowHtml, /Open Shopify Flow/);
+  assert.match(flowHtml, /Open Shopify Flow app/);
+  assert.match(flowHtml, /Flow Email Templates/);
+  assert.match(flowHtml, /First purchase wellness welcome/);
+  assert.match(flowHtml, /Customer post-purchase education/);
+  assert.match(flowHtml, /data-flow-admin-link/);
+  assert.match(flowHtml, /target="_top"/);
 
   const sourcesHtml = renderAdminPage({ ...baseModel, activePath: "/sources" });
   assert.match(sourcesHtml, /Source Connections/);

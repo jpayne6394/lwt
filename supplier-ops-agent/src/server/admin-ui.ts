@@ -1,4 +1,5 @@
 import type { AlertMessage } from "../alerts/alert-service.ts";
+import { FLOW_EMAIL_TEMPLATES, templatePlainTextForFlow } from "../campaigns/flow-email-templates.ts";
 import type { CampaignDraftRecord } from "../campaigns/types.ts";
 import { WELLNESS_BLOG_PROFILES } from "../content/blog-template-builder.ts";
 import type { BlogDraftRecord } from "../content/types.ts";
@@ -50,13 +51,13 @@ export function renderAdminPage(model: AdminPageModel): string {
   </head>
   <body>
     <div class="app-shell">
-      <aside class="sidebar">
-        <div class="brand">Supplier Ops</div>
-        <nav>${NAV_ITEMS.map((item) => navLink(item, model.activePath)).join("")}</nav>
-      </aside>
       <main class="main">
         <header class="topbar">
           <div>
+            <div class="brand-row">
+              <span class="brand-mark">Supplier Ops</span>
+              <span class="mode-label">Shopify command workbench</span>
+            </div>
             <h1>${pageTitle(model.activePath)}</h1>
             <p>${pageSubtitle(model.activePath)}</p>
           </div>
@@ -70,6 +71,7 @@ export function renderAdminPage(model: AdminPageModel): string {
           </div>
           <div id="sync-status" class="sync-status" role="status" aria-live="polite"></div>
         </header>
+        <nav class="app-tabs" aria-label="Supplier Ops sections">${NAV_ITEMS.map((item) => navLink(item, model.activePath)).join("")}</nav>
         ${renderContent(model)}
       </main>
     </div>
@@ -128,11 +130,11 @@ function renderDashboard(model: AdminPageModel): string {
       ${metric("Latest Issues", latestRun?.issueCount ?? 0)}
     </section>
     ${renderAgentDock(activeAgent, latestRun, latestProductOps, latestRadar, model.revenuePlays)}
+    ${renderAgentWorkspace(model, latestRun, latestProductOps, latestRadar, issueCounts)}
     <div class="dashboard-grid">
       ${renderLatestRunPanel(latestRun)}
       ${renderActionQueue(latestRun, latestProductOps, latestRadar, model.revenuePlays, issueCounts)}
     </div>
-    ${renderAgentWorkspace(model, latestRun, latestProductOps, latestRadar, issueCounts)}
     <section class="panel">
       <h2>Alerts</h2>
       ${model.alerts.length ? model.alerts.map(renderAlert).join("") : `<p class="empty">No alerts yet.</p>`}
@@ -340,10 +342,11 @@ function renderAgentWorkspace(
     return `<section class="panel agent-workspace">
       <div class="panel-heading">
         <h2>Flow Launchpad</h2>
-        <a class="button-link" href="/admin/apps/flow" target="_blank" rel="noreferrer">Open Shopify Flow</a>
+        <a class="button-link" href="https://admin.shopify.com/apps/flow" target="_top" rel="noreferrer" data-flow-admin-link>Open Shopify Flow app</a>
       </div>
-      <p>Use this as the planning surface for automations. V1 tracks setup ideas and links you into Shopify Flow; it does not auto-edit workflows.</p>
+      <p>Use this as the planning surface for automations. V1 gives you setup checklists and professional email copy to paste into Shopify Flow-triggered email actions; it does not auto-edit workflows.</p>
     </section>
+    ${renderFlowEmailTemplates()}
     ${renderFlowIdeas(radar?.revenuePlays ?? model.revenuePlays)}`;
   }
 
@@ -563,6 +566,42 @@ function renderCampaignDrafts(drafts: CampaignDraftRecord[]): string {
         : `<p class="empty">No campaign drafts yet.</p>`
     }
   </section>`;
+}
+
+function renderFlowEmailTemplates(): string {
+  return `<section class="panel flow-templates">
+    <div class="panel-heading">
+      <h2>Flow Email Templates</h2>
+      <span>${FLOW_EMAIL_TEMPLATES.length}</span>
+    </div>
+    <p class="section-note">Copy these into Shopify Flow email actions, then adjust the timing, segment, and review threshold for your store. The wording stays professional, helpful, and light on health claims.</p>
+    <div class="template-grid">
+      ${FLOW_EMAIL_TEMPLATES.map(renderFlowEmailTemplate).join("")}
+    </div>
+  </section>`;
+}
+
+function renderFlowEmailTemplate(template: (typeof FLOW_EMAIL_TEMPLATES)[number]): string {
+  return `<article class="template-card">
+    <div class="template-card-head">
+      <div>
+        <strong>${escapeHtml(template.title)}</strong>
+        <span class="flow-trigger">${escapeHtml(template.flowTrigger)}</span>
+      </div>
+      <span class="status-pill">${escapeHtml(template.audience)}</span>
+    </div>
+    <dl class="template-meta">
+      <div><dt>Subject</dt><dd>${escapeHtml(template.subject)}</dd></div>
+      <div><dt>Preview</dt><dd>${escapeHtml(template.previewText)}</dd></div>
+    </dl>
+    <textarea class="template-copy" readonly rows="10" data-template-copy="${escapeHtml(template.id)}">${escapeHtml(templatePlainTextForFlow(template))}</textarea>
+    <div class="template-actions">
+      <button type="button" class="secondary" data-copy-template="${escapeHtml(template.id)}">Copy template</button>
+    </div>
+    <ol class="setup-list">
+      ${template.setupSteps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+    </ol>
+  </article>`;
 }
 
 function renderFlowIdeas(plays: RevenuePlayRecord[]): string {
@@ -787,16 +826,17 @@ function styles(): string {
       font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--text); }
-    .app-shell { min-height: 100vh; display: grid; grid-template-columns: 240px minmax(0, 1fr); }
-    .sidebar { background: #172321; color: #f8fbfa; padding: 24px 16px; }
-    .brand { font-size: 18px; font-weight: 720; margin-bottom: 28px; }
-    nav { display: grid; gap: 6px; }
-    nav a { color: #dce5e2; text-decoration: none; padding: 10px 12px; border-radius: 6px; font-size: 14px; }
-    nav a.active, nav a:hover { background: rgba(255, 255, 255, 0.12); color: #ffffff; }
-    .main { padding: 28px; max-width: 1280px; width: 100%; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
-    h1 { font-size: 28px; line-height: 1.2; margin: 0 0 4px; font-weight: 760; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; }
+    .app-shell { min-height: 100vh; width: 100%; }
+    .main { padding: 22px 24px 32px; max-width: none; width: 100%; }
+    .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+    .brand-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .brand-mark { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; background: #0f1f1d; color: #f8fbfa; font-size: 12px; font-weight: 800; }
+    .mode-label { color: var(--muted); font-size: 13px; font-weight: 650; }
+    .app-tabs { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; padding: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    .app-tabs a { color: var(--muted); text-decoration: none; padding: 9px 12px; border-radius: 6px; font-size: 14px; font-weight: 650; white-space: nowrap; }
+    .app-tabs a.active, .app-tabs a:hover { background: #eef6f5; color: var(--accent-strong); }
+    h1 { font-size: 26px; line-height: 1.2; margin: 0 0 4px; font-weight: 760; }
     h2 { font-size: 18px; margin: 0 0 16px; }
     p { margin: 0; color: var(--muted); }
     button, .button-link { border: 0; background: var(--accent); color: white; min-height: 40px; padding: 0 16px; border-radius: 6px; font-size: 14px; font-weight: 650; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
@@ -809,20 +849,20 @@ function styles(): string {
     .briefing h2 { margin: 0 0 6px; font-size: 22px; }
     .briefing p { color: #cfe0dc; max-width: 760px; }
     .safety-chip { display: inline-flex; align-items: center; min-height: 30px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 999px; color: #dff7ef; font-size: 12px; font-weight: 720; white-space: nowrap; }
-    .metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
     .metric, .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-    .metric { padding: 16px; display: grid; gap: 10px; }
+    .metric { padding: 14px; display: grid; gap: 8px; }
     .metric span { color: var(--muted); font-size: 13px; }
-    .metric strong { font-size: 28px; }
-    .agent-dock { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
-    .agent-card { min-height: 112px; padding: 14px; display: grid; align-content: space-between; gap: 6px; color: var(--text); text-decoration: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+    .metric strong { font-size: 26px; }
+    .agent-dock { display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr)); gap: 8px; margin-bottom: 16px; }
+    .agent-card { min-height: 88px; padding: 12px; display: grid; align-content: space-between; gap: 4px; color: var(--text); text-decoration: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
     .agent-card:hover { border-color: #9bbcb6; }
     .agent-card.selected { border-color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
-    .agent-card strong { font-size: 26px; }
+    .agent-card strong { font-size: 22px; }
     .agent-card span { color: var(--muted); font-size: 12px; }
     .agent-card .agent-name { color: var(--text); font-size: 14px; font-weight: 760; }
     .agent-card em { color: var(--accent-strong); font-size: 12px; font-style: normal; font-weight: 700; }
-    .dashboard-grid { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr); gap: 16px; align-items: start; }
+    .dashboard-grid { display: grid; grid-template-columns: minmax(300px, 0.75fr) minmax(420px, 1.25fr); gap: 16px; align-items: start; }
     .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
     .panel-heading.compact { margin-bottom: 8px; }
     .panel-heading h2 { margin: 0; }
@@ -832,7 +872,7 @@ function styles(): string {
     .action-item:hover { border-color: #9bbcb6; background: #f5fbf9; }
     .action-item span { color: var(--accent-strong); font-size: 12px; font-weight: 760; }
     .action-item strong { font-size: 14px; }
-    .action-item small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .action-item small { color: var(--muted); font-size: 12px; line-height: 1.4; max-width: 78ch; }
     .agent-workspace p { max-width: 780px; }
     .agent-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
     .panel { padding: 18px; margin-bottom: 16px; overflow: auto; }
@@ -861,6 +901,21 @@ function styles(): string {
     .mini-card strong { font-size: 14px; }
     .radar-explanation { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; background: #fbfcfc; }
     .radar-explanation p { margin-top: 4px; }
+    .section-note { margin-bottom: 14px; max-width: 860px; }
+    .template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+    .template-card { border: 1px solid var(--border); border-radius: 6px; background: #fbfcfc; padding: 14px; display: grid; gap: 12px; min-width: 0; }
+    .template-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .template-card-head div { display: grid; gap: 5px; min-width: 0; }
+    .template-card-head strong { font-size: 15px; line-height: 1.3; }
+    .flow-trigger { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .template-meta { display: grid; gap: 8px; margin: 0; }
+    .template-meta div { display: grid; gap: 3px; }
+    .template-meta dt { font-size: 12px; font-weight: 760; text-transform: uppercase; letter-spacing: 0; }
+    .template-meta dd { color: var(--text); font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+    .template-copy { min-height: 220px; font-size: 12px; line-height: 1.45; background: white; }
+    .template-actions { display: flex; justify-content: flex-start; }
+    .setup-list { margin: 0; padding-left: 20px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .setup-list li + li { margin-top: 4px; }
     .draft-form { display: grid; gap: 12px; margin-top: 16px; max-width: 720px; }
     label { display: grid; gap: 6px; color: var(--text); font-size: 13px; font-weight: 700; }
     input, select, textarea { width: 100%; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text); padding: 10px 12px; font: inherit; font-size: 14px; }
@@ -870,14 +925,25 @@ function styles(): string {
     .alert.error { border-color: #fecdca; color: var(--error); background: #fff5f5; }
     .alert.warning { border-color: #fedf89; color: var(--warning); background: #fffbeb; }
     .alert.info { background: #f5fbff; }
+    @media (max-width: 1100px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+    }
     @media (max-width: 860px) {
-      .app-shell { grid-template-columns: 1fr; }
-      .sidebar { position: static; }
       .main { padding: 18px; }
       .topbar { align-items: flex-start; flex-direction: column; }
-      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .briefing { flex-direction: column; }
-      .agent-dock, .dashboard-grid, .agent-stats { grid-template-columns: 1fr; }
+      .agent-stats, .template-grid { grid-template-columns: 1fr; }
+      .app-tabs { overflow-x: auto; flex-wrap: nowrap; }
+    }
+    @media (max-width: 560px) {
+      .main { padding: 14px; }
+      .run-actions { width: 100%; }
+      .run-actions form, .run-actions button { width: 100%; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .agent-dock { grid-auto-flow: column; grid-auto-columns: minmax(152px, 1fr); grid-template-columns: none; overflow-x: auto; padding-bottom: 4px; }
+      .agent-card { min-height: 104px; }
+      .run-summary div, .settings-list div { grid-template-columns: 1fr; }
+      .template-card-head { flex-direction: column; }
     }
   `;
 }
@@ -886,6 +952,34 @@ function clientScript(): string {
   return `
     const syncStatus = document.getElementById("sync-status");
     const runForms = Array.from(document.querySelectorAll("[data-run-form]"));
+    const flowAdminLinks = Array.from(document.querySelectorAll("[data-flow-admin-link]"));
+    const shopifyStoreMatch = (document.referrer || "").match(/admin\\.shopify\\.com\\/store\\/([^/]+)/);
+    const shopifyFlowUrl = shopifyStoreMatch ? "https://admin.shopify.com/store/" + shopifyStoreMatch[1] + "/apps/flow" : "https://admin.shopify.com/apps/flow";
+    flowAdminLinks.forEach((link) => {
+      link.href = shopifyFlowUrl;
+    });
+
+    Array.from(document.querySelectorAll("[data-copy-template]")).forEach((button) => {
+      button.addEventListener("click", async () => {
+        const templateId = button.getAttribute("data-copy-template");
+        const copyField = Array.from(document.querySelectorAll("[data-template-copy]")).find((field) => field.getAttribute("data-template-copy") === templateId);
+        if (!copyField) return;
+        const copyText = copyField.value || copyField.textContent || "";
+        try {
+          await navigator.clipboard.writeText(copyText);
+          button.dataset.originalText = button.dataset.originalText || button.textContent || "Copy template";
+          button.textContent = "Copied";
+          setTimeout(() => {
+            button.textContent = button.dataset.originalText || "Copy template";
+          }, 1600);
+        } catch (_error) {
+          copyField.focus();
+          copyField.select();
+          button.textContent = "Select and copy";
+        }
+      });
+    });
+
     runForms.forEach((form) => {
       form.addEventListener("submit", async (event) => {
         event.preventDefault();

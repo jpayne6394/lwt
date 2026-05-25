@@ -59,7 +59,7 @@ PINTEREST_ACCESS_TOKEN=optional-official-token
 TRUTH_SOCIAL_APPROVED_ACCESS=false
 ```
 
-Blog Publisher uses saved wellness templates, not paid AI calls. It can create local article drafts and then create Shopify draft articles after approval. Campaign Planner creates Shopify Email handoff briefs; it does not send emails. Flow Launchpad stores setup ideas and links into Shopify Flow; it does not auto-edit workflows.
+Blog Publisher uses saved wellness templates, not paid AI calls. It can create local article drafts and then create Shopify draft articles after approval. Campaign Planner creates Shopify Email handoff briefs; it does not send emails. Flow Launchpad stores setup ideas, links into the Shopify Flow app, and includes copy-ready professional email templates for Flow-triggered customer and internal operations emails. It does not auto-edit workflows.
 
 ## Run locally
 
