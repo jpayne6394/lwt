@@ -1,7 +1,7 @@
 import { AlertService } from "../alerts/alert-service.ts";
-import { planSupplierSync } from "../domain/sync-planner.ts";
+import { planSupplierSyncAsync } from "../domain/sync-planner.ts";
 import type { BlockedIssue, PlannedChange, ShopifyVariant, SupplierProduct, SyncPlan } from "../domain/types.ts";
-import { buildProductOpsRunOutput } from "../product-ops/product-ops-agent.ts";
+import { buildProductOpsRunOutputAsync } from "../product-ops/product-ops-agent.ts";
 import type { ProductOpsRunOutput } from "../product-ops/types.ts";
 import type { ShopifySyncClient } from "../shopify/shopify-sync-client.ts";
 import type { SupplierOpsRepository, SyncRun } from "../storage/repository.ts";
@@ -88,7 +88,7 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
     };
   }
 
-  const plan = planSupplierSync({
+  const plan = await planSupplierSyncAsync({
     supplierProducts,
     shopifyVariants,
     mappings,
@@ -136,7 +136,7 @@ async function recordProductOpsOutput(input: {
   changes: PlannedChange[];
   issues: BlockedIssue[];
 }): Promise<ProductOpsRunOutput> {
-  const output = buildProductOpsRunOutput({
+  const output = await buildProductOpsRunOutputAsync({
     runId: input.run.id,
     runType: "full_product_ops_check",
     dryRun: input.input.dryRun,

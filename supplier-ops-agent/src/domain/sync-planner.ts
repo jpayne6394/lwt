@@ -22,41 +22,64 @@ export function planSupplierSync(input: SupplierSyncInput): SyncPlan {
   const issues: BlockedIssue[] = [];
 
   for (const supplierProduct of input.supplierProducts) {
-    const match = matchSupplierProduct(supplierProduct, input.shopifyVariants, input.mappings);
-
-    if (match.status === "blocked") {
-      issues.push({
-        kind: "match_uncertain",
-        supplierProduct,
-        shopifyVariant: match.candidate?.variant,
-        reason: match.reason,
-        data: {
-          supplier: supplierProductSummary(supplierProduct),
-          candidate: match.candidate ? shopifyVariantSummary(match.candidate.variant) : undefined,
-          matchConfidence: match.candidate?.confidence,
-        },
-      });
-      continue;
-    }
-
-    if (match.status === "unmatched") {
-      const regularPrice = resolveRegularPrice({
-        supplierCost: supplierProduct.cost,
-        supplierMsrp: supplierProduct.msrp,
-      });
-      changes.push({
-        type: "draft_product",
-        supplierProduct,
-        draftPrice: regularPrice.price,
-        reason: match.reason,
-      });
-      continue;
-    }
-
-    appendMatchedProductChanges(changes, issues, supplierProduct, match.variant);
+    planSupplierProduct(input, changes, issues, supplierProduct);
   }
 
   return { changes, issues };
+}
+
+export async function planSupplierSyncAsync(input: SupplierSyncInput, yieldEvery = 10): Promise<SyncPlan> {
+  const changes: PlannedChange[] = [];
+  const issues: BlockedIssue[] = [];
+
+  for (const [index, supplierProduct] of input.supplierProducts.entries()) {
+    planSupplierProduct(input, changes, issues, supplierProduct);
+    if ((index + 1) % yieldEvery === 0) {
+      await yieldToEventLoop();
+    }
+  }
+
+  return { changes, issues };
+}
+
+function planSupplierProduct(
+  input: SupplierSyncInput,
+  changes: PlannedChange[],
+  issues: BlockedIssue[],
+  supplierProduct: SupplierProduct,
+): void {
+  const match = matchSupplierProduct(supplierProduct, input.shopifyVariants, input.mappings);
+
+  if (match.status === "blocked") {
+    issues.push({
+      kind: "match_uncertain",
+      supplierProduct,
+      shopifyVariant: match.candidate?.variant,
+      reason: match.reason,
+      data: {
+        supplier: supplierProductSummary(supplierProduct),
+        candidate: match.candidate ? shopifyVariantSummary(match.candidate.variant) : undefined,
+        matchConfidence: match.candidate?.confidence,
+      },
+    });
+    return;
+  }
+
+  if (match.status === "unmatched") {
+    const regularPrice = resolveRegularPrice({
+      supplierCost: supplierProduct.cost,
+      supplierMsrp: supplierProduct.msrp,
+    });
+    changes.push({
+      type: "draft_product",
+      supplierProduct,
+      draftPrice: regularPrice.price,
+      reason: match.reason,
+    });
+    return;
+  }
+
+  appendMatchedProductChanges(changes, issues, supplierProduct, match.variant);
 }
 
 function supplierProductSummary(product: SupplierProduct): Record<string, unknown> {
@@ -169,5 +192,11 @@ function appendMatchedProductChanges(
       reason: price.reason,
     });
   }
+}
+
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => {
+    setImmediate(resolve);
+  });
 }
 

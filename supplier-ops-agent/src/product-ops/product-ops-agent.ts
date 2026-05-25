@@ -45,6 +45,10 @@ export type BuildProductOpsRunOutputInput = {
   lowStockThreshold?: number;
 };
 
+export type BuildProductOpsRunOutputOptions = {
+  yieldEvery?: number;
+};
+
 export function evaluateProductReadiness(input: EvaluateProductReadinessInput): ProductOpsProductResult {
   const flags: string[] = [];
   const reasons: string[] = [];
@@ -152,37 +156,65 @@ export function evaluateProductReadiness(input: EvaluateProductReadinessInput): 
 }
 
 export function buildProductOpsRunOutput(input: BuildProductOpsRunOutputInput): ProductOpsRunOutput {
-  const results = input.supplierProducts.map((supplierProduct) => {
-    const productIssues = input.issues.filter((issue) => issueMatchesProduct(issue, supplierProduct));
-    const match = matchSupplierProduct(supplierProduct, input.shopifyVariants, input.mappings);
+  const results = input.supplierProducts.map((supplierProduct) => evaluateSupplierProduct(input, supplierProduct));
+  return composeRunOutput(input, results);
+}
 
-    if (match.status === "matched") {
-      return evaluateProductReadiness({
-        supplierProduct,
-        shopifyVariant: match.variant,
-        matchConfidence: match.confidence,
-        issues: productIssues,
-        lowStockThreshold: input.lowStockThreshold,
-      });
+export async function buildProductOpsRunOutputAsync(
+  input: BuildProductOpsRunOutputInput,
+  options: BuildProductOpsRunOutputOptions = {},
+): Promise<ProductOpsRunOutput> {
+  const results: ProductOpsProductResult[] = [];
+  const yieldEvery = options.yieldEvery ?? 10;
+
+  for (const [index, supplierProduct] of input.supplierProducts.entries()) {
+    results.push(evaluateSupplierProduct(input, supplierProduct));
+    if ((index + 1) % yieldEvery === 0) {
+      await yieldToEventLoop();
     }
+  }
 
-    const syntheticIssue: BlockedIssue = {
-      kind: "match_uncertain",
-      supplierProduct,
-      shopifyVariant: match.status === "blocked" ? match.candidate?.variant : undefined,
-      reason: match.reason,
-      data: match.status === "blocked" ? { matchConfidence: match.candidate?.confidence ?? 0 } : undefined,
-    };
+  return composeRunOutput(input, results);
+}
 
+function evaluateSupplierProduct(
+  input: BuildProductOpsRunOutputInput,
+  supplierProduct: SupplierProduct,
+): ProductOpsProductResult {
+  const productIssues = input.issues.filter((issue) => issueMatchesProduct(issue, supplierProduct));
+  const match = matchSupplierProduct(supplierProduct, input.shopifyVariants, input.mappings);
+
+  if (match.status === "matched") {
     return evaluateProductReadiness({
       supplierProduct,
-      shopifyVariant: syntheticIssue.shopifyVariant,
-      matchConfidence: match.status === "blocked" ? match.candidate?.confidence ?? 0 : 0,
-      issues: [...productIssues, syntheticIssue],
+      shopifyVariant: match.variant,
+      matchConfidence: match.confidence,
+      issues: productIssues,
       lowStockThreshold: input.lowStockThreshold,
     });
-  });
+  }
 
+  const syntheticIssue: BlockedIssue = {
+    kind: "match_uncertain",
+    supplierProduct,
+    shopifyVariant: match.status === "blocked" ? match.candidate?.variant : undefined,
+    reason: match.reason,
+    data: match.status === "blocked" ? { matchConfidence: match.candidate?.confidence ?? 0 } : undefined,
+  };
+
+  return evaluateProductReadiness({
+    supplierProduct,
+    shopifyVariant: syntheticIssue.shopifyVariant,
+    matchConfidence: match.status === "blocked" ? match.candidate?.confidence ?? 0 : 0,
+    issues: [...productIssues, syntheticIssue],
+    lowStockThreshold: input.lowStockThreshold,
+  });
+}
+
+function composeRunOutput(
+  input: BuildProductOpsRunOutputInput,
+  results: ProductOpsProductResult[],
+): ProductOpsRunOutput {
   const productsToPromote = results.filter((result) => result.promotionStatus === "PROMOTE_READY");
   const productsToAvoid = results.filter((result) => result.promotionStatus !== "PROMOTE_READY");
   const promotionTasks = productsToPromote.map((result) => taskForProduct(result));
@@ -324,4 +356,10 @@ function hasUsefulTags(tags: string[]): boolean {
 
 function roundConfidence(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => {
+    setImmediate(resolve);
+  });
 }
