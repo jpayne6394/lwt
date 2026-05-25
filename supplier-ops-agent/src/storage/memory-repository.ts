@@ -7,7 +7,10 @@ import type {
   SupplierSnapshot,
   SyncRun,
 } from "./repository.ts";
+import type { CampaignDraftRecord } from "../campaigns/types.ts";
+import type { BlogDraftRecord } from "../content/types.ts";
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
+import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
 
 export type MemoryRepositorySeed = {
@@ -23,6 +26,10 @@ export class MemoryRepository implements SupplierOpsRepository {
   readonly #changes: AppliedChangeRecord[] = [];
   readonly #issues: BlockedIssueRecord[] = [];
   readonly #productOpsOutputs: ProductOpsOutputRecord[] = [];
+  readonly #marketRadarOutputs: MarketRadarOutputRecord[] = [];
+  readonly #revenuePlays: RevenuePlayRecord[] = [];
+  readonly #blogDrafts: BlogDraftRecord[] = [];
+  readonly #campaignDrafts: CampaignDraftRecord[] = [];
 
   constructor(seed: MemoryRepositorySeed = {}) {
     this.#shopifyVariants = seed.shopifyVariants ?? [];
@@ -104,6 +111,79 @@ export class MemoryRepository implements SupplierOpsRepository {
     });
   }
 
+  async recordMarketRadarOutput(output: MarketRadarRunOutput): Promise<void> {
+    const id = `radar_${Date.now()}_${this.#marketRadarOutputs.length + 1}`;
+    this.#marketRadarOutputs.unshift({
+      ...output,
+      id,
+      runId: id,
+      createdAt: new Date().toISOString(),
+    });
+    await this.recordRevenuePlays(output.revenuePlays);
+  }
+
+  async recentMarketRadarOutputs(limit = 20): Promise<MarketRadarOutputRecord[]> {
+    return this.#marketRadarOutputs.slice(0, limit);
+  }
+
+  async recordRevenuePlays(plays: RevenuePlayRecord[]): Promise<void> {
+    for (const play of plays) {
+      const existingIndex = this.#revenuePlays.findIndex((candidate) => candidate.id === play.id);
+      if (existingIndex >= 0) {
+        this.#revenuePlays[existingIndex] = {
+          ...this.#revenuePlays[existingIndex],
+          ...play,
+          status: this.#revenuePlays[existingIndex].status,
+          updatedAt: play.updatedAt,
+        };
+      } else {
+        this.#revenuePlays.unshift(play);
+      }
+    }
+  }
+
+  async updateRevenuePlayStatus(id: string, status: RevenuePlayRecord["status"]): Promise<RevenuePlayRecord | null> {
+    const play = this.#revenuePlays.find((candidate) => candidate.id === id);
+    if (!play) {
+      return null;
+    }
+    play.status = status;
+    play.updatedAt = new Date().toISOString();
+    return play;
+  }
+
+  async recentRevenuePlays(limit = 50): Promise<RevenuePlayRecord[]> {
+    return this.#revenuePlays.slice(0, limit);
+  }
+
+  async recordBlogDraft(draft: BlogDraftRecord): Promise<void> {
+    this.#blogDrafts.unshift(draft);
+  }
+
+  async updateBlogDraftShopifyArticle(id: string, article: { id: string; handle: string }): Promise<BlogDraftRecord | null> {
+    const draft = this.#blogDrafts.find((candidate) => candidate.id === id);
+    if (!draft) {
+      return null;
+    }
+    draft.status = "CREATED_IN_SHOPIFY";
+    draft.shopifyArticleId = article.id;
+    draft.shopifyArticleHandle = article.handle;
+    draft.updatedAt = new Date().toISOString();
+    return draft;
+  }
+
+  async recentBlogDrafts(limit = 50): Promise<BlogDraftRecord[]> {
+    return this.#blogDrafts.slice(0, limit);
+  }
+
+  async recordCampaignDraft(draft: CampaignDraftRecord): Promise<void> {
+    this.#campaignDrafts.unshift(draft);
+  }
+
+  async recentCampaignDrafts(limit = 50): Promise<CampaignDraftRecord[]> {
+    return this.#campaignDrafts.slice(0, limit);
+  }
+
   async recentRuns(limit = 20): Promise<SyncRun[]> {
     return this.#runs.slice(0, limit);
   }
@@ -134,6 +214,14 @@ export class MemoryRepository implements SupplierOpsRepository {
 
   listProductOpsOutputs(): ProductOpsOutputRecord[] {
     return [...this.#productOpsOutputs];
+  }
+
+  listMarketRadarOutputs(): MarketRadarOutputRecord[] {
+    return [...this.#marketRadarOutputs];
+  }
+
+  listRevenuePlays(): RevenuePlayRecord[] {
+    return [...this.#revenuePlays];
   }
 }
 

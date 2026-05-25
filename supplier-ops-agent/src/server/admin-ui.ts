@@ -1,9 +1,13 @@
 import type { AlertMessage } from "../alerts/alert-service.ts";
+import type { CampaignDraftRecord } from "../campaigns/types.ts";
+import { WELLNESS_BLOG_PROFILES } from "../content/blog-template-builder.ts";
+import type { BlogDraftRecord } from "../content/types.ts";
+import type { MarketRadarOutputRecord, RevenuePlayRecord, SourceConnectionCard } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsProductResult, ProductOpsTask } from "../product-ops/types.ts";
 import type { BlockedIssueRecord, AppliedChangeRecord, SyncRun } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
 
-export type ActiveAgent = "bi" | "inventory" | "product_ops" | "campaign" | "blog";
+export type ActiveAgent = "bi" | "inventory" | "product_ops" | "campaign" | "blog" | "flow";
 
 export type AdminPageModel = {
   activePath: string;
@@ -13,6 +17,11 @@ export type AdminPageModel = {
   changes: AppliedChangeRecord[];
   issues: BlockedIssueRecord[];
   productOpsOutputs: ProductOpsOutputRecord[];
+  marketRadarOutputs: MarketRadarOutputRecord[];
+  revenuePlays: RevenuePlayRecord[];
+  sourceConnections: SourceConnectionCard[];
+  blogDrafts: BlogDraftRecord[];
+  campaignDrafts: CampaignDraftRecord[];
   alerts: AlertMessage[];
   shopifyApiKey?: string;
   applyChangesEnabled: boolean;
@@ -24,6 +33,7 @@ const NAV_ITEMS = [
   { href: "/runs", label: "Runs" },
   { href: "/changes", label: "Change Ledger" },
   { href: "/issues", label: "Match Issues" },
+  { href: "/sources", label: "Sources" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -86,6 +96,9 @@ function renderContent(model: AdminPageModel): string {
   if (model.activePath.startsWith("/issues")) {
     return renderIssues(model.issues);
   }
+  if (model.activePath.startsWith("/sources")) {
+    return renderSources(model.sourceConnections);
+  }
   if (model.activePath.startsWith("/settings")) {
     return renderSettings(model.suppliers, model.applyChangesEnabled);
   }
@@ -95,6 +108,7 @@ function renderContent(model: AdminPageModel): string {
 function renderDashboard(model: AdminPageModel): string {
   const latestRun = model.runs[0];
   const latestProductOps = model.productOpsOutputs[0];
+  const latestRadar = model.marketRadarOutputs[0];
   const activeAgent = model.activeAgent ?? "product_ops";
   const issueCounts = countIssuesByKind(model.issues);
 
@@ -109,15 +123,16 @@ function renderDashboard(model: AdminPageModel): string {
     <section class="metrics health-metrics">
       ${metric("Suppliers", model.suppliers.length)}
       ${metric("Promote Ready", latestProductOps?.summary.promoteReady ?? 0)}
+      ${metric("Revenue Plays", latestRadar?.summary.revenuePlays ?? model.revenuePlays.length)}
       ${metric("Review Required", latestProductOps?.summary.reviewRequired ?? 0)}
       ${metric("Latest Issues", latestRun?.issueCount ?? 0)}
     </section>
-    ${renderAgentDock(activeAgent, latestRun, latestProductOps)}
+    ${renderAgentDock(activeAgent, latestRun, latestProductOps, latestRadar, model.revenuePlays)}
     <div class="dashboard-grid">
       ${renderLatestRunPanel(latestRun)}
-      ${renderActionQueue(latestRun, latestProductOps, issueCounts)}
+      ${renderActionQueue(latestRun, latestProductOps, latestRadar, model.revenuePlays, issueCounts)}
     </div>
-    ${renderAgentWorkspace(activeAgent, latestRun, latestProductOps, issueCounts)}
+    ${renderAgentWorkspace(model, latestRun, latestProductOps, latestRadar, issueCounts)}
     <section class="panel">
       <h2>Alerts</h2>
       ${model.alerts.length ? model.alerts.map(renderAlert).join("") : `<p class="empty">No alerts yet.</p>`}
@@ -163,13 +178,16 @@ function renderAgentDock(
   activeAgent: ActiveAgent,
   run: SyncRun | undefined,
   output: ProductOpsOutputRecord | undefined,
+  radar: MarketRadarOutputRecord | undefined,
+  revenuePlays: RevenuePlayRecord[],
 ): string {
   const agents: Array<{ id: ActiveAgent; label: string; signal: string; value: number | string }> = [
-    { id: "bi", label: "BI Analyst", signal: "Store pulse", value: run?.changeCount ?? 0 },
+    { id: "bi", label: "BI Analyst", signal: "Market radar", value: radar?.summary.revenuePlays ?? revenuePlays.length },
     { id: "inventory", label: "Inventory Ops", signal: "Planned changes", value: run?.changeCount ?? 0 },
     { id: "product_ops", label: "Product Ops", signal: "Review queue", value: output?.summary.reviewRequired ?? 0 },
     { id: "campaign", label: "Campaign Planner", signal: "Promotion candidates", value: output?.summary.promoteReady ?? 0 },
     { id: "blog", label: "Blog Publisher", signal: "Draft sources", value: output?.summary.promoteReady ?? 0 },
+    { id: "flow", label: "Flow Launchpad", signal: "Automation ideas", value: revenuePlays.filter((play) => play.targetAgent === "flow").length },
   ];
 
   return `<section class="agent-dock" aria-label="Sub-agent selector">
@@ -190,9 +208,15 @@ function renderAgentDock(
 function renderActionQueue(
   run: SyncRun | undefined,
   output: ProductOpsOutputRecord | undefined,
+  radar: MarketRadarOutputRecord | undefined,
+  revenuePlays: RevenuePlayRecord[],
   issueCounts: Map<BlockedIssueRecord["kind"], number>,
 ): string {
+  const topRevenuePlays = (radar?.revenuePlays ?? revenuePlays).slice(0, 3);
   const actions = [
+    radar
+      ? actionQueueItem("BI Analyst", `Review ${radar.summary.revenuePlays} revenue plays`, `${radar.summary.signalsReviewed} market signals checked by Market Radar.`, "/?agent=bi")
+      : actionQueueItem("BI Analyst", "Refresh Market Radar", "Create the first outside-market revenue briefing.", "/?agent=bi"),
     run && run.changeCount > 0
       ? actionQueueItem("Inventory Ops", `Review ${run.changeCount} dry-run changes`, "Open the change ledger before write mode.", "/changes")
       : undefined,
@@ -211,6 +235,7 @@ function renderActionQueue(
     output && output.summary.promoteReady > 0
       ? actionQueueItem("Campaign Planner", "Approve promote-ready products", `${output.summary.promoteReady} products can feed campaigns and blog drafts.`, "/?agent=campaign")
       : undefined,
+    ...topRevenuePlays.map((play) => actionQueueItem(play.targetAgent, play.title, play.explanation, `/?agent=${play.targetAgent}`)),
   ].filter((item): item is string => item !== undefined);
 
   return `<section class="panel action-queue">
@@ -231,21 +256,32 @@ function actionQueueItem(agent: string, title: string, detail: string, href: str
 }
 
 function renderAgentWorkspace(
-  activeAgent: ActiveAgent,
+  model: AdminPageModel,
   run: SyncRun | undefined,
   output: ProductOpsOutputRecord | undefined,
+  radar: MarketRadarOutputRecord | undefined,
   issueCounts: Map<BlockedIssueRecord["kind"], number>,
 ): string {
+  const activeAgent = model.activeAgent ?? "product_ops";
   if (activeAgent === "bi") {
     return `<section class="panel agent-workspace">
-      <h2>BI Analyst is selected</h2>
-      <div class="agent-stats">
-        ${metric("Variants Scanned", output?.summary.variantsChecked ?? 0)}
-        ${metric("Products Checked", output?.summary.productsChecked ?? 0)}
-        ${metric("Dry-run Changes", run?.changeCount ?? 0)}
-        ${metric("Blocked Issues", run?.issueCount ?? 0)}
+      <div class="panel-heading">
+        <h2>BI Analyst: Market Radar</h2>
+        <form method="post" action="/api/market-radar" data-run-form data-running-label="Refreshing Market Radar...">
+          <button type="submit">Refresh radar</button>
+        </form>
       </div>
-    </section>`;
+      <div class="agent-stats">
+        ${metric("Signals", radar?.summary.signalsReviewed ?? 0)}
+        ${metric("Revenue Plays", radar?.summary.revenuePlays ?? model.revenuePlays.length)}
+        ${metric("Competitor Prices", radar?.summary.competitorPricesReviewed ?? 0)}
+        ${metric("Claim Flags", radar?.summary.lightClaimWarnings ?? 0)}
+      </div>
+    </section>
+    ${renderSalesWindows(radar)}
+    ${renderMarketExplanations(radar)}
+    ${renderRevenuePlays(radar?.revenuePlays ?? model.revenuePlays)}
+    ${renderSources(model.sourceConnections)}`;
   }
 
   if (activeAgent === "inventory") {
@@ -262,18 +298,53 @@ function renderAgentWorkspace(
 
   if (activeAgent === "campaign") {
     return `<section class="panel agent-workspace">
-      <h2>Campaign Planner is selected</h2>
-      <p>${output?.summary.promoteReady ? "Promotion candidates are ready for campaign drafting." : "No campaign candidates are ready yet."}</p>
+      <div class="panel-heading">
+        <h2>Campaign Draft Suite</h2>
+        <form method="post" action="/api/campaign-drafts">
+          <button type="submit">Create campaign brief</button>
+        </form>
+      </div>
+      <p>Build Shopify Email handoff briefs from BI revenue plays, Product Ops candidates, and seasonal product ideas. The app drafts copy and product picks; sending stays inside Shopify Email.</p>
     </section>
+    ${renderCampaignDrafts(model.campaignDrafts)}
+    ${renderRevenuePlays((radar?.revenuePlays ?? model.revenuePlays).filter((play) => play.targetAgent === "campaign"))}
     ${renderProductList("Campaign candidates", output?.productsToPromote ?? [])}`;
   }
 
   if (activeAgent === "blog") {
     return `<section class="panel agent-workspace">
-      <h2>Blog Publisher is selected</h2>
-      <p>${output?.summary.promoteReady ? "Use promote-ready products as article source material." : "No article source products are ready yet."}</p>
+      <h2>Blog Template Builder</h2>
+      <p>Choose a wellness style profile, add your rough thought, and create a Shopify-ready draft for review. This is template-driven by default, with no AI cost.</p>
+      <form class="draft-form" method="post" action="/api/blog-drafts">
+        <label>Style profile
+          <select name="profileId">
+            ${WELLNESS_BLOG_PROFILES.map((profile) => `<option value="${escapeHtml(profile.id)}">${escapeHtml(profile.label)}</option>`).join("")}
+          </select>
+        </label>
+        <label>Title
+          <input name="title" required placeholder="Magnesium for better sleep">
+        </label>
+        <label>Rough thoughts
+          <textarea name="roughThoughts" rows="5" placeholder="Paste your idea, angle, notes, or products to mention."></textarea>
+        </label>
+        <button type="submit">Create template draft</button>
+      </form>
     </section>
+    ${renderBlogProfiles()}
+    ${renderBlogDrafts(model.blogDrafts)}
+    ${renderRevenuePlays((radar?.revenuePlays ?? model.revenuePlays).filter((play) => play.targetAgent === "blog"))}
     ${renderProductList("Article source products", output?.productsToPromote ?? [])}`;
+  }
+
+  if (activeAgent === "flow") {
+    return `<section class="panel agent-workspace">
+      <div class="panel-heading">
+        <h2>Flow Launchpad</h2>
+        <a class="button-link" href="/admin/apps/flow" target="_blank" rel="noreferrer">Open Shopify Flow</a>
+      </div>
+      <p>Use this as the planning surface for automations. V1 tracks setup ideas and links you into Shopify Flow; it does not auto-edit workflows.</p>
+    </section>
+    ${renderFlowIdeas(radar?.revenuePlays ?? model.revenuePlays)}`;
   }
 
   return `<section class="panel agent-workspace">
@@ -364,6 +435,168 @@ function countIssuesByKind(issues: BlockedIssueRecord[]): Map<BlockedIssueRecord
     counts.set(issue.kind, (counts.get(issue.kind) ?? 0) + 1);
   }
   return counts;
+}
+
+function renderSalesWindows(radar: MarketRadarOutputRecord | undefined): string {
+  return `<section class="panel">
+    <h2>BI Sales Windows</h2>
+    ${
+      radar?.salesWindows.length
+        ? `<div class="window-grid">${radar.salesWindows
+            .map(
+              (window) => `<article class="mini-card">
+                <span>${escapeHtml(window.label)}</span>
+                <strong>$${window.revenue.toFixed(2)}</strong>
+                <small>${window.orderCount} orders - ${window.unitsSold} units</small>
+              </article>`,
+            )
+            .join("")}</div>`
+        : `<p class="empty">Refresh Market Radar to build today, 7, 30, 90, and 365 day sales windows.</p>`
+    }
+  </section>`;
+}
+
+function renderMarketExplanations(radar: MarketRadarOutputRecord | undefined): string {
+  return `<section class="panel">
+    <h2>Market Radar Explanations</h2>
+    ${
+      radar?.explanations.length
+        ? radar.explanations
+            .slice(0, 8)
+            .map(
+              (explanation) => `<article class="radar-explanation">
+                <div>
+                  <strong>${escapeHtml(explanation.title)}</strong>
+                  <p>${escapeHtml(explanation.explanation)}</p>
+                </div>
+                <span class="status-pill">${escapeHtml(explanation.confidence)}</span>
+              </article>`,
+            )
+            .join("")
+        : `<p class="empty">No market explanations yet.</p>`
+    }
+  </section>`;
+}
+
+function renderRevenuePlays(plays: RevenuePlayRecord[]): string {
+  return `<section class="panel">
+    <h2>Revenue Plays</h2>
+    ${
+      plays.length
+        ? `<table>
+            <thead><tr><th>Idea</th><th>Action</th><th>Agent</th><th>Confidence</th><th>Status</th><th>Context</th></tr></thead>
+            <tbody>${plays.slice(0, 25).map(renderRevenuePlay).join("")}</tbody>
+          </table>`
+        : `<p class="empty">No revenue plays yet. Refresh Market Radar to generate ideas.</p>`
+    }
+  </section>`;
+}
+
+function renderRevenuePlay(play: RevenuePlayRecord): string {
+  return `<tr>
+    <td><div class="summary-cell"><strong>${escapeHtml(play.title)}</strong><span>${escapeHtml(play.explanation)}</span>${play.claimWarnings.length ? `<span class="warning-text">${escapeHtml(play.claimWarnings.join(" "))}</span>` : ""}</div></td>
+    <td>${escapeHtml(play.actionType)}</td>
+    <td>${escapeHtml(play.targetAgent)}</td>
+    <td>${escapeHtml(play.confidence)}</td>
+    <td><span class="status-pill">${escapeHtml(play.status)}</span></td>
+    <td>${escapeHtml(`${play.inventoryContext} ${play.pricingContext}`)}</td>
+  </tr>`;
+}
+
+function renderBlogProfiles(): string {
+  return `<section class="panel">
+    <h2>Wellness style profiles</h2>
+    <div class="card-grid">
+      ${WELLNESS_BLOG_PROFILES.map(
+        (profile) => `<article class="mini-card">
+          <strong>${escapeHtml(profile.label)}</strong>
+          <span>${escapeHtml(profile.summary)}</span>
+        </article>`,
+      ).join("")}
+    </div>
+  </section>`;
+}
+
+function renderBlogDrafts(drafts: BlogDraftRecord[]): string {
+  return `<section class="panel">
+    <h2>Blog drafts</h2>
+    ${
+      drafts.length
+        ? `<table>
+          <thead><tr><th>Draft</th><th>Profile</th><th>Status</th><th>Warnings</th><th>Shopify</th></tr></thead>
+          <tbody>${drafts.slice(0, 20).map(renderBlogDraft).join("")}</tbody>
+        </table>`
+        : `<p class="empty">No blog drafts yet.</p>`
+    }
+  </section>`;
+}
+
+function renderBlogDraft(draft: BlogDraftRecord): string {
+  const shopifyState = draft.shopifyArticleId
+    ? `Created: ${draft.shopifyArticleHandle ?? draft.shopifyArticleId}`
+    : `<form method="post" action="/api/blog-drafts/shopify"><input type="hidden" name="draftId" value="${escapeHtml(draft.id)}"><button type="submit">Create Shopify draft</button></form>`;
+  return `<tr>
+    <td><div class="summary-cell"><strong>${escapeHtml(draft.title)}</strong><span>${escapeHtml(draft.summary)}</span></div></td>
+    <td>${escapeHtml(draft.profileLabel)}</td>
+    <td><span class="status-pill">${escapeHtml(draft.status)}</span></td>
+    <td>${escapeHtml(draft.claimWarnings.join(" ") || "None")}</td>
+    <td>${shopifyState}</td>
+  </tr>`;
+}
+
+function renderCampaignDrafts(drafts: CampaignDraftRecord[]): string {
+  return `<section class="panel">
+    <h2>Campaign drafts</h2>
+    ${
+      drafts.length
+        ? `<table>
+          <thead><tr><th>Campaign</th><th>Subject options</th><th>Segment</th><th>Handoff</th></tr></thead>
+          <tbody>${drafts.slice(0, 20).map(
+            (draft) => `<tr>
+              <td><div class="summary-cell"><strong>${escapeHtml(draft.title)}</strong><span>${escapeHtml(draft.previewText)}</span></div></td>
+              <td>${escapeHtml(draft.subjectLines.join(" | "))}</td>
+              <td>${escapeHtml(draft.segmentIdea)}</td>
+              <td><a class="inline-link" href="${escapeHtml(draft.shopifyEmailAdminPath)}">Shopify Email handoff</a></td>
+            </tr>`,
+          ).join("")}</tbody>
+        </table>`
+        : `<p class="empty">No campaign drafts yet.</p>`
+    }
+  </section>`;
+}
+
+function renderFlowIdeas(plays: RevenuePlayRecord[]): string {
+  const flowPlays = plays.filter((play) => play.targetAgent === "flow" || play.actionType === "FLOW_SETUP");
+  return `<section class="panel">
+    <h2>Flow setup ideas</h2>
+    ${
+      flowPlays.length
+        ? `<table>
+          <thead><tr><th>Automation idea</th><th>Why</th><th>Status</th></tr></thead>
+          <tbody>${flowPlays.map(
+            (play) => `<tr><td>${escapeHtml(play.title)}</td><td>${escapeHtml(play.explanation)}</td><td><span class="status-pill">${escapeHtml(play.status)}</span></td></tr>`,
+          ).join("")}</tbody>
+        </table>`
+        : `<p class="empty">No Flow ideas yet. Refresh Market Radar to create automation suggestions.</p>`
+    }
+  </section>`;
+}
+
+function renderSources(sources: SourceConnectionCard[]): string {
+  return `<section class="panel">
+    <h2>Source Connections</h2>
+    <div class="card-grid">
+      ${sources.length ? sources.map(renderSourceCard).join("") : `<p class="empty">No source connection cards configured yet.</p>`}
+    </div>
+  </section>`;
+}
+
+function renderSourceCard(source: SourceConnectionCard): string {
+  return `<article class="mini-card source-card">
+    <div class="panel-heading compact"><strong>${escapeHtml(source.label)}</strong><span class="status-pill">${escapeHtml(source.status)}</span></div>
+    <span>${escapeHtml(source.notes)}</span>
+    <small>${escapeHtml(source.accessMode)}${source.configured ? " - configured" : ""}</small>
+  </article>`;
 }
 
 function renderSuppliers(suppliers: SupplierConfig[]): string {
@@ -513,6 +746,7 @@ function pageTitle(path: string): string {
   if (path.startsWith("/runs")) return "Runs";
   if (path.startsWith("/changes")) return "Change Ledger";
   if (path.startsWith("/issues")) return "Match Issues";
+  if (path.startsWith("/sources")) return "Sources";
   if (path.startsWith("/settings")) return "Settings";
   return "Dashboard";
 }
@@ -522,6 +756,7 @@ function pageSubtitle(path: string): string {
   if (path.startsWith("/runs")) return "Weekly and manual sync history.";
   if (path.startsWith("/changes")) return "Dry-run planned changes and real Shopify writes.";
   if (path.startsWith("/issues")) return "Blocked changes that need attention before automation proceeds.";
+  if (path.startsWith("/sources")) return "Safe Market Radar source connections and platform status.";
   if (path.startsWith("/settings")) return "Automation defaults and safety rules.";
   return "Supplier availability and pricing automation for Shopify.";
 }
@@ -564,7 +799,7 @@ function styles(): string {
     h1 { font-size: 28px; line-height: 1.2; margin: 0 0 4px; font-weight: 760; }
     h2 { font-size: 18px; margin: 0 0 16px; }
     p { margin: 0; color: var(--muted); }
-    button { border: 0; background: var(--accent); color: white; min-height: 40px; padding: 0 16px; border-radius: 6px; font-size: 14px; font-weight: 650; cursor: pointer; }
+    button, .button-link { border: 0; background: var(--accent); color: white; min-height: 40px; padding: 0 16px; border-radius: 6px; font-size: 14px; font-weight: 650; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
     button:hover { background: var(--accent-strong); }
     button.secondary { background: #36485c; }
     .run-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -574,12 +809,12 @@ function styles(): string {
     .briefing h2 { margin: 0 0 6px; font-size: 22px; }
     .briefing p { color: #cfe0dc; max-width: 760px; }
     .safety-chip { display: inline-flex; align-items: center; min-height: 30px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 999px; color: #dff7ef; font-size: 12px; font-weight: 720; white-space: nowrap; }
-    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
     .metric, .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
     .metric { padding: 16px; display: grid; gap: 10px; }
     .metric span { color: var(--muted); font-size: 13px; }
     .metric strong { font-size: 28px; }
-    .agent-dock { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .agent-dock { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
     .agent-card { min-height: 112px; padding: 14px; display: grid; align-content: space-between; gap: 6px; color: var(--text); text-decoration: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
     .agent-card:hover { border-color: #9bbcb6; }
     .agent-card.selected { border-color: var(--accent); box-shadow: inset 0 3px 0 var(--accent); }
@@ -589,6 +824,7 @@ function styles(): string {
     .agent-card em { color: var(--accent-strong); font-size: 12px; font-style: normal; font-weight: 700; }
     .dashboard-grid { display: grid; grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr); gap: 16px; align-items: start; }
     .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+    .panel-heading.compact { margin-bottom: 8px; }
     .panel-heading h2 { margin: 0; }
     .panel-heading span { display: inline-flex; align-items: center; justify-content: center; min-width: 28px; height: 28px; border-radius: 999px; background: #eef6f5; color: var(--accent-strong); font-size: 12px; font-weight: 800; }
     .action-queue { display: grid; gap: 10px; }
@@ -617,6 +853,19 @@ function styles(): string {
     .summary-cell span, .summary-cell a { color: var(--muted); font-size: 12px; }
     .summary-cell a { color: var(--accent); }
     .status-pill { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 999px; background: #eef6f5; color: var(--accent-strong); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .window-grid, .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+    .mini-card { border: 1px solid var(--border); border-radius: 6px; background: #fbfcfc; padding: 12px; display: grid; gap: 8px; }
+    .source-card .panel-heading { align-items: flex-start; flex-direction: column; }
+    .source-card .status-pill { align-self: flex-start; }
+    .mini-card span, .mini-card small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+    .mini-card strong { font-size: 14px; }
+    .radar-explanation { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; background: #fbfcfc; }
+    .radar-explanation p { margin-top: 4px; }
+    .draft-form { display: grid; gap: 12px; margin-top: 16px; max-width: 720px; }
+    label { display: grid; gap: 6px; color: var(--text); font-size: 13px; font-weight: 700; }
+    input, select, textarea { width: 100%; border: 1px solid var(--border); border-radius: 6px; background: white; color: var(--text); padding: 10px 12px; font: inherit; font-size: 14px; }
+    textarea { resize: vertical; }
+    .warning-text { color: var(--warning) !important; }
     .alert { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; }
     .alert.error { border-color: #fecdca; color: var(--error); background: #fff5f5; }
     .alert.warning { border-color: #fedf89; color: var(--warning); background: #fffbeb; }

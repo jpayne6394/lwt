@@ -62,6 +62,11 @@ test("admin UI renders the required Shopify app sections and run-now control", (
         blockedIssues: [],
       },
     ],
+    marketRadarOutputs: [],
+    revenuePlays: [],
+    sourceConnections: [],
+    blogDrafts: [],
+    campaignDrafts: [],
     alerts: [],
     shopifyApiKey: "test-api-key",
     applyChangesEnabled: false,
@@ -132,6 +137,11 @@ test("admin UI shows supplier and Shopify context for blocked issues", () => {
       },
     ],
     productOpsOutputs: [],
+    marketRadarOutputs: [],
+    revenuePlays: [],
+    sourceConnections: [],
+    blogDrafts: [],
+    campaignDrafts: [],
     alerts: [],
     shopifyApiKey: "test-api-key",
     applyChangesEnabled: false,
@@ -226,6 +236,73 @@ test("dashboard renders a command center with sub-agent selection and prioritize
         blockedIssues: [],
       },
     ],
+    marketRadarOutputs: [
+      {
+        id: "radar_1",
+        runId: "radar_1",
+        createdAt: "2026-05-25T18:00:00.000Z",
+        agent: "bi",
+        mode: "dry_run",
+        startedAt: "2026-05-25T18:00:00.000Z",
+        finishedAt: "2026-05-25T18:00:00.000Z",
+        summary: {
+          signalsReviewed: 2,
+          competitorPricesReviewed: 1,
+          revenuePlays: 2,
+          highConfidencePlays: 1,
+          lightClaimWarnings: 1,
+        },
+        salesWindows: [
+          { window: "today", label: "Today", orderCount: 1, revenue: 120, unitsSold: 3 },
+          { window: "7d", label: "7 days", orderCount: 4, revenue: 320, unitsSold: 8 },
+        ],
+        explanations: [
+          {
+            topic: "magnesium sleep",
+            title: "Magnesium sleep chatter is rising",
+            explanation: "Market chatter plus stocked products creates a revenue opportunity.",
+            evidence: [{ sourceId: "open-web", sourceLabel: "Open Web", title: "Trend", url: "https://example.com", capturedAt: "2026-05-25T18:00:00.000Z" }],
+            matchedProducts: [],
+            confidence: "high",
+          },
+        ],
+        sourceConnections: [
+          {
+            id: "open-web",
+            label: "Open Web / RSS",
+            status: "connected",
+            accessMode: "safe_open_web",
+            notes: "Public URLs only.",
+            configured: true,
+          },
+        ],
+        revenuePlays: [
+          {
+            id: "play_1",
+            title: "Write a magnesium sleep guide",
+            explanation: "Use trend evidence to create revenue from a stocked product.",
+            actionType: "BLOG_DRAFT",
+            targetAgent: "blog",
+            source: "Market Radar",
+            evidence: [],
+            matchedProducts: [],
+            inventoryContext: "In stock",
+            pricingContext: "Competitor price gap detected",
+            confidence: "high",
+            effort: "medium",
+            status: "SUGGESTED",
+            claimWarnings: ["Avoid cure/treat language."],
+            createdAt: "2026-05-25T18:00:00.000Z",
+            updatedAt: "2026-05-25T18:00:00.000Z",
+          },
+        ],
+        errors: [],
+      },
+    ],
+    revenuePlays: [],
+    sourceConnections: [],
+    blogDrafts: [],
+    campaignDrafts: [],
     alerts: [],
     shopifyApiKey: "test-api-key",
     applyChangesEnabled: false,
@@ -236,7 +313,56 @@ test("dashboard renders a command center with sub-agent selection and prioritize
   }
 
   assert.match(html, /Action Queue/);
+  assert.match(html, /Market Radar/);
+  assert.match(html, /Revenue Plays/);
+  assert.match(html, /Write a magnesium sleep guide/);
   assert.match(html, /Review uncertain matches/);
   assert.match(html, /68|172|84/);
   assert.match(html, /Product Ops is selected/);
+});
+
+test("admin UI renders blog, campaign, flow, and source workbench controls", () => {
+  const baseModel = {
+    activePath: "/",
+    suppliers: [],
+    runs: [],
+    changes: [],
+    issues: [],
+    productOpsOutputs: [],
+    marketRadarOutputs: [],
+    revenuePlays: [],
+    sourceConnections: [
+      {
+        id: "truth-social",
+        label: "Truth Social",
+        status: "manual_only" as const,
+        accessMode: "manual_review" as const,
+        notes: "Manual review until sanctioned access exists.",
+        configured: false,
+      },
+    ],
+    blogDrafts: [],
+    campaignDrafts: [],
+    alerts: [],
+    shopifyApiKey: "test-api-key",
+    applyChangesEnabled: false,
+  };
+
+  const blogHtml = renderAdminPage({ ...baseModel, activeAgent: "blog" });
+  assert.match(blogHtml, /Blog Template Builder/);
+  assert.match(blogHtml, /Educational guide/);
+  assert.match(blogHtml, /Create template draft/);
+
+  const campaignHtml = renderAdminPage({ ...baseModel, activeAgent: "campaign" });
+  assert.match(campaignHtml, /Campaign Draft Suite/);
+  assert.match(campaignHtml, /Shopify Email handoff/);
+
+  const flowHtml = renderAdminPage({ ...baseModel, activeAgent: "flow" });
+  assert.match(flowHtml, /Flow Launchpad/);
+  assert.match(flowHtml, /Open Shopify Flow/);
+
+  const sourcesHtml = renderAdminPage({ ...baseModel, activePath: "/sources" });
+  assert.match(sourcesHtml, /Source Connections/);
+  assert.match(sourcesHtml, /Truth Social/);
+  assert.match(sourcesHtml, /manual_only/);
 });

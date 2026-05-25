@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { ShopifyContentClient } from "../src/shopify/content-client.ts";
 import { ShopifySyncClient } from "../src/shopify/shopify-sync-client.ts";
 import type { PlannedChange } from "../src/domain/types.ts";
 
@@ -84,4 +85,57 @@ test("Shopify sync client applies inventory, price, cost, and draft product chan
   assert.match(calls[3].query, /productCreate/);
   assert.match(calls[4].query, /productVariantsBulkUpdate/);
   assert.match(calls[5].query, /inventoryItemUpdate/);
+});
+
+test("Shopify content client creates draft blog articles without publishing", async () => {
+  const calls: Array<{ query: string; variables: any }> = [];
+  const client = new ShopifyContentClient({
+    graphql: async (query, variables) => {
+      calls.push({ query, variables });
+      if (query.includes("blogs")) {
+        return {
+          data: {
+            blogs: {
+              nodes: [
+                {
+                  id: "gid://shopify/Blog/1",
+                  title: "Wellness Blog",
+                  handle: "wellness-blog",
+                },
+              ],
+            },
+          },
+        };
+      }
+      return {
+        data: {
+          articleCreate: {
+            article: {
+              id: "gid://shopify/Article/1",
+              title: "Magnesium for Better Sleep",
+              handle: "magnesium-for-better-sleep",
+            },
+            userErrors: [],
+          },
+        },
+      };
+    },
+  });
+
+  const blogs = await client.listBlogs();
+  const article = await client.createDraftArticle({
+    blogId: blogs[0].id,
+    title: "Magnesium for Better Sleep",
+    authorName: "Living Well Today",
+    bodyHtml: "<h2>Magnesium for Better Sleep</h2>",
+    summary: "A draft article.",
+    tags: ["magnesium", "sleep"],
+    handle: "magnesium-for-better-sleep",
+  });
+
+  assert.equal(article.id, "gid://shopify/Article/1");
+  assert.match(calls[0].query, /blogs/);
+  assert.match(calls[1].query, /articleCreate/);
+  assert.equal(calls[1].variables.article.isPublished, false);
+  assert.equal(calls[1].variables.article.blogId, "gid://shopify/Blog/1");
 });

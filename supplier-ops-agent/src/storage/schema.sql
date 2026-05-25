@@ -94,6 +94,42 @@ create table if not exists product_ops_outputs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists market_radar_outputs (
+  id text primary key,
+  run_id text not null,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists revenue_plays (
+  id text primary key,
+  action_type text not null,
+  target_agent text not null,
+  status text not null,
+  payload jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists revenue_plays_status_idx on revenue_plays (status);
+create index if not exists revenue_plays_target_agent_idx on revenue_plays (target_agent);
+
+create table if not exists blog_drafts (
+  id text primary key,
+  status text not null,
+  payload jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists campaign_drafts (
+  id text primary key,
+  status text not null,
+  payload jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists alert_history (
   id text primary key,
   severity text not null,

@@ -1,4 +1,7 @@
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant, SupplierProduct } from "../domain/types.ts";
+import type { CampaignDraftRecord } from "../campaigns/types.ts";
+import type { BlogDraftRecord } from "../content/types.ts";
+import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
 
 export type SyncRunStatus = "running" | "completed" | "completed_with_issues" | "failed";
@@ -53,6 +56,16 @@ export type SupplierOpsRepository = {
   recordAppliedChanges(runId: string, changes: PlannedChange[]): Promise<void>;
   recordBlockedIssues(runId: string, issues: BlockedIssue[]): Promise<void>;
   recordProductOpsOutput?(runId: string, output: ProductOpsRunOutput): Promise<void>;
+  recordMarketRadarOutput?(output: MarketRadarRunOutput): Promise<void>;
+  recentMarketRadarOutputs?(limit?: number): Promise<MarketRadarOutputRecord[]>;
+  recordRevenuePlays?(plays: RevenuePlayRecord[]): Promise<void>;
+  updateRevenuePlayStatus?(id: string, status: RevenuePlayRecord["status"]): Promise<RevenuePlayRecord | null>;
+  recentRevenuePlays?(limit?: number): Promise<RevenuePlayRecord[]>;
+  recordBlogDraft?(draft: BlogDraftRecord): Promise<void>;
+  updateBlogDraftShopifyArticle?(id: string, article: { id: string; handle: string }): Promise<BlogDraftRecord | null>;
+  recentBlogDrafts?(limit?: number): Promise<BlogDraftRecord[]>;
+  recordCampaignDraft?(draft: CampaignDraftRecord): Promise<void>;
+  recentCampaignDrafts?(limit?: number): Promise<CampaignDraftRecord[]>;
   recentRuns(limit?: number): Promise<SyncRun[]>;
   recentChanges(limit?: number): Promise<AppliedChangeRecord[]>;
   recentIssues(limit?: number): Promise<BlockedIssueRecord[]>;

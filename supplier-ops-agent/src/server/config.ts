@@ -10,6 +10,20 @@ export type RuntimeConfig = {
   applyChanges: boolean;
   emailWebhookUrl?: string;
   weeklySyncIntervalMs: number;
+  marketRadarSourceUrls: string[];
+  competitorPriceUrls: Array<{
+    productHandle: string;
+    productTitle: string;
+    competitor: string;
+    url: string;
+  }>;
+  sourceCredentials: {
+    reddit: boolean;
+    meta: boolean;
+    x: boolean;
+    pinterest: boolean;
+    truthSocial: boolean;
+  };
 };
 
 export const DEFAULT_SHOPIFY_API_KEY = "11a896486e45ed90e06e632a3e0bacec";
@@ -30,5 +44,44 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     applyChanges: env.APPLY_CHANGES === "true",
     emailWebhookUrl: env.EMAIL_WEBHOOK_URL,
     weeklySyncIntervalMs: Number(env.WEEKLY_SYNC_INTERVAL_MS ?? 7 * 24 * 60 * 60 * 1000),
+    marketRadarSourceUrls: parseList(env.MARKET_RADAR_SOURCE_URLS),
+    competitorPriceUrls: parseCompetitorUrls(env.COMPETITOR_PRICE_URLS),
+    sourceCredentials: {
+      reddit: Boolean(env.REDDIT_ACCESS_TOKEN || env.REDDIT_CLIENT_ID),
+      meta: Boolean(env.META_ACCESS_TOKEN || env.INSTAGRAM_ACCESS_TOKEN),
+      x: Boolean(env.X_BEARER_TOKEN || env.TWITTER_BEARER_TOKEN),
+      pinterest: Boolean(env.PINTEREST_ACCESS_TOKEN),
+      truthSocial: Boolean(env.TRUTH_SOCIAL_APPROVED_ACCESS === "true"),
+    },
   };
+}
+
+function parseList(value: string | undefined): string[] {
+  if (!value) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.map(String).filter(Boolean);
+    }
+  } catch {
+    // Fall through to comma-separated parsing.
+  }
+  return value.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function parseCompetitorUrls(value: string | undefined): RuntimeConfig["competitorPriceUrls"] {
+  if (!value) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(value) as RuntimeConfig["competitorPriceUrls"];
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item) => item.productHandle && item.productTitle && item.competitor && item.url);
+    }
+  } catch {
+    return [];
+  }
+  return [];
 }

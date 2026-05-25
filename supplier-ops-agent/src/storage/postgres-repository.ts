@@ -7,7 +7,10 @@ import type {
   SupplierSnapshot,
   SyncRun,
 } from "./repository.ts";
+import type { CampaignDraftRecord } from "../campaigns/types.ts";
+import type { BlogDraftRecord } from "../content/types.ts";
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
+import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
 
 export class PostgresRepository implements SupplierOpsRepository {
@@ -132,6 +135,86 @@ export class PostgresRepository implements SupplierOpsRepository {
     );
   }
 
+  async recordMarketRadarOutput(output: MarketRadarRunOutput): Promise<void> {
+    const id = `radar_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    await this.#pool.query(
+      `insert into market_radar_outputs (id, run_id, payload) values ($1, $2, $3::jsonb)`,
+      [id, id, JSON.stringify(output)],
+    );
+    await this.recordRevenuePlays(output.revenuePlays);
+  }
+
+  async recordRevenuePlays(plays: RevenuePlayRecord[]): Promise<void> {
+    for (const play of plays) {
+      await this.#pool.query(
+        `insert into revenue_plays (id, action_type, target_agent, status, payload, updated_at)
+         values ($1, $2, $3, $4, $5::jsonb, now())
+         on conflict (id) do update set
+           action_type = excluded.action_type,
+           target_agent = excluded.target_agent,
+           payload = excluded.payload,
+           updated_at = now()`,
+        [play.id, play.actionType, play.targetAgent, play.status, JSON.stringify(play)],
+      );
+    }
+  }
+
+  async updateRevenuePlayStatus(id: string, status: RevenuePlayRecord["status"]): Promise<RevenuePlayRecord | null> {
+    const existing = await this.#pool.query(`select payload from revenue_plays where id = $1`, [id]);
+    if (!existing.rows[0]) {
+      return null;
+    }
+    const play = {
+      ...(existing.rows[0].payload as RevenuePlayRecord),
+      status,
+      updatedAt: new Date().toISOString(),
+    };
+    await this.#pool.query(`update revenue_plays set status = $2, payload = $3::jsonb, updated_at = now() where id = $1`, [
+      id,
+      status,
+      JSON.stringify(play),
+    ]);
+    return play;
+  }
+
+  async recordBlogDraft(draft: BlogDraftRecord): Promise<void> {
+    await this.#pool.query(
+      `insert into blog_drafts (id, status, payload, updated_at)
+       values ($1, $2, $3::jsonb, now())
+       on conflict (id) do update set status = excluded.status, payload = excluded.payload, updated_at = now()`,
+      [draft.id, draft.status, JSON.stringify(draft)],
+    );
+  }
+
+  async updateBlogDraftShopifyArticle(id: string, article: { id: string; handle: string }): Promise<BlogDraftRecord | null> {
+    const existing = await this.#pool.query(`select payload from blog_drafts where id = $1`, [id]);
+    if (!existing.rows[0]) {
+      return null;
+    }
+    const draft = {
+      ...(existing.rows[0].payload as BlogDraftRecord),
+      status: "CREATED_IN_SHOPIFY" as const,
+      shopifyArticleId: article.id,
+      shopifyArticleHandle: article.handle,
+      updatedAt: new Date().toISOString(),
+    };
+    await this.#pool.query(`update blog_drafts set status = $2, payload = $3::jsonb, updated_at = now() where id = $1`, [
+      id,
+      draft.status,
+      JSON.stringify(draft),
+    ]);
+    return draft;
+  }
+
+  async recordCampaignDraft(draft: CampaignDraftRecord): Promise<void> {
+    await this.#pool.query(
+      `insert into campaign_drafts (id, status, payload, updated_at)
+       values ($1, $2, $3::jsonb, now())
+       on conflict (id) do update set status = excluded.status, payload = excluded.payload, updated_at = now()`,
+      [draft.id, draft.status, JSON.stringify(draft)],
+    );
+  }
+
   async recentRuns(limit = 20): Promise<SyncRun[]> {
     const result = await this.#pool.query(
       `select id, dry_run, status, started_at, completed_at, supplier_count, change_count, issue_count
@@ -178,6 +261,34 @@ export class PostgresRepository implements SupplierOpsRepository {
       runId: row.run_id,
       createdAt: row.created_at.toISOString(),
     }));
+  }
+
+  async recentMarketRadarOutputs(limit = 20): Promise<MarketRadarOutputRecord[]> {
+    const result = await this.#pool.query(
+      `select id, run_id, payload, created_at from market_radar_outputs order by created_at desc limit $1`,
+      [limit],
+    );
+    return result.rows.map((row: any) => ({
+      ...row.payload,
+      id: row.id,
+      runId: row.run_id,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async recentRevenuePlays(limit = 50): Promise<RevenuePlayRecord[]> {
+    const result = await this.#pool.query(`select payload from revenue_plays order by updated_at desc limit $1`, [limit]);
+    return result.rows.map((row: any) => row.payload as RevenuePlayRecord);
+  }
+
+  async recentBlogDrafts(limit = 50): Promise<BlogDraftRecord[]> {
+    const result = await this.#pool.query(`select payload from blog_drafts order by updated_at desc limit $1`, [limit]);
+    return result.rows.map((row: any) => row.payload as BlogDraftRecord);
+  }
+
+  async recentCampaignDrafts(limit = 50): Promise<CampaignDraftRecord[]> {
+    const result = await this.#pool.query(`select payload from campaign_drafts order by updated_at desc limit $1`, [limit]);
+    return result.rows.map((row: any) => row.payload as CampaignDraftRecord);
   }
 }
 

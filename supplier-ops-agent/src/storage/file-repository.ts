@@ -1,7 +1,10 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
+import type { CampaignDraftRecord } from "../campaigns/types.ts";
+import type { BlogDraftRecord } from "../content/types.ts";
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
+import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
 import type {
   AppliedChangeRecord,
@@ -21,6 +24,10 @@ type FileRepositoryState = {
   changes: AppliedChangeRecord[];
   issues: BlockedIssueRecord[];
   productOpsOutputs: ProductOpsOutputRecord[];
+  marketRadarOutputs: MarketRadarOutputRecord[];
+  revenuePlays: RevenuePlayRecord[];
+  blogDrafts: BlogDraftRecord[];
+  campaignDrafts: CampaignDraftRecord[];
 };
 
 const EMPTY_STATE: FileRepositoryState = {
@@ -31,6 +38,10 @@ const EMPTY_STATE: FileRepositoryState = {
   changes: [],
   issues: [],
   productOpsOutputs: [],
+  marketRadarOutputs: [],
+  revenuePlays: [],
+  blogDrafts: [],
+  campaignDrafts: [],
 };
 
 const MAX_RUNS = 50;
@@ -38,6 +49,9 @@ const MAX_SNAPSHOTS = 20;
 const MAX_CHANGES = 300;
 const MAX_ISSUES = 300;
 const MAX_PRODUCT_OPS_OUTPUTS = 20;
+const MAX_MARKET_RADAR_OUTPUTS = 20;
+const MAX_REVENUE_PLAYS = 200;
+const MAX_CONTENT_DRAFTS = 100;
 
 export class FileRepository implements SupplierOpsRepository {
   readonly #filePath: string;
@@ -146,6 +160,73 @@ export class FileRepository implements SupplierOpsRepository {
     await this.#persist();
   }
 
+  async recordMarketRadarOutput(output: MarketRadarRunOutput): Promise<void> {
+    const id = `radar_${Date.now()}_${this.#state.marketRadarOutputs.length + 1}`;
+    this.#state.marketRadarOutputs.unshift({
+      ...output,
+      id,
+      runId: id,
+      createdAt: new Date().toISOString(),
+    });
+    this.#state.marketRadarOutputs = this.#state.marketRadarOutputs.slice(0, MAX_MARKET_RADAR_OUTPUTS);
+    await this.recordRevenuePlays(output.revenuePlays);
+    await this.#persist();
+  }
+
+  async recordRevenuePlays(plays: RevenuePlayRecord[]): Promise<void> {
+    for (const play of plays) {
+      const existingIndex = this.#state.revenuePlays.findIndex((candidate) => candidate.id === play.id);
+      if (existingIndex >= 0) {
+        this.#state.revenuePlays[existingIndex] = {
+          ...this.#state.revenuePlays[existingIndex],
+          ...play,
+          status: this.#state.revenuePlays[existingIndex].status,
+          updatedAt: play.updatedAt,
+        };
+      } else {
+        this.#state.revenuePlays.unshift(play);
+      }
+    }
+    this.#state.revenuePlays = this.#state.revenuePlays.slice(0, MAX_REVENUE_PLAYS);
+    await this.#persist();
+  }
+
+  async updateRevenuePlayStatus(id: string, status: RevenuePlayRecord["status"]): Promise<RevenuePlayRecord | null> {
+    const play = this.#state.revenuePlays.find((candidate) => candidate.id === id);
+    if (!play) {
+      return null;
+    }
+    play.status = status;
+    play.updatedAt = new Date().toISOString();
+    await this.#persist();
+    return play;
+  }
+
+  async recordBlogDraft(draft: BlogDraftRecord): Promise<void> {
+    this.#state.blogDrafts.unshift(draft);
+    this.#state.blogDrafts = this.#state.blogDrafts.slice(0, MAX_CONTENT_DRAFTS);
+    await this.#persist();
+  }
+
+  async updateBlogDraftShopifyArticle(id: string, article: { id: string; handle: string }): Promise<BlogDraftRecord | null> {
+    const draft = this.#state.blogDrafts.find((candidate) => candidate.id === id);
+    if (!draft) {
+      return null;
+    }
+    draft.status = "CREATED_IN_SHOPIFY";
+    draft.shopifyArticleId = article.id;
+    draft.shopifyArticleHandle = article.handle;
+    draft.updatedAt = new Date().toISOString();
+    await this.#persist();
+    return draft;
+  }
+
+  async recordCampaignDraft(draft: CampaignDraftRecord): Promise<void> {
+    this.#state.campaignDrafts.unshift(draft);
+    this.#state.campaignDrafts = this.#state.campaignDrafts.slice(0, MAX_CONTENT_DRAFTS);
+    await this.#persist();
+  }
+
   async recentRuns(limit = 20): Promise<SyncRun[]> {
     return this.#state.runs.slice(0, limit);
   }
@@ -160,6 +241,22 @@ export class FileRepository implements SupplierOpsRepository {
 
   async recentProductOpsOutputs(limit = 20): Promise<ProductOpsOutputRecord[]> {
     return this.#state.productOpsOutputs.slice(0, limit);
+  }
+
+  async recentMarketRadarOutputs(limit = 20): Promise<MarketRadarOutputRecord[]> {
+    return this.#state.marketRadarOutputs.slice(0, limit);
+  }
+
+  async recentRevenuePlays(limit = 50): Promise<RevenuePlayRecord[]> {
+    return this.#state.revenuePlays.slice(0, limit);
+  }
+
+  async recentBlogDrafts(limit = 50): Promise<BlogDraftRecord[]> {
+    return this.#state.blogDrafts.slice(0, limit);
+  }
+
+  async recentCampaignDrafts(limit = 50): Promise<CampaignDraftRecord[]> {
+    return this.#state.campaignDrafts.slice(0, limit);
   }
 
   async #persist(): Promise<void> {
@@ -208,6 +305,10 @@ async function readState(filePath: string): Promise<FileRepositoryState> {
       changes: Array.isArray(parsed.changes) ? parsed.changes : [],
       issues: Array.isArray(parsed.issues) ? parsed.issues : [],
       productOpsOutputs: Array.isArray(parsed.productOpsOutputs) ? parsed.productOpsOutputs : [],
+      marketRadarOutputs: Array.isArray(parsed.marketRadarOutputs) ? parsed.marketRadarOutputs : [],
+      revenuePlays: Array.isArray(parsed.revenuePlays) ? parsed.revenuePlays : [],
+      blogDrafts: Array.isArray(parsed.blogDrafts) ? parsed.blogDrafts : [],
+      campaignDrafts: Array.isArray(parsed.campaignDrafts) ? parsed.campaignDrafts : [],
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

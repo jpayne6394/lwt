@@ -13,6 +13,7 @@ Embedded Shopify admin app and background worker for supplier-driven inventory a
 - Blocks uncertain matches, supplier failures, login/2FA problems, parser errors, and price swings over 25%.
 - Creates newly discovered supplier products as Shopify drafts only.
 - Adds a Product Operations Agent layer that classifies promotion readiness without changing product copy, tags, types, collections, or promotions.
+- Adds a BI-led command workbench with Market Radar, revenue plays, source connection cards, blog template drafts, campaign briefs, and a Shopify Flow launchpad.
 
 ## Product Operations Agent
 
@@ -33,6 +34,32 @@ Readiness checks cover active and published status, confident supplier match, st
 Suggested tasks use these action types: `PROMOTE`, `FIX`, `WRITE`, `AUTOMATE`, `IGNORE`, and `REVIEW`. V1 only suggests work; it does not auto-edit titles, descriptions, tags, product types, metafields, collections, or promotions.
 
 Dry-run is safe by default. Shopify writes only run when `APPLY_CHANGES=true` is set. Without that environment variable, manual write clicks and scheduled runs are forced into dry-run mode.
+
+## BI Market Radar and command workbench
+
+The dashboard now includes sub-agent workbenches for BI Analyst, Inventory Ops, Product Ops, Campaign Planner, Blog Publisher, and Flow Launchpad.
+
+Market Radar is free-first and rule-based by default:
+
+- Builds sales windows for today, 7, 30, 90, and 365 days when order scope is available.
+- Uses cached Shopify catalog/Product Ops output, optional open-web URLs, optional competitor price URLs, and official/API-safe source statuses.
+- Produces evidence-backed revenue plays for blog drafts, email campaign briefs, pricing checks, bundles/restock opportunities, and Flow setup ideas.
+- Keeps social platforms as safe connector cards. Do not store social passwords or cookie-scraping sessions; use official API/OAuth access when available.
+- Adds light health-claim warnings for risky language, but leaves final compliance review to the human reviewer.
+
+Optional source env vars:
+
+```bash
+MARKET_RADAR_SOURCE_URLS=https://example.com/rss,https://example.com/wellness-newsletter
+COMPETITOR_PRICE_URLS=[{"productHandle":"magnesium-glycinate","productTitle":"Magnesium Glycinate","competitor":"Competitor A","url":"https://competitor.example/products/magnesium"}]
+REDDIT_ACCESS_TOKEN=optional-official-token
+META_ACCESS_TOKEN=optional-official-token
+X_BEARER_TOKEN=optional-paid-api-token
+PINTEREST_ACCESS_TOKEN=optional-official-token
+TRUTH_SOCIAL_APPROVED_ACCESS=false
+```
+
+Blog Publisher uses saved wellness templates, not paid AI calls. It can create local article drafts and then create Shopify draft articles after approval. Campaign Planner creates Shopify Email handoff briefs; it does not send emails. Flow Launchpad stores setup ideas and links into Shopify Flow; it does not auto-edit workflows.
 
 ## Run locally
 
@@ -112,5 +139,8 @@ The app needs Shopify Admin API scopes for product and inventory automation:
 - `write_products`
 - `read_inventory`
 - `write_inventory`
+- `read_orders` for BI sales windows
+- `read_content`
+- `write_content` for draft blog article creation
 
 The app UI is server-rendered and includes Shopify App Bridge so it can be embedded in Shopify admin.
