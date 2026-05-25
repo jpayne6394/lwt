@@ -30,7 +30,16 @@ const FORMAT_STOP_WORDS = new Set([
   "vial",
   "vials",
 ]);
-const GENERIC_TITLE_STOP_WORDS = new Set(["care", "product", "products", "supplement", "supplements"]);
+const GENERIC_TITLE_STOP_WORDS = new Set([
+  "care",
+  "phase",
+  "product",
+  "products",
+  "relief",
+  "supplement",
+  "supplements",
+  "symptom",
+]);
 
 const BRAND_ALIASES = new Map([
   ["research nutritional", "researched nutritionals"],

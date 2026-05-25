@@ -185,6 +185,77 @@ test("matcher treats generic title overlap as unmatched instead of blocking draf
   });
 });
 
+test("matcher ignores DesBio Phase Symptom Relief family words when the remedy code differs", () => {
+  const result = matchSupplierProduct(
+    {
+      supplierId: "desbio",
+      supplierName: "DesBio",
+      brand: "DesBio",
+      sku: "SPHASE1-CYTO",
+      title: "CYTO Phase 1 Symptom Relief",
+      stockStatus: "in_stock",
+      capturedAt: "2026-05-24T12:00:00.000Z",
+    },
+    [
+      {
+        productId: "gid://shopify/Product/30",
+        variantId: "gid://shopify/ProductVariant/30",
+        inventoryItemId: "gid://shopify/InventoryItem/30",
+        locationId: "gid://shopify/Location/1",
+        handle: "bart-phase-1-symptom-relief-desbio",
+        title: "BART Phase 1 Symptom Relief by DesBio",
+        vendor: "DesBio",
+        sku: "SPHASE1-BART",
+        barcode: "",
+        price: 335,
+        compareAtPrice: null,
+        cost: 169.95,
+        status: "active",
+      },
+    ],
+    [],
+  );
+
+  assert.deepEqual(result, {
+    status: "unmatched",
+    reason: "No matching Shopify product found",
+  });
+});
+
+test("matcher still accepts the same DesBio Phase Symptom Relief remedy by title", () => {
+  const result = matchSupplierProduct(
+    {
+      supplierId: "desbio",
+      supplierName: "DesBio",
+      brand: "DesBio",
+      title: "BART Phase 1 Symptom Relief",
+      stockStatus: "in_stock",
+      capturedAt: "2026-05-24T12:00:00.000Z",
+    },
+    [
+      {
+        productId: "gid://shopify/Product/31",
+        variantId: "gid://shopify/ProductVariant/31",
+        inventoryItemId: "gid://shopify/InventoryItem/31",
+        locationId: "gid://shopify/Location/1",
+        handle: "bart-phase-1-symptom-relief-desbio",
+        title: "BART Phase 1 Symptom Relief by DesBio",
+        vendor: "DesBio",
+        sku: "SPHASE1-BART",
+        barcode: "",
+        price: 335,
+        compareAtPrice: null,
+        cost: 169.95,
+        status: "active",
+      },
+    ],
+    [],
+  );
+
+  assert.equal(result.status, "matched");
+  assert.equal(result.strategy, "title_vendor");
+});
+
 test("matcher blocks duplicate exact SKU matches", () => {
   const result = matchSupplierProduct(
     {
