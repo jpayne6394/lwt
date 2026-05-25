@@ -58,12 +58,14 @@ async function createRepository(databaseUrl: string | undefined): Promise<Suppli
 
 function createShopifyClients(config: ReturnType<typeof loadConfig>) {
   if (!config.shopifyShop || !config.shopifyAccessToken) {
+    const graphql = async () => {
+      throw new Error("Shopify credentials are not configured");
+    };
+
     return {
-      catalogClient: undefined,
+      catalogClient: new ShopifyCatalogClient(graphql),
       syncClient: new ShopifySyncClient({
-        graphql: async () => {
-          throw new Error("Shopify credentials are not configured");
-        },
+        graphql,
       }),
     };
   }
