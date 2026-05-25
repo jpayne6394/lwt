@@ -143,7 +143,10 @@ function findTitleVendorMatch(supplierProduct: SupplierProduct, shopifyVariants:
   const supplierBrand = canonicalBrand(supplierProduct.brand ?? supplierProduct.supplierName);
   const requiresDesbioPhaseFamily =
     supplierProduct.supplierId === "desbio" && isDesbioPhaseSymptomRelief(supplierProduct.title);
-  const scored = shopifyVariants
+  const candidateVariants = supplierBrand
+    ? shopifyVariants.filter((variant) => brandMatches(supplierBrand, variant))
+    : shopifyVariants;
+  const scored = candidateVariants
     .map((variant) => {
       const titleStopWords = titleStopWordsForBrands(supplierBrand, variant.vendor);
       const supplierTokens = tokenizeProductTitle(supplierProduct.title, titleStopWords);

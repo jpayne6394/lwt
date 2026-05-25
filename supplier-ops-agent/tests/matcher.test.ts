@@ -185,6 +185,43 @@ test("matcher treats generic title overlap as unmatched instead of blocking draf
   });
 });
 
+test("matcher ignores title overlap from a different vendor family", () => {
+  const result = matchSupplierProduct(
+    {
+      supplierId: "physicians-standard",
+      supplierName: "Physicians' Standard",
+      brand: "Physicians' Standard",
+      sku: "5D",
+      title: "Vitamin C & Zinc",
+      stockStatus: "in_stock",
+      capturedAt: "2026-05-24T12:00:00.000Z",
+    },
+    [
+      {
+        productId: "gid://shopify/Product/21",
+        variantId: "gid://shopify/ProductVariant/21",
+        inventoryItemId: "gid://shopify/InventoryItem/21",
+        locationId: "gid://shopify/Location/1",
+        handle: "zinc-16oz-by-world-health-mall",
+        title: "Zinc 16oz. by World Health Mall",
+        vendor: "World Health Mall",
+        sku: "ZINC 16OZ",
+        barcode: "",
+        price: 33.99,
+        compareAtPrice: null,
+        cost: 17,
+        status: "active",
+      },
+    ],
+    [],
+  );
+
+  assert.deepEqual(result, {
+    status: "unmatched",
+    reason: "No matching Shopify product found",
+  });
+});
+
 test("matcher ignores DesBio Phase Symptom Relief family words when the remedy code differs", () => {
   const result = matchSupplierProduct(
     {
