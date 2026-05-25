@@ -4,7 +4,7 @@ import type { SupplierAdapter, SupplierConfig } from "./types.ts";
 import { WebsiteSupplierAdapter, type WebsiteAdapterConfig } from "./website-adapter.ts";
 
 export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.ProcessEnv = process.env): SupplierAdapter[] {
-  return suppliers.map((supplier) => {
+  return suppliers.flatMap((supplier) => {
     const suffix = toEnvSuffix(supplier.id);
     const feedUrl =
       env[`SUPPLIER_FEED_URL_${suffix}`] ??
@@ -12,22 +12,28 @@ export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.P
       defaultFeedUrlForSupplier(supplier.id);
 
     if (feedUrl) {
-      return new JsonFeedSupplierAdapter(supplier, feedUrl);
+      return [new JsonFeedSupplierAdapter(supplier, feedUrl)];
     }
 
     if (supplier.id === "emerson-ecologics") {
-      return new EmersonCatalogSupplierAdapter(supplier, {
-        catalogUrls: parseList(env[`SUPPLIER_CATALOG_URLS_${suffix}`]),
-        cookieHeader: env[`SUPPLIER_COOKIE_HEADER_${suffix}`] ?? env[`SUPPLIER_COOKIE_${suffix}`],
-      });
+      return [
+        new EmersonCatalogSupplierAdapter(supplier, {
+          catalogUrls: parseList(env[`SUPPLIER_CATALOG_URLS_${suffix}`]),
+          cookieHeader: env[`SUPPLIER_COOKIE_HEADER_${suffix}`] ?? env[`SUPPLIER_COOKIE_${suffix}`],
+        }),
+      ];
     }
 
     const websiteConfig = parseWebsiteConfig(env[`SUPPLIER_WEBSITE_CONFIG_${suffix}`]);
+    if (!websiteConfig.loginUrl || !websiteConfig.productsUrl || !websiteConfig.selectors) {
+      return [];
+    }
+
     return new WebsiteSupplierAdapter(supplier, {
       ...websiteConfig,
       username: env[`SUPPLIER_USERNAME_${suffix}`] ?? websiteConfig.username,
       password: env[`SUPPLIER_PASSWORD_${suffix}`] ?? websiteConfig.password,
-    });
+    }) as SupplierAdapter;
   });
 }
 

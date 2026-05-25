@@ -30,6 +30,13 @@ export class AlertService {
   }
 
   async raise(input: RaiseAlertInput): Promise<AlertMessage> {
+    const existingIndex = this.#alerts.findIndex(
+      (alert) => alert.kind === input.kind && alert.title === input.title && alert.body === input.body,
+    );
+    if (existingIndex !== -1) {
+      this.#alerts.splice(existingIndex, 1);
+    }
+
     const alert: AlertMessage = {
       ...input,
       id: `alert_${Date.now()}_${this.#alerts.length + 1}`,
