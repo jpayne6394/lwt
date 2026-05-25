@@ -92,7 +92,7 @@ function renderDashboard(model: AdminPageModel): string {
     <section class="metrics">
       ${metric("Suppliers", model.suppliers.length)}
       ${metric("Recent Runs", model.runs.length)}
-      ${metric("Applied Changes", model.changes.length)}
+      ${metric("Planned Changes", model.changes.length)}
       ${metric("Open Issues", model.issues.length)}
     </section>
     <section class="panel">
@@ -179,12 +179,14 @@ function renderIssues(issues: BlockedIssueRecord[]): string {
   return `<section class="panel">
     <h2>Blocked issues</h2>
     ${issues.length ? `<table>
-      <thead><tr><th>Time</th><th>Kind</th><th>Reason</th><th>Data</th></tr></thead>
+      <thead><tr><th>Time</th><th>Kind</th><th>Supplier item</th><th>Shopify candidate</th><th>Reason</th><th>Data</th></tr></thead>
       <tbody>${issues
         .map(
           (issue) => `<tr>
             <td>${escapeHtml(issue.createdAt)}</td>
             <td>${escapeHtml(issue.kind)}</td>
+            <td>${renderSupplierProductSummary(issue.supplierProduct)}</td>
+            <td>${renderShopifyVariantSummary(issue.shopifyVariant)}</td>
             <td>${escapeHtml(issue.reason)}</td>
             <td><code>${escapeHtml(JSON.stringify(issue.data ?? {}))}</code></td>
           </tr>`,
@@ -192,6 +194,41 @@ function renderIssues(issues: BlockedIssueRecord[]): string {
         .join("")}</tbody>
     </table>` : `<p class="empty">No blocked issues.</p>`}
   </section>`;
+}
+
+function renderSupplierProductSummary(product: BlockedIssueRecord["supplierProduct"]): string {
+  if (!product) {
+    return `<span class="muted">No supplier item</span>`;
+  }
+
+  const title = escapeHtml(product.title);
+  const sku = product.sku ? `SKU ${escapeHtml(product.sku)}` : "No SKU";
+  const brand = product.brand ? escapeHtml(product.brand) : escapeHtml(product.supplierName);
+  const stock = escapeHtml(product.stockStatus);
+  const url = product.productUrl
+    ? `<a class="inline-link" href="${escapeHtml(product.productUrl)}" target="_blank" rel="noreferrer">Supplier page</a>`
+    : "";
+
+  return `<div class="summary-cell">
+    <strong>${title}</strong>
+    <span>${brand} · ${sku} · ${stock}</span>
+    ${url}
+  </div>`;
+}
+
+function renderShopifyVariantSummary(variant: BlockedIssueRecord["shopifyVariant"]): string {
+  if (!variant) {
+    return `<span class="muted">No candidate</span>`;
+  }
+
+  const sku = variant.sku ? `SKU ${escapeHtml(variant.sku)}` : "No SKU";
+  const price = Number.isFinite(variant.price) ? `$${variant.price.toFixed(2)}` : "No price";
+
+  return `<div class="summary-cell">
+    <strong>${escapeHtml(variant.title)}</strong>
+    <span>${escapeHtml(variant.vendor)} · ${sku} · ${price}</span>
+    <span>${escapeHtml(variant.status)}</span>
+  </div>`;
 }
 
 function renderSettings(suppliers: SupplierConfig[]): string {
@@ -230,7 +267,7 @@ function pageTitle(path: string): string {
 function pageSubtitle(path: string): string {
   if (path.startsWith("/suppliers")) return "Configured supplier adapters and coverage.";
   if (path.startsWith("/runs")) return "Weekly and manual sync history.";
-  if (path.startsWith("/changes")) return "Every automated Shopify update, recorded before write.";
+  if (path.startsWith("/changes")) return "Dry-run planned changes and real Shopify writes.";
   if (path.startsWith("/issues")) return "Blocked changes that need attention before automation proceeds.";
   if (path.startsWith("/settings")) return "Automation defaults and safety rules.";
   return "Supplier availability and pricing automation for Shopify.";
@@ -295,6 +332,13 @@ function styles(): string {
     dt { color: var(--muted); }
     dd { margin: 0; }
     .empty { color: var(--muted); padding: 10px 0; }
+    .muted { color: var(--muted); }
+    .inline-link { color: var(--accent); text-decoration: none; font-weight: 650; }
+    .inline-link:hover { color: var(--accent-strong); text-decoration: underline; }
+    .summary-cell { display: grid; gap: 4px; min-width: 220px; }
+    .summary-cell strong { font-size: 13px; }
+    .summary-cell span, .summary-cell a { color: var(--muted); font-size: 12px; }
+    .summary-cell a { color: var(--accent); }
     .alert { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; }
     .alert.error { border-color: #fecdca; color: var(--error); background: #fff5f5; }
     .alert.warning { border-color: #fedf89; color: var(--warning); background: #fffbeb; }

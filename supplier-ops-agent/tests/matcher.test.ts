@@ -115,6 +115,76 @@ test("matcher accepts high-confidence vendor and title matches without SKU", () 
   assert.equal(result.strategy, "title_vendor");
 });
 
+test("matcher accepts known supplier brand aliases and packaging title differences", () => {
+  const result = matchSupplierProduct(
+    {
+      supplierId: "research-nutritionals",
+      supplierName: "Research Nutritionals",
+      brand: "Research Nutritionals",
+      title: "InflaQuell 180 Capsule Bottle",
+      stockStatus: "in_stock",
+      capturedAt: "2026-05-24T12:00:00.000Z",
+    },
+    [
+      {
+        productId: "gid://shopify/Product/10",
+        variantId: "gid://shopify/ProductVariant/10",
+        inventoryItemId: "gid://shopify/InventoryItem/10",
+        locationId: "gid://shopify/Location/1",
+        handle: "inflaquell-180-caps-by-researched-nutritionals",
+        title: "InflaQuell 180 caps by Researched Nutritionals",
+        vendor: "Researched Nutritionals",
+        sku: "InflaQuell",
+        barcode: "",
+        price: 75,
+        compareAtPrice: null,
+        cost: null,
+        status: "active",
+      },
+    ],
+    [],
+  );
+
+  assert.equal(result.status, "matched");
+  assert.equal(result.strategy, "title_vendor");
+});
+
+test("matcher treats generic title overlap as unmatched instead of blocking drafts", () => {
+  const result = matchSupplierProduct(
+    {
+      supplierId: "physicians-standard",
+      supplierName: "Physicians' Standard",
+      brand: "Physicians' Standard",
+      title: "Digest Care",
+      stockStatus: "in_stock",
+      capturedAt: "2026-05-24T12:00:00.000Z",
+    },
+    [
+      {
+        productId: "gid://shopify/Product/20",
+        variantId: "gid://shopify/ProductVariant/20",
+        inventoryItemId: "gid://shopify/InventoryItem/20",
+        locationId: "gid://shopify/Location/1",
+        handle: "kidney-care-by-physicians-standard",
+        title: "Kidney Care by Physicians' Standard",
+        vendor: "Physicians Standard",
+        sku: "Kidney-Care",
+        barcode: "",
+        price: 30,
+        compareAtPrice: null,
+        cost: null,
+        status: "active",
+      },
+    ],
+    [],
+  );
+
+  assert.deepEqual(result, {
+    status: "unmatched",
+    reason: "No matching Shopify product found",
+  });
+});
+
 test("matcher blocks duplicate exact SKU matches", () => {
   const result = matchSupplierProduct(
     {

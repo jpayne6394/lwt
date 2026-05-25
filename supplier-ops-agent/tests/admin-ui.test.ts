@@ -35,3 +35,56 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /app-bridge/);
   assert.match(html, /<meta name="shopify-api-key" content="test-api-key">/);
 });
+
+test("admin UI shows supplier and Shopify context for blocked issues", () => {
+  const html = renderAdminPage({
+    activePath: "/issues",
+    suppliers: [],
+    runs: [],
+    changes: [],
+    issues: [
+      {
+        id: "issue_1",
+        runId: "run_1",
+        kind: "match_uncertain",
+        reason: "Supplier product resembles an existing Shopify product but not confidently enough to automate",
+        createdAt: "2026-05-25T04:00:00.000Z",
+        supplierProduct: {
+          supplierId: "research-nutritionals",
+          supplierName: "Research Nutritionals",
+          brand: "Research Nutritionals",
+          sku: "RN123",
+          title: "InflaQuell 180 Capsule Bottle",
+          stockStatus: "in_stock",
+          msrp: 75,
+          productUrl: "https://example.com/supplier-product",
+          capturedAt: "2026-05-25T04:00:00.000Z",
+        },
+        shopifyVariant: {
+          productId: "gid://shopify/Product/1",
+          variantId: "gid://shopify/ProductVariant/1",
+          inventoryItemId: "gid://shopify/InventoryItem/1",
+          locationId: "gid://shopify/Location/1",
+          handle: "inflaquell-180-caps-by-researched-nutritionals",
+          title: "InflaQuell 180 caps by Researched Nutritionals",
+          vendor: "Researched Nutritionals",
+          sku: "InflaQuell",
+          barcode: "",
+          price: 75,
+          compareAtPrice: null,
+          cost: null,
+          status: "active",
+        },
+        data: { matchConfidence: 0.76 },
+      },
+    ],
+    alerts: [],
+    shopifyApiKey: "test-api-key",
+  });
+
+  assert.match(html, /InflaQuell 180 Capsule Bottle/);
+  assert.match(html, /RN123/);
+  assert.match(html, /Research Nutritionals/);
+  assert.match(html, /InflaQuell 180 caps by Researched Nutritionals/);
+  assert.match(html, /matchConfidence/);
+});

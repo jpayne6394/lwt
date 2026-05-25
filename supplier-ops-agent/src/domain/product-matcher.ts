@@ -1,7 +1,50 @@
 import type { MatchResult, ProductMapping, ShopifyVariant, SupplierProduct } from "./types.ts";
 
 const TITLE_CONFIDENCE_THRESHOLD = 0.78;
-const UNCERTAIN_CONFIDENCE_THRESHOLD = 0.25;
+const UNCERTAIN_CONFIDENCE_THRESHOLD = 0.45;
+
+const BASE_STOP_WORDS = new Set(["by", "the", "and", "for", "with", "a", "an", "of"]);
+const FORMAT_STOP_WORDS = new Set([
+  "bottle",
+  "caps",
+  "cap",
+  "capsule",
+  "capsules",
+  "count",
+  "ct",
+  "fl",
+  "floz",
+  "g",
+  "gel",
+  "grams",
+  "ml",
+  "oz",
+  "sachet",
+  "sachets",
+  "softgel",
+  "softgels",
+  "tab",
+  "tabs",
+  "tablet",
+  "tablets",
+  "vial",
+  "vials",
+]);
+const GENERIC_TITLE_STOP_WORDS = new Set(["care", "product", "products", "supplement", "supplements"]);
+
+const BRAND_ALIASES = new Map([
+  ["research nutritional", "researched nutritionals"],
+  ["research nutritionals", "researched nutritionals"],
+  ["researched nutritional", "researched nutritionals"],
+  ["researched nutritionals", "researched nutritionals"],
+  ["physician standard", "physicians standard"],
+  ["physician s standard", "physicians standard"],
+  ["physicians standard", "physicians standard"],
+  ["physicians standards", "physicians standard"],
+  ["des bio", "desbio"],
+  ["deseret biologicals", "desbio"],
+  ["desbio", "desbio"],
+]);
 
 export function matchSupplierProduct(
   supplierProduct: SupplierProduct,
@@ -88,13 +131,13 @@ function findManualMapping(
 }
 
 function findTitleVendorMatch(supplierProduct: SupplierProduct, shopifyVariants: ShopifyVariant[]): MatchResult {
-  const supplierTokens = tokenizeProductTitle(supplierProduct.title);
-  const supplierBrand = normalizeText(supplierProduct.brand ?? supplierProduct.supplierName);
+  const supplierBrand = canonicalBrand(supplierProduct.brand ?? supplierProduct.supplierName);
   const scored = shopifyVariants
     .map((variant) => {
-      const titleScore = tokenOverlapScore(supplierTokens, tokenizeProductTitle(variant.title));
-      const vendorText = normalizeText(`${variant.vendor} ${variant.title}`);
-      const vendorMatches = supplierBrand.length > 0 && vendorText.includes(supplierBrand);
+      const titleStopWords = titleStopWordsForBrands(supplierBrand, variant.vendor);
+      const supplierTokens = tokenizeProductTitle(supplierProduct.title, titleStopWords);
+      const titleScore = tokenOverlapScore(supplierTokens, tokenizeProductTitle(variant.title, titleStopWords));
+      const vendorMatches = brandMatches(supplierBrand, variant);
       const score = vendorMatches ? titleScore : titleScore * 0.65;
       return { variant, score, vendorMatches };
     })
@@ -128,6 +171,10 @@ function findTitleVendorMatch(supplierProduct: SupplierProduct, shopifyVariants:
   return {
     status: "blocked",
     reason: "Supplier product resembles an existing Shopify product but not confidently enough to automate",
+    candidate: {
+      variant: best.variant,
+      confidence: roundConfidence(best.score),
+    },
   };
 }
 
@@ -145,11 +192,18 @@ function normalizeText(value: string): string {
     .replace(/\s+/g, " ");
 }
 
-function tokenizeProductTitle(value: string): string[] {
-  const stopWords = new Set(["by", "the", "and", "for", "with", "a", "an", "of"]);
+function tokenizeProductTitle(value: string, additionalStopWords: Set<string> = new Set()): string[] {
   return normalizeText(value)
     .split(" ")
-    .filter((token) => token.length > 1 && !stopWords.has(token));
+    .filter(
+      (token) =>
+        token.length > 1 &&
+        !BASE_STOP_WORDS.has(token) &&
+        !FORMAT_STOP_WORDS.has(token) &&
+        !GENERIC_TITLE_STOP_WORDS.has(token) &&
+        !additionalStopWords.has(token) &&
+        !isQuantityFormatToken(token),
+    );
 }
 
 function tokenOverlapScore(leftTokens: string[], rightTokens: string[]): number {
@@ -159,10 +213,56 @@ function tokenOverlapScore(leftTokens: string[], rightTokens: string[]): number 
 
   const right = new Set(rightTokens);
   const matches = leftTokens.filter((token) => right.has(token)).length;
-  return matches / Math.max(leftTokens.length, rightTokens.length);
+  if (matches === 0) {
+    return 0;
+  }
+
+  const coverage = matches / Math.min(leftTokens.length, rightTokens.length);
+  const balance = matches / Math.max(leftTokens.length, rightTokens.length);
+  return (coverage + balance) / 2;
 }
 
 function roundConfidence(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+function titleStopWordsForBrands(supplierBrand: string, shopifyVendor: string): Set<string> {
+  return new Set([...brandTokens(supplierBrand), ...brandTokens(canonicalBrand(shopifyVendor))]);
+}
+
+function brandTokens(value: string): string[] {
+  return normalizeText(value)
+    .split(" ")
+    .filter((token) => token.length > 1);
+}
+
+function canonicalBrand(value: string): string {
+  const normalized = normalizeText(value);
+  return BRAND_ALIASES.get(normalized) ?? normalized;
+}
+
+function brandMatches(supplierBrand: string, variant: ShopifyVariant): boolean {
+  if (supplierBrand.length === 0) {
+    return false;
+  }
+
+  const variantVendor = canonicalBrand(variant.vendor);
+  return variantVendor === supplierBrand || canonicalizeBrandAliases(variant.title).includes(supplierBrand);
+}
+
+function canonicalizeBrandAliases(value: string): string {
+  let normalized = normalizeText(value);
+  for (const [alias, canonical] of BRAND_ALIASES) {
+    normalized = normalized.replace(new RegExp(`\\b${escapeRegExp(alias)}\\b`, "g"), canonical);
+  }
+  return normalized;
+}
+
+function isQuantityFormatToken(token: string): boolean {
+  return /^\d+$/.test(token) || /^\d+(caps?|capsules?|tabs?|tablets?|ct|count|ml|oz|floz|fl|g|grams?|vcaps?|vegcaps?|softgels?|vials?)$/.test(token);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 

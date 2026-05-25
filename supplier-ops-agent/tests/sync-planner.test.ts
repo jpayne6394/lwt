@@ -79,17 +79,19 @@ test("sync planner drafts new products when no Shopify match exists", () => {
 });
 
 test("sync planner blocks uncertain matches and big price swings", () => {
+  const vagueProduct: SupplierProduct = {
+    supplierId: "desbio",
+    supplierName: "DesBio",
+    title: "Vague Mold Product",
+    stockStatus: "in_stock",
+    cost: 20,
+    msrp: 80,
+    capturedAt: "2026-05-24T12:00:00.000Z",
+  };
+
   const plan = planSupplierSync({
     supplierProducts: [
-      {
-        supplierId: "desbio",
-        supplierName: "DesBio",
-        title: "Vague Mold Product",
-        stockStatus: "in_stock",
-        cost: 20,
-        msrp: 80,
-        capturedAt: "2026-05-24T12:00:00.000Z",
-      },
+      vagueProduct,
       {
         supplierId: "desbio",
         supplierName: "DesBio",
@@ -110,4 +112,7 @@ test("sync planner blocks uncertain matches and big price swings", () => {
     plan.issues.map((issue) => issue.kind),
     ["match_uncertain", "price_guardrail"],
   );
+  assert.deepEqual(plan.issues[0].supplierProduct, vagueProduct);
+  assert.deepEqual(plan.issues[0].shopifyVariant, shopifyVariant);
+  assert.equal(plan.issues[0].data?.matchConfidence, 0.5);
 });

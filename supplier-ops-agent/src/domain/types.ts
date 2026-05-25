@@ -53,6 +53,10 @@ export type MatchResult =
   | {
       status: "blocked";
       reason: string;
+      candidate?: {
+        variant: ShopifyVariant;
+        confidence: number;
+      };
     }
   | {
       status: "unmatched";

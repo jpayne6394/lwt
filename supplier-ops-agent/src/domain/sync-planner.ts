@@ -28,7 +28,13 @@ export function planSupplierSync(input: SupplierSyncInput): SyncPlan {
       issues.push({
         kind: "match_uncertain",
         supplierProduct,
+        shopifyVariant: match.candidate?.variant,
         reason: match.reason,
+        data: {
+          supplier: supplierProductSummary(supplierProduct),
+          candidate: match.candidate ? shopifyVariantSummary(match.candidate.variant) : undefined,
+          matchConfidence: match.candidate?.confidence,
+        },
       });
       continue;
     }
@@ -51,6 +57,39 @@ export function planSupplierSync(input: SupplierSyncInput): SyncPlan {
   }
 
   return { changes, issues };
+}
+
+function supplierProductSummary(product: SupplierProduct): Record<string, unknown> {
+  return {
+    supplierId: product.supplierId,
+    supplierName: product.supplierName,
+    brand: product.brand,
+    sku: product.sku,
+    upc: product.upc,
+    title: product.title,
+    stockStatus: product.stockStatus,
+    quantity: product.quantity,
+    cost: product.cost,
+    msrp: product.msrp,
+    salePrice: product.salePrice,
+    productUrl: product.productUrl,
+  };
+}
+
+function shopifyVariantSummary(variant: ShopifyVariant): Record<string, unknown> {
+  return {
+    productId: variant.productId,
+    variantId: variant.variantId,
+    handle: variant.handle,
+    title: variant.title,
+    vendor: variant.vendor,
+    sku: variant.sku,
+    barcode: variant.barcode,
+    price: variant.price,
+    compareAtPrice: variant.compareAtPrice,
+    cost: variant.cost,
+    status: variant.status,
+  };
 }
 
 function appendMatchedProductChanges(
