@@ -60,10 +60,20 @@ SUPPLIER_PASSWORD_RESEARCH_NUTRITIONALS=portal-password
 Emerson Ecologics needs either an official feed/API URL or a known post-login catalog/export URL. Its login page uses bot protection, so credentials alone are not enough for reliable unattended automation:
 
 ```bash
+SUPPLIER_COOKIE_EMERSON_ECOLOGICS=session-cookie-string
+SUPPLIER_CATALOG_URLS_EMERSON_ECOLOGICS=https://www.emersonecologics.com/shop
 SUPPLIER_WEBSITE_CONFIG_EMERSON_ECOLOGICS={"loginUrl":"https://emersonecologics.com/login","productsUrl":"https://emersonecologics.com/<post-login-catalog-or-export-url>","selectors":{"username":"#email","password":"#password","submit":"button[data-e2e=\"sign-in-button\"], button[type=submit]","productRows":"[data-product-row]"}}
 SUPPLIER_USERNAME_EMERSON_ECOLOGICS=portal-user
 SUPPLIER_PASSWORD_EMERSON_ECOLOGICS=portal-password
 ```
+
+To avoid manually copying cookies from browser Inspect, run the local capture helper:
+
+```bash
+npm run capture:emerson
+```
+
+It opens Emerson in a real browser, lets you log in once, and writes `.auth/emerson-cookie.env` with the `SUPPLIER_COOKIE_EMERSON_ECOLOGICS` value to add in Render.
 
 Website product rows should expose `data-*` fields such as `data-title`, `data-sku`, `data-upc`, `data-available`, `data-quantity`, `data-cost`, `data-msrp`, and `data-sale-price`.
 

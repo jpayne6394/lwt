@@ -9,3 +9,6 @@ coverage/
 admin-dashboard-*.png
 playwright-report/
 test-results/
+.auth/
+emerson-cookie*.env
+emerson-cookie*.txt

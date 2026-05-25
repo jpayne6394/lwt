@@ -9,6 +9,7 @@
     "start": "node --experimental-strip-types src/index.ts",
     "dev": "node --experimental-strip-types src/index.ts",
     "worker": "node --experimental-strip-types src/worker.ts",
+    "capture:emerson": "node --experimental-strip-types scripts/capture-emerson-cookie.ts",
     "check": "node --test --experimental-strip-types \"tests/**/*.test.ts\""
   },
   "dependencies": {
