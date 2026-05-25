@@ -7,6 +7,7 @@ export type RuntimeConfig = {
   shopifyShop?: string;
   shopifyAccessToken?: string;
   shopifyApiVersion: string;
+  applyChanges: boolean;
   emailWebhookUrl?: string;
   weeklySyncIntervalMs: number;
 };
@@ -26,6 +27,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     shopifyShop: env.SHOPIFY_SHOP,
     shopifyAccessToken: env.SHOPIFY_ACCESS_TOKEN,
     shopifyApiVersion: env.SHOPIFY_API_VERSION ?? "2026-01",
+    applyChanges: env.APPLY_CHANGES === "true",
     emailWebhookUrl: env.EMAIL_WEBHOOK_URL,
     weeklySyncIntervalMs: Number(env.WEEKLY_SYNC_INTERVAL_MS ?? 7 * 24 * 60 * 60 * 1000),
   };

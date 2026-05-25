@@ -12,6 +12,27 @@ Embedded Shopify admin app and background worker for supplier-driven inventory a
 - Uses supplier MSRP/list price first; otherwise falls back to `2x` cost. Supplier sales mirror into price plus compare-at price.
 - Blocks uncertain matches, supplier failures, login/2FA problems, parser errors, and price swings over 25%.
 - Creates newly discovered supplier products as Shopify drafts only.
+- Adds a Product Operations Agent layer that classifies promotion readiness without changing product copy, tags, types, collections, or promotions.
+
+## Product Operations Agent
+
+Every supplier run now emits a structured `product_ops` output. The output includes run mode, timing, products checked, variants checked, supplier count, promotion readiness counts, promotion queues, promotion tasks, cleanup tasks, review tasks, operational errors, planned supplier changes, and blocked issues.
+
+Promotion statuses use this priority order:
+
+1. `DO_NOT_PROMOTE`
+2. `REVIEW_REQUIRED`
+3. `OUT_OF_STOCK`
+4. `LOW_STOCK`
+5. `BAD_PAGE`
+6. `NEEDS_DATA_CLEANUP`
+7. `PROMOTE_READY`
+
+Readiness checks cover active and published status, confident supplier match, stock status, image presence, price, description, title, vendor, product type, product form, useful tags, and do-not-promote/discontinued/risky tags.
+
+Suggested tasks use these action types: `PROMOTE`, `FIX`, `WRITE`, `AUTOMATE`, `IGNORE`, and `REVIEW`. V1 only suggests work; it does not auto-edit titles, descriptions, tags, product types, metafields, collections, or promotions.
+
+Dry-run is safe by default. Shopify writes only run when `APPLY_CHANGES=true` is set. Without that environment variable, manual write clicks and scheduled runs are forced into dry-run mode.
 
 ## Run locally
 
@@ -24,6 +45,12 @@ node --experimental-strip-types src/worker.ts --dry-run
 ```
 
 For production, install the declared dependencies with your package manager, create the Postgres schema from `src/storage/schema.sql`, set the environment variables from `.env.example`, and run `src/index.ts` behind your Shopify app URL.
+
+```bash
+APPLY_CHANGES=false
+```
+
+Set `APPLY_CHANGES=true` only after reviewing dry-run output in the embedded Shopify admin app.
 
 ## Supplier setup
 

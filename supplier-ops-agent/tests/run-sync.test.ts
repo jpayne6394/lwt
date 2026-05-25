@@ -91,6 +91,51 @@ test("runSupplierSync refreshes Shopify catalog before planning changes", async 
   assert.equal((await repository.listShopifyVariants())[0].variantId, shopifyVariant.variantId);
 });
 
+test("runSupplierSync records Product Ops output and never applies Shopify writes in dry-run", async () => {
+  const product: SupplierProduct = {
+    supplierId: "desbio",
+    supplierName: "DesBio",
+    sku: "MOLD",
+    title: "MOLD:PLUS by DesBio",
+    stockStatus: "in_stock",
+    quantity: 8,
+    cost: 18,
+    msrp: 40,
+    capturedAt: "2026-05-24T12:00:00.000Z",
+  };
+  const repository = new MemoryRepository({
+    shopifyVariants: [
+      {
+        ...shopifyVariant,
+        productType: "Homeopathic",
+        productForm: "Liquid",
+        tags: ["immune"],
+        imageUrls: ["https://example.com/mold-plus.jpg"],
+        descriptionHtml: "<p>DesBio MOLD:PLUS homeopathic support.</p>",
+        inventoryQuantity: 8,
+        publishedAt: "2026-05-24T12:00:00.000Z",
+      },
+    ],
+  });
+  const alerts = new AlertService();
+
+  const result = await runSupplierSync({
+    adapters: [successfulAdapter(product)],
+    repository,
+    alerts,
+    shopifyClient: {
+      applyChanges: async () => {
+        throw new Error("dry-run should not write to Shopify");
+      },
+    },
+    dryRun: true,
+  });
+
+  assert.equal(result.productOpsOutput.mode, "dry_run");
+  assert.equal(result.productOpsOutput.summary.promoteReady, 1);
+  assert.equal(repository.listProductOpsOutputs()[0].summary.promoteReady, 1);
+});
+
 test("runSupplierSync blocks planning when configured Shopify catalog refresh returns no variants", async () => {
   const product: SupplierProduct = {
     supplierId: "desbio",

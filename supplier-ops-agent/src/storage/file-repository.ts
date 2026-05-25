@@ -2,6 +2,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
+import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
 import type {
   AppliedChangeRecord,
   BlockedIssueRecord,
@@ -19,6 +20,7 @@ type FileRepositoryState = {
   snapshots: SupplierSnapshot[];
   changes: AppliedChangeRecord[];
   issues: BlockedIssueRecord[];
+  productOpsOutputs: ProductOpsOutputRecord[];
 };
 
 const EMPTY_STATE: FileRepositoryState = {
@@ -28,12 +30,14 @@ const EMPTY_STATE: FileRepositoryState = {
   snapshots: [],
   changes: [],
   issues: [],
+  productOpsOutputs: [],
 };
 
 const MAX_RUNS = 50;
 const MAX_SNAPSHOTS = 20;
 const MAX_CHANGES = 300;
 const MAX_ISSUES = 300;
+const MAX_PRODUCT_OPS_OUTPUTS = 20;
 
 export class FileRepository implements SupplierOpsRepository {
   readonly #filePath: string;
@@ -131,6 +135,17 @@ export class FileRepository implements SupplierOpsRepository {
     await this.#persist();
   }
 
+  async recordProductOpsOutput(runId: string, output: ProductOpsRunOutput): Promise<void> {
+    this.#state.productOpsOutputs.unshift({
+      ...output,
+      id: `product_ops_${Date.now()}_${this.#state.productOpsOutputs.length + 1}`,
+      runId,
+      createdAt: new Date().toISOString(),
+    });
+    this.#state.productOpsOutputs = this.#state.productOpsOutputs.slice(0, MAX_PRODUCT_OPS_OUTPUTS);
+    await this.#persist();
+  }
+
   async recentRuns(limit = 20): Promise<SyncRun[]> {
     return this.#state.runs.slice(0, limit);
   }
@@ -141,6 +156,10 @@ export class FileRepository implements SupplierOpsRepository {
 
   async recentIssues(limit = 50): Promise<BlockedIssueRecord[]> {
     return this.#state.issues.slice(0, limit);
+  }
+
+  async recentProductOpsOutputs(limit = 20): Promise<ProductOpsOutputRecord[]> {
+    return this.#state.productOpsOutputs.slice(0, limit);
   }
 
   async #persist(): Promise<void> {
@@ -188,6 +207,7 @@ async function readState(filePath: string): Promise<FileRepositoryState> {
       snapshots: Array.isArray(parsed.snapshots) ? parsed.snapshots : [],
       changes: Array.isArray(parsed.changes) ? parsed.changes : [],
       issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+      productOpsOutputs: Array.isArray(parsed.productOpsOutputs) ? parsed.productOpsOutputs : [],
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

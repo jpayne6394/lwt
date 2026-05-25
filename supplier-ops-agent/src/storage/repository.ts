@@ -1,4 +1,5 @@
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant, SupplierProduct } from "../domain/types.ts";
+import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
 
 export type SyncRunStatus = "running" | "completed" | "completed_with_issues" | "failed";
 
@@ -51,8 +52,10 @@ export type SupplierOpsRepository = {
   saveSupplierSnapshot(snapshot: SupplierSnapshot): Promise<void>;
   recordAppliedChanges(runId: string, changes: PlannedChange[]): Promise<void>;
   recordBlockedIssues(runId: string, issues: BlockedIssue[]): Promise<void>;
+  recordProductOpsOutput?(runId: string, output: ProductOpsRunOutput): Promise<void>;
   recentRuns(limit?: number): Promise<SyncRun[]>;
   recentChanges(limit?: number): Promise<AppliedChangeRecord[]>;
   recentIssues(limit?: number): Promise<BlockedIssueRecord[]>;
+  recentProductOpsOutputs?(limit?: number): Promise<ProductOpsOutputRecord[]>;
 };
 

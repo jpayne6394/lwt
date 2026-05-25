@@ -1,7 +1,7 @@
 import { createRuntime } from "./runtime.ts";
 
 const runtime = await createRuntime();
-const dryRun = process.argv.includes("--dry-run");
+const dryRun = process.argv.includes("--dry-run") || !runtime.config.applyChanges;
 await runtime.runNow(dryRun);
 console.log(`Supplier sync complete (${dryRun ? "dry run" : "write mode"})`);
 

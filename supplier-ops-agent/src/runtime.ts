@@ -23,18 +23,20 @@ export async function createRuntime() {
   const shopify = createShopifyClients(config);
 
   let activeRun: Promise<void> | null = null;
+  const effectiveDryRun = (dryRun: boolean) => dryRun || !config.applyChanges;
   const startRun = (dryRun: boolean) => {
     if (activeRun) {
       return false;
     }
 
+    const safeDryRun = effectiveDryRun(dryRun);
     activeRun = runSupplierSync({
       adapters,
       repository,
       alerts,
       shopifyCatalogClient: shopify.catalogClient,
       shopifyClient: shopify.syncClient,
-      dryRun,
+      dryRun: safeDryRun,
     })
       .catch((error) => {
         console.error("Supplier sync failed", error);
@@ -57,6 +59,7 @@ export async function createRuntime() {
     runNow,
     startRun,
     shopifyApiKey: config.shopifyApiKey,
+    applyChangesEnabled: config.applyChanges,
   };
 
   return {

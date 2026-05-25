@@ -32,6 +32,13 @@ export class ShopifyCatalogClient {
             compareAtPrice: variant.compareAtPrice == null ? null : Number(variant.compareAtPrice),
             cost: variant.inventoryItem.unitCost?.amount == null ? null : Number(variant.inventoryItem.unitCost.amount),
             status: product.status.toLowerCase(),
+            productType: product.productType,
+            productForm: product.productForm?.value ?? undefined,
+            tags: product.tags,
+            imageUrls: product.featuredMedia?.preview?.image?.url ? [product.featuredMedia.preview.image.url] : [],
+            descriptionHtml: product.descriptionHtml,
+            inventoryQuantity: variant.inventoryQuantity,
+            publishedAt: product.publishedAt,
           });
         }
       }
@@ -52,6 +59,18 @@ type ShopifyCatalogResponse = {
         title: string;
         vendor: string;
         status: string;
+        productType: string;
+        tags: string[];
+        descriptionHtml: string;
+        publishedAt: string | null;
+        productForm: { value: string } | null;
+        featuredMedia: {
+          preview: {
+            image: {
+              url: string;
+            } | null;
+          };
+        } | null;
         variants: {
           nodes: Array<{
             id: string;
@@ -59,6 +78,7 @@ type ShopifyCatalogResponse = {
             barcode: string | null;
             price: string;
             compareAtPrice: string | null;
+            inventoryQuantity: number | null;
             inventoryItem: {
               id: string;
               unitCost: { amount: string } | null;
@@ -88,6 +108,20 @@ query SupplierOpsProducts($after: String) {
       title
       vendor
       status
+      productType
+      tags
+      descriptionHtml
+      publishedAt
+      productForm: metafield(namespace: "custom", key: "product_form") {
+        value
+      }
+      featuredMedia {
+        preview {
+          image {
+            url
+          }
+        }
+      }
       variants(first: 100) {
         nodes {
           id
@@ -95,6 +129,7 @@ query SupplierOpsProducts($after: String) {
           barcode
           price
           compareAtPrice
+          inventoryQuantity
           inventoryItem {
             id
             unitCost {

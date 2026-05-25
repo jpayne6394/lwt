@@ -87,6 +87,13 @@ create table if not exists blocked_issues (
   created_at timestamptz not null default now()
 );
 
+create table if not exists product_ops_outputs (
+  id text primary key,
+  run_id text not null references sync_runs(id) on delete cascade,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists alert_history (
   id text primary key,
   severity text not null,

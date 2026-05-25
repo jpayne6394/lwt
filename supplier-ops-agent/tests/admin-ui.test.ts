@@ -29,8 +29,42 @@ test("admin UI renders the required Shopify app sections and run-now control", (
     ],
     changes: [],
     issues: [],
+    productOpsOutputs: [
+      {
+        id: "product_ops_1",
+        runId: "run_1",
+        createdAt: "2026-05-25T04:05:00.000Z",
+        agent: "product_ops",
+        runType: "full_product_ops_check",
+        mode: "dry_run",
+        startedAt: "2026-05-25T04:00:00.000Z",
+        finishedAt: "2026-05-25T04:05:00.000Z",
+        summary: {
+          productsChecked: 12,
+          variantsChecked: 10,
+          suppliersChecked: 4,
+          promoteReady: 5,
+          lowStock: 1,
+          outOfStock: 1,
+          needsDataCleanup: 2,
+          badPage: 1,
+          doNotPromote: 0,
+          reviewRequired: 2,
+          errors: 0,
+        },
+        productsToPromote: [],
+        productsToAvoid: [],
+        promotionTasks: [],
+        cleanupTasks: [],
+        reviewTasks: [],
+        errors: [],
+        plannedChanges: [],
+        blockedIssues: [],
+      },
+    ],
     alerts: [],
     shopifyApiKey: "test-api-key",
+    applyChangesEnabled: false,
   });
 
   for (const label of ["Dashboard", "Suppliers", "Runs", "Change Ledger", "Match Issues", "Settings"]) {
@@ -41,8 +75,12 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /Run write sync/);
   assert.match(html, /action="\/api\/runs\?dryRun=true"/);
   assert.match(html, /id="sync-status"/);
-  assert.match(html, /Latest Changes/);
-  assert.match(html, /<strong>206<\/strong>/);
+  assert.match(html, /Product Ops/);
+  assert.match(html, /Promote Ready/);
+  assert.match(html, /<strong>5<\/strong>/);
+  assert.match(html, /Review Required/);
+  assert.match(html, /<strong>2<\/strong>/);
+  assert.match(html, /<dt>Changes<\/dt><dd>206<\/dd>/);
   assert.match(html, /Latest Issues/);
   assert.match(html, /<strong>98<\/strong>/);
   assert.match(html, /data-run-form/);
@@ -93,8 +131,10 @@ test("admin UI shows supplier and Shopify context for blocked issues", () => {
         data: { matchConfidence: 0.76 },
       },
     ],
+    productOpsOutputs: [],
     alerts: [],
     shopifyApiKey: "test-api-key",
+    applyChangesEnabled: false,
   });
 
   assert.match(html, /InflaQuell 180 Capsule Bottle/);

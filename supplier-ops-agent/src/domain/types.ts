@@ -31,6 +31,13 @@ export type ShopifyVariant = {
   compareAtPrice: number | null;
   cost: number | null;
   status: string;
+  productType?: string;
+  productForm?: string;
+  tags?: string[];
+  imageUrls?: string[];
+  descriptionHtml?: string;
+  inventoryQuantity?: number | null;
+  publishedAt?: string | null;
 };
 
 export type ProductMapping = {

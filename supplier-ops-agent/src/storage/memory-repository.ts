@@ -8,6 +8,7 @@ import type {
   SyncRun,
 } from "./repository.ts";
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
+import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
 
 export type MemoryRepositorySeed = {
   shopifyVariants?: ShopifyVariant[];
@@ -21,6 +22,7 @@ export class MemoryRepository implements SupplierOpsRepository {
   readonly #snapshots: SupplierSnapshot[] = [];
   readonly #changes: AppliedChangeRecord[] = [];
   readonly #issues: BlockedIssueRecord[] = [];
+  readonly #productOpsOutputs: ProductOpsOutputRecord[] = [];
 
   constructor(seed: MemoryRepositorySeed = {}) {
     this.#shopifyVariants = seed.shopifyVariants ?? [];
@@ -93,6 +95,15 @@ export class MemoryRepository implements SupplierOpsRepository {
     );
   }
 
+  async recordProductOpsOutput(runId: string, output: ProductOpsRunOutput): Promise<void> {
+    this.#productOpsOutputs.unshift({
+      ...output,
+      id: `product_ops_${Date.now()}_${this.#productOpsOutputs.length + 1}`,
+      runId,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
   async recentRuns(limit = 20): Promise<SyncRun[]> {
     return this.#runs.slice(0, limit);
   }
@@ -105,6 +116,10 @@ export class MemoryRepository implements SupplierOpsRepository {
     return this.#issues.slice(0, limit);
   }
 
+  async recentProductOpsOutputs(limit = 20): Promise<ProductOpsOutputRecord[]> {
+    return this.#productOpsOutputs.slice(0, limit);
+  }
+
   listSupplierSnapshots(): SupplierSnapshot[] {
     return [...this.#snapshots];
   }
@@ -115,6 +130,10 @@ export class MemoryRepository implements SupplierOpsRepository {
 
   listBlockedIssues(): BlockedIssueRecord[] {
     return [...this.#issues];
+  }
+
+  listProductOpsOutputs(): ProductOpsOutputRecord[] {
+    return [...this.#productOpsOutputs];
   }
 }
 

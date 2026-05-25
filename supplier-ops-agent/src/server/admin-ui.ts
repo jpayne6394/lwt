@@ -1,4 +1,5 @@
 import type { AlertMessage } from "../alerts/alert-service.ts";
+import type { ProductOpsOutputRecord, ProductOpsProductResult, ProductOpsTask } from "../product-ops/types.ts";
 import type { BlockedIssueRecord, AppliedChangeRecord, SyncRun } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
 
@@ -8,8 +9,10 @@ export type AdminPageModel = {
   runs: SyncRun[];
   changes: AppliedChangeRecord[];
   issues: BlockedIssueRecord[];
+  productOpsOutputs: ProductOpsOutputRecord[];
   alerts: AlertMessage[];
   shopifyApiKey?: string;
+  applyChangesEnabled: boolean;
 };
 
 const NAV_ITEMS = [
@@ -81,18 +84,19 @@ function renderContent(model: AdminPageModel): string {
     return renderIssues(model.issues);
   }
   if (model.activePath.startsWith("/settings")) {
-    return renderSettings(model.suppliers);
+    return renderSettings(model.suppliers, model.applyChangesEnabled);
   }
   return renderDashboard(model);
 }
 
 function renderDashboard(model: AdminPageModel): string {
   const latestRun = model.runs[0];
+  const latestProductOps = model.productOpsOutputs[0];
   return `
     <section class="metrics">
       ${metric("Suppliers", model.suppliers.length)}
-      ${metric("Recent Runs", model.runs.length)}
-      ${metric("Latest Changes", latestRun?.changeCount ?? 0)}
+      ${metric("Promote Ready", latestProductOps?.summary.promoteReady ?? 0)}
+      ${metric("Review Required", latestProductOps?.summary.reviewRequired ?? 0)}
       ${metric("Latest Issues", latestRun?.issueCount ?? 0)}
     </section>
     <section class="panel">
@@ -108,10 +112,86 @@ function renderDashboard(model: AdminPageModel): string {
           : `<p class="empty">No supplier sync has run yet.</p>`
       }
     </section>
+    ${renderProductOpsSummary(latestProductOps)}
+    ${renderProductList("Products to promote", latestProductOps?.productsToPromote ?? [])}
+    ${renderTaskList("Promotion tasks", latestProductOps?.promotionTasks ?? [])}
+    ${renderTaskList("Cleanup tasks", latestProductOps?.cleanupTasks ?? [])}
+    ${renderTaskList("Review tasks", latestProductOps?.reviewTasks ?? [])}
     <section class="panel">
       <h2>Alerts</h2>
       ${model.alerts.length ? model.alerts.map(renderAlert).join("") : `<p class="empty">No alerts yet.</p>`}
     </section>`;
+}
+
+function renderProductOpsSummary(output: ProductOpsOutputRecord | undefined): string {
+  if (!output) {
+    return `<section class="panel"><h2>Product Ops</h2><p class="empty">No Product Ops output yet.</p></section>`;
+  }
+
+  return `<section class="panel">
+    <h2>Product Ops</h2>
+    <dl class="run-summary">
+      <div><dt>Mode</dt><dd>${escapeHtml(output.mode)}</dd></div>
+      <div><dt>Products checked</dt><dd>${output.summary.productsChecked}</dd></div>
+      <div><dt>Variants checked</dt><dd>${output.summary.variantsChecked}</dd></div>
+      <div><dt>Promote ready</dt><dd>${output.summary.promoteReady}</dd></div>
+      <div><dt>Low stock</dt><dd>${output.summary.lowStock}</dd></div>
+      <div><dt>Out of stock</dt><dd>${output.summary.outOfStock}</dd></div>
+      <div><dt>Needs cleanup</dt><dd>${output.summary.needsDataCleanup}</dd></div>
+      <div><dt>Bad page</dt><dd>${output.summary.badPage}</dd></div>
+      <div><dt>Do not promote</dt><dd>${output.summary.doNotPromote}</dd></div>
+      <div><dt>Review required</dt><dd>${output.summary.reviewRequired}</dd></div>
+      <div><dt>Errors</dt><dd>${output.summary.errors}</dd></div>
+    </dl>
+  </section>`;
+}
+
+function renderProductList(title: string, products: ProductOpsProductResult[]): string {
+  return `<section class="panel">
+    <h2>${escapeHtml(title)}</h2>
+    ${products.length ? `<table>
+      <thead><tr><th>Product</th><th>Supplier</th><th>Status</th><th>Stock</th><th>Confidence</th><th>Reasons</th></tr></thead>
+      <tbody>${products.slice(0, 25).map(renderProductOpsProduct).join("")}</tbody>
+    </table>` : `<p class="empty">No products in this queue.</p>`}
+  </section>`;
+}
+
+function renderProductOpsProduct(product: ProductOpsProductResult): string {
+  const supplierPage = product.productUrl
+    ? `<a class="inline-link" href="${escapeHtml(product.productUrl)}" target="_blank" rel="noreferrer">Supplier page</a>`
+    : "";
+
+  return `<tr>
+    <td><div class="summary-cell">
+      <strong>${escapeHtml(product.title)}</strong>
+      <span>${escapeHtml(product.vendor ?? product.supplierName)} - ${escapeHtml(product.sku ?? "No SKU")}</span>
+      ${supplierPage}
+    </div></td>
+    <td>${escapeHtml(product.supplierName)}</td>
+    <td><span class="status-pill">${escapeHtml(product.promotionStatus)}</span></td>
+    <td>${escapeHtml(product.stockStatus ?? "unknown")}</td>
+    <td>${product.matchConfidence.toFixed(2)}</td>
+    <td>${escapeHtml(product.reasons.join(" "))}</td>
+  </tr>`;
+}
+
+function renderTaskList(title: string, tasks: ProductOpsTask[]): string {
+  return `<section class="panel">
+    <h2>${escapeHtml(title)}</h2>
+    ${tasks.length ? `<table>
+      <thead><tr><th>Action</th><th>Task</th><th>Status</th><th>Detail</th></tr></thead>
+      <tbody>${tasks.slice(0, 25).map(renderProductOpsTask).join("")}</tbody>
+    </table>` : `<p class="empty">No tasks in this queue.</p>`}
+  </section>`;
+}
+
+function renderProductOpsTask(task: ProductOpsTask): string {
+  return `<tr>
+    <td>${escapeHtml(task.actionType)}</td>
+    <td>${escapeHtml(task.title)}</td>
+    <td>${escapeHtml(task.promotionStatus ?? "")}</td>
+    <td>${escapeHtml(task.detail)}</td>
+  </tr>`;
 }
 
 function renderSuppliers(suppliers: SupplierConfig[]): string {
@@ -231,11 +311,12 @@ function renderShopifyVariantSummary(variant: BlockedIssueRecord["shopifyVariant
   </div>`;
 }
 
-function renderSettings(suppliers: SupplierConfig[]): string {
+function renderSettings(suppliers: SupplierConfig[], applyChangesEnabled: boolean): string {
   return `<section class="panel">
     <h2>Automation settings</h2>
     <dl class="settings-list">
       <div><dt>Schedule</dt><dd>Weekly full sync, with manual run-now from Shopify admin.</dd></div>
+      <div><dt>Write mode</dt><dd>${applyChangesEnabled ? "Enabled" : "Dry-run only until APPLY_CHANGES=true."}</dd></div>
       <div><dt>Inventory fallback</dt><dd>Exact quantity wins; in stock without quantity becomes 10; out of stock becomes 0.</dd></div>
       <div><dt>Pricing</dt><dd>Supplier MSRP/list price first; otherwise 2x supplier cost. Sales mirror with compare-at price.</dd></div>
       <div><dt>Guardrail</dt><dd>Price changes over 25%, uncertain matches, login/2FA, and parser errors are blocked and alerted.</dd></div>
@@ -339,6 +420,7 @@ function styles(): string {
     .summary-cell strong { font-size: 13px; }
     .summary-cell span, .summary-cell a { color: var(--muted); font-size: 12px; }
     .summary-cell a { color: var(--accent); }
+    .status-pill { display: inline-flex; align-items: center; min-height: 24px; padding: 0 8px; border-radius: 999px; background: #eef6f5; color: var(--accent-strong); font-size: 12px; font-weight: 700; white-space: nowrap; }
     .alert { display: grid; gap: 4px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; }
     .alert.error { border-color: #fecdca; color: var(--error); background: #fff5f5; }
     .alert.warning { border-color: #fedf89; color: var(--warning); background: #fffbeb; }

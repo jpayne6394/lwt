@@ -13,6 +13,7 @@ export type ServerContext = {
   runNow: (dryRun: boolean) => Promise<void>;
   startRun: (dryRun: boolean) => boolean;
   shopifyApiKey?: string;
+  applyChangesEnabled: boolean;
 };
 
 export type StartServerOptions = {
@@ -38,13 +39,15 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
   }
 
   if (request.method === "POST" && url.pathname === "/api/runs") {
-    const dryRun = url.searchParams.get("dryRun") === "true";
+    const requestedDryRun = url.searchParams.get("dryRun") === "true";
+    const dryRun = requestedDryRun || !context.applyChangesEnabled;
     const started = context.startRun(dryRun);
 
     if (wantsJson(request)) {
       sendJson(response, started ? 202 : 200, {
         ok: true,
         dryRun,
+        applyChangesEnabled: context.applyChangesEnabled,
         started,
         alreadyRunning: !started,
         redirect: "/runs",
@@ -68,10 +71,11 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     return;
   }
 
-  const [runs, changes, issues] = await Promise.all([
+  const [runs, changes, issues, productOpsOutputs] = await Promise.all([
     context.repository.recentRuns(30),
     context.repository.recentChanges(100),
     context.repository.recentIssues(100),
+    context.repository.recentProductOpsOutputs?.(10) ?? Promise.resolve([]),
   ]);
 
   const html = renderAdminPage({
@@ -80,8 +84,10 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     runs,
     changes,
     issues,
+    productOpsOutputs,
     alerts: context.alerts.list(),
     shopifyApiKey: context.shopifyApiKey,
+    applyChangesEnabled: context.applyChangesEnabled,
   });
 
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });

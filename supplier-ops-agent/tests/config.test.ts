@@ -24,3 +24,9 @@ test("loadConfig uses a free file-backed store when Postgres is not configured",
 
   assert.equal(config.storagePath, "/tmp/custom-supplier-store.json");
 });
+
+test("loadConfig defaults Shopify writes off unless APPLY_CHANGES is explicitly true", () => {
+  assert.equal(loadConfig({}).applyChanges, false);
+  assert.equal(loadConfig({ APPLY_CHANGES: "false" }).applyChanges, false);
+  assert.equal(loadConfig({ APPLY_CHANGES: "true" }).applyChanges, true);
+});

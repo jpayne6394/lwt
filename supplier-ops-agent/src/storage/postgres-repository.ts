@@ -8,6 +8,7 @@ import type {
   SyncRun,
 } from "./repository.ts";
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
+import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
 
 export class PostgresRepository implements SupplierOpsRepository {
   readonly #pool: any;
@@ -124,6 +125,13 @@ export class PostgresRepository implements SupplierOpsRepository {
     }
   }
 
+  async recordProductOpsOutput(runId: string, output: ProductOpsRunOutput): Promise<void> {
+    await this.#pool.query(
+      `insert into product_ops_outputs (id, run_id, payload) values ($1, $2, $3::jsonb)`,
+      [`product_ops_${Date.now()}_${Math.random().toString(16).slice(2)}`, runId, JSON.stringify(output)],
+    );
+  }
+
   async recentRuns(limit = 20): Promise<SyncRun[]> {
     const result = await this.#pool.query(
       `select id, dry_run, status, started_at, completed_at, supplier_count, change_count, issue_count
@@ -149,6 +157,19 @@ export class PostgresRepository implements SupplierOpsRepository {
   async recentIssues(limit = 50): Promise<BlockedIssueRecord[]> {
     const result = await this.#pool.query(
       `select id, run_id, kind, reason, payload, created_at from blocked_issues order by created_at desc limit $1`,
+      [limit],
+    );
+    return result.rows.map((row: any) => ({
+      ...row.payload,
+      id: row.id,
+      runId: row.run_id,
+      createdAt: row.created_at.toISOString(),
+    }));
+  }
+
+  async recentProductOpsOutputs(limit = 20): Promise<ProductOpsOutputRecord[]> {
+    const result = await this.#pool.query(
+      `select id, run_id, payload, created_at from product_ops_outputs order by created_at desc limit $1`,
       [limit],
     );
     return result.rows.map((row: any) => ({

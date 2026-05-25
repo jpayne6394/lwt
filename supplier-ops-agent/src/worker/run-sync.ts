@@ -1,6 +1,8 @@
 import { AlertService } from "../alerts/alert-service.ts";
 import { planSupplierSync } from "../domain/sync-planner.ts";
 import type { BlockedIssue, PlannedChange, ShopifyVariant, SupplierProduct, SyncPlan } from "../domain/types.ts";
+import { buildProductOpsRunOutput } from "../product-ops/product-ops-agent.ts";
+import type { ProductOpsRunOutput } from "../product-ops/types.ts";
 import type { ShopifySyncClient } from "../shopify/shopify-sync-client.ts";
 import type { SupplierOpsRepository, SyncRun } from "../storage/repository.ts";
 import type { SupplierAdapter } from "../suppliers/types.ts";
@@ -24,6 +26,7 @@ export type RunSupplierSyncInput = {
 export type RunSupplierSyncResult = {
   run: SyncRun;
   plan: SyncPlan;
+  productOpsOutput: ProductOpsRunOutput;
 };
 
 export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunSupplierSyncResult> {
@@ -57,6 +60,7 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
   }
 
   const shopifyVariants = await loadShopifyVariants(input, run.id, issues);
+  const mappings = await input.repository.listMappings();
   if (input.shopifyCatalogClient && shopifyVariants.length === 0) {
     const allIssues = [...issues, ...shopifyCatalogUnavailableIssue()];
     await input.repository.recordBlockedIssues(run.id, allIssues);
@@ -65,16 +69,25 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
       changeCount: 0,
       issueCount: allIssues.length,
     });
+    const productOpsOutput = await recordProductOpsOutput({
+      input,
+      run: completed,
+      supplierProducts,
+      shopifyVariants,
+      mappings,
+      changes: [],
+      issues: allIssues,
+    });
     return {
       run: completed,
       plan: {
         changes: [],
         issues: allIssues,
       },
+      productOpsOutput,
     };
   }
 
-  const mappings = await input.repository.listMappings();
   const plan = planSupplierSync({
     supplierProducts,
     shopifyVariants,
@@ -94,6 +107,15 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
     changeCount: plan.changes.length,
     issueCount: allIssues.length,
   });
+  const productOpsOutput = await recordProductOpsOutput({
+    input,
+    run: completed,
+    supplierProducts,
+    shopifyVariants,
+    mappings,
+    changes: plan.changes,
+    issues: allIssues,
+  });
 
   return {
     run: completed,
@@ -101,7 +123,35 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
       changes: plan.changes,
       issues: allIssues,
     },
+    productOpsOutput,
   };
+}
+
+async function recordProductOpsOutput(input: {
+  input: RunSupplierSyncInput;
+  run: SyncRun;
+  supplierProducts: SupplierProduct[];
+  shopifyVariants: ShopifyVariant[];
+  mappings: Awaited<ReturnType<SupplierOpsRepository["listMappings"]>>;
+  changes: PlannedChange[];
+  issues: BlockedIssue[];
+}): Promise<ProductOpsRunOutput> {
+  const output = buildProductOpsRunOutput({
+    runId: input.run.id,
+    runType: "full_product_ops_check",
+    dryRun: input.input.dryRun,
+    startedAt: input.run.startedAt,
+    finishedAt: input.run.completedAt ?? new Date().toISOString(),
+    supplierProducts: input.supplierProducts,
+    shopifyVariants: input.shopifyVariants,
+    mappings: input.mappings,
+    changes: input.changes,
+    issues: input.issues,
+    supplierCount: input.input.adapters.length,
+  });
+
+  await input.input.repository.recordProductOpsOutput?.(input.run.id, output);
+  return output;
 }
 
 async function loadShopifyVariants(
