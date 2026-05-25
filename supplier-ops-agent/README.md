@@ -27,10 +27,12 @@ For production, install the declared dependencies with your package manager, cre
 
 ## Supplier setup
 
-Use structured feeds first:
+Use structured feeds first. These public product feeds are built in, so you do not need to add Render env vars for them unless you want to override the URL:
 
 ```bash
-SUPPLIER_FEED_URL_DESBIO=https://example.com/desbio-products.json
+SUPPLIER_FEED_URL_PHYSICIANS_STANDARD=https://www.physiciansstandard.com/products.json?limit=250
+SUPPLIER_FEED_URL_DESBIO=https://desbio.com/wp-json/wc/store/v1/products?per_page=100
+SUPPLIER_FEED_URL_RESEARCH_NUTRITIONALS=https://www.researchednutritionals.com/wp-json/wc/store/v1/products?per_page=100
 ```
 
 Use website automation only when no feed/API exists:
@@ -41,12 +43,26 @@ SUPPLIER_USERNAME_DESBIO=portal-user
 SUPPLIER_PASSWORD_DESBIO=portal-password
 ```
 
-Physicians' Standard uses the `PHYSICIANS_STANDARD` environment suffix:
+Physicians' Standard uses the `PHYSICIANS_STANDARD` environment suffix. Credentials can stay in Render for future authenticated cost/stock extraction, but the current public feed works without them:
 
 ```bash
-SUPPLIER_FEED_URL_PHYSICIANS_STANDARD=https://example.com/physicians-standard-products.json
 SUPPLIER_USERNAME_PHYSICIANS_STANDARD=portal-user
 SUPPLIER_PASSWORD_PHYSICIANS_STANDARD=portal-password
+```
+
+Research Nutritionals uses the `RESEARCH_NUTRITIONALS` suffix:
+
+```bash
+SUPPLIER_USERNAME_RESEARCH_NUTRITIONALS=portal-user
+SUPPLIER_PASSWORD_RESEARCH_NUTRITIONALS=portal-password
+```
+
+Emerson Ecologics needs either an official feed/API URL or a known post-login catalog/export URL. Its login page uses bot protection, so credentials alone are not enough for reliable unattended automation:
+
+```bash
+SUPPLIER_WEBSITE_CONFIG_EMERSON_ECOLOGICS={"loginUrl":"https://emersonecologics.com/login","productsUrl":"https://emersonecologics.com/<post-login-catalog-or-export-url>","selectors":{"username":"#email","password":"#password","submit":"button[data-e2e=\"sign-in-button\"], button[type=submit]","productRows":"[data-product-row]"}}
+SUPPLIER_USERNAME_EMERSON_ECOLOGICS=portal-user
+SUPPLIER_PASSWORD_EMERSON_ECOLOGICS=portal-password
 ```
 
 Website product rows should expose `data-*` fields such as `data-title`, `data-sku`, `data-upc`, `data-available`, `data-quantity`, `data-cost`, `data-msrp`, and `data-sale-price`.

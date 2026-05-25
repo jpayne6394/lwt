@@ -5,7 +5,10 @@ import { WebsiteSupplierAdapter, type WebsiteAdapterConfig } from "./website-ada
 export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.ProcessEnv = process.env): SupplierAdapter[] {
   return suppliers.map((supplier) => {
     const suffix = toEnvSuffix(supplier.id);
-    const feedUrl = env[`SUPPLIER_FEED_URL_${suffix}`] ?? (supplier.sourceEnvVar ? env[supplier.sourceEnvVar] : undefined);
+    const feedUrl =
+      env[`SUPPLIER_FEED_URL_${suffix}`] ??
+      (supplier.sourceEnvVar ? env[supplier.sourceEnvVar] : undefined) ??
+      defaultFeedUrlForSupplier(supplier.id);
 
     if (feedUrl) {
       return new JsonFeedSupplierAdapter(supplier, feedUrl);
@@ -19,6 +22,16 @@ export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.P
     });
   });
 }
+
+export function defaultFeedUrlForSupplier(supplierId: string): string | undefined {
+  return DEFAULT_FEED_URLS[supplierId];
+}
+
+const DEFAULT_FEED_URLS: Record<string, string> = {
+  "physicians-standard": "https://www.physiciansstandard.com/products.json?limit=250",
+  desbio: "https://desbio.com/wp-json/wc/store/v1/products?per_page=100",
+  "research-nutritionals": "https://www.researchednutritionals.com/wp-json/wc/store/v1/products?per_page=100",
+};
 
 function parseWebsiteConfig(value: string | undefined): WebsiteAdapterConfig {
   if (!value) {
