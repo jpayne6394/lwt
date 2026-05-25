@@ -11,6 +11,7 @@ export type ServerContext = {
   suppliers: SupplierConfig[];
   alerts: AlertService;
   runNow: (dryRun: boolean) => Promise<void>;
+  shopifyApiKey?: string;
 };
 
 export type StartServerOptions = {
@@ -67,6 +68,7 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     changes,
     issues,
     alerts: context.alerts.list(),
+    shopifyApiKey: context.shopifyApiKey,
   });
 
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
@@ -82,4 +84,3 @@ function sendText(response: ServerResponse, status: number, body: string): void 
   response.writeHead(status, { "Content-Type": "text/plain; charset=utf-8" });
   response.end(body);
 }
-

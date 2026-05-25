@@ -36,6 +36,7 @@ export async function createRuntime() {
     suppliers,
     alerts,
     runNow,
+    shopifyApiKey: config.shopifyApiKey,
   };
 
   return {
@@ -72,4 +73,3 @@ function createShopifyClient(config: ReturnType<typeof loadConfig>) {
     graphql: (query, variables) => admin.graphql(query, variables),
   });
 }
-

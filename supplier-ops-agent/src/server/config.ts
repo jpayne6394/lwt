@@ -2,6 +2,7 @@ export type RuntimeConfig = {
   port: number;
   host: string;
   databaseUrl?: string;
+  shopifyApiKey?: string;
   shopifyShop?: string;
   shopifyAccessToken?: string;
   shopifyApiVersion: string;
@@ -14,6 +15,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     port: Number(env.PORT ?? 8080),
     host: env.HOST ?? "0.0.0.0",
     databaseUrl: env.DATABASE_URL,
+    shopifyApiKey: env.SHOPIFY_API_KEY ?? env.SHOPIFY_CLIENT_ID,
     shopifyShop: env.SHOPIFY_SHOP,
     shopifyAccessToken: env.SHOPIFY_ACCESS_TOKEN,
     shopifyApiVersion: env.SHOPIFY_API_VERSION ?? "2026-01",
@@ -21,4 +23,3 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     weeklySyncIntervalMs: Number(env.WEEKLY_SYNC_INTERVAL_MS ?? 7 * 24 * 60 * 60 * 1000),
   };
 }
-

@@ -9,6 +9,7 @@ export type AdminPageModel = {
   changes: AppliedChangeRecord[];
   issues: BlockedIssueRecord[];
   alerts: AlertMessage[];
+  shopifyApiKey?: string;
 };
 
 const NAV_ITEMS = [
@@ -26,7 +27,7 @@ export function renderAdminPage(model: AdminPageModel): string {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="shopify-api-key" content="">
+    <meta name="shopify-api-key" content="${escapeHtml(model.shopifyApiKey ?? "")}">
     <title>Supplier Ops Agent</title>
     <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" data-app-bridge></script>
     <style>${styles()}</style>
@@ -296,4 +297,3 @@ function styles(): string {
     }
   `;
 }
-
