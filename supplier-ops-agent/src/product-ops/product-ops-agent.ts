@@ -1,5 +1,5 @@
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant, SupplierProduct } from "../domain/types.ts";
-import { matchSupplierProduct } from "../domain/product-matcher.ts";
+import { createProductMatcher, type ProductMatcher } from "../domain/product-matcher.ts";
 import type {
   ProductOpsError,
   ProductOpsProductResult,
@@ -156,7 +156,8 @@ export function evaluateProductReadiness(input: EvaluateProductReadinessInput): 
 }
 
 export function buildProductOpsRunOutput(input: BuildProductOpsRunOutputInput): ProductOpsRunOutput {
-  const results = input.supplierProducts.map((supplierProduct) => evaluateSupplierProduct(input, supplierProduct));
+  const matcher = createProductMatcher(input.shopifyVariants, input.mappings);
+  const results = input.supplierProducts.map((supplierProduct) => evaluateSupplierProduct(input, matcher, supplierProduct));
   return composeRunOutput(input, results);
 }
 
@@ -166,9 +167,10 @@ export async function buildProductOpsRunOutputAsync(
 ): Promise<ProductOpsRunOutput> {
   const results: ProductOpsProductResult[] = [];
   const yieldEvery = options.yieldEvery ?? 10;
+  const matcher = createProductMatcher(input.shopifyVariants, input.mappings);
 
   for (const [index, supplierProduct] of input.supplierProducts.entries()) {
-    results.push(evaluateSupplierProduct(input, supplierProduct));
+    results.push(evaluateSupplierProduct(input, matcher, supplierProduct));
     if ((index + 1) % yieldEvery === 0) {
       await yieldToEventLoop();
     }
@@ -179,10 +181,11 @@ export async function buildProductOpsRunOutputAsync(
 
 function evaluateSupplierProduct(
   input: BuildProductOpsRunOutputInput,
+  matcher: ProductMatcher,
   supplierProduct: SupplierProduct,
 ): ProductOpsProductResult {
   const productIssues = input.issues.filter((issue) => issueMatchesProduct(issue, supplierProduct));
-  const match = matchSupplierProduct(supplierProduct, input.shopifyVariants, input.mappings);
+  const match = matcher.match(supplierProduct);
 
   if (match.status === "matched") {
     return evaluateProductReadiness({

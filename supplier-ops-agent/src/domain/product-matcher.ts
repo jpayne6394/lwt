@@ -60,6 +60,33 @@ export function matchSupplierProduct(
   shopifyVariants: ShopifyVariant[],
   mappings: ProductMapping[],
 ): MatchResult {
+  return createProductMatcher(shopifyVariants, mappings).match(supplierProduct);
+}
+
+export type ProductMatcher = {
+  match(supplierProduct: SupplierProduct): MatchResult;
+};
+
+export function createProductMatcher(shopifyVariants: ShopifyVariant[], mappings: ProductMapping[]): ProductMatcher {
+  const skuIndex = groupVariantsByIdentifier(shopifyVariants, (variant) => variant.sku);
+  const upcIndex = groupVariantsByIdentifier(shopifyVariants, (variant) => variant.barcode);
+  const brandCandidateCache = new Map<string, ShopifyVariant[]>();
+
+  return {
+    match(supplierProduct: SupplierProduct): MatchResult {
+      return matchWithIndexes(supplierProduct, shopifyVariants, mappings, skuIndex, upcIndex, brandCandidateCache);
+    },
+  };
+}
+
+function matchWithIndexes(
+  supplierProduct: SupplierProduct,
+  shopifyVariants: ShopifyVariant[],
+  mappings: ProductMapping[],
+  skuIndex: Map<string, ShopifyVariant[]>,
+  upcIndex: Map<string, ShopifyVariant[]>,
+  brandCandidateCache: Map<string, ShopifyVariant[]>,
+): MatchResult {
   const manual = findManualMapping(supplierProduct, shopifyVariants, mappings);
   if (manual) {
     return {
@@ -72,7 +99,7 @@ export function matchSupplierProduct(
 
   const sku = normalizeIdentifier(supplierProduct.sku);
   if (sku) {
-    const skuMatches = shopifyVariants.filter((variant) => normalizeIdentifier(variant.sku) === sku);
+    const skuMatches = skuIndex.get(sku) ?? [];
     if (skuMatches.length > 1) {
       return {
         status: "blocked",
@@ -91,7 +118,7 @@ export function matchSupplierProduct(
 
   const upc = normalizeIdentifier(supplierProduct.upc);
   if (upc) {
-    const upcMatches = shopifyVariants.filter((variant) => normalizeIdentifier(variant.barcode) === upc);
+    const upcMatches = upcIndex.get(upc) ?? [];
     if (upcMatches.length > 1) {
       return {
         status: "blocked",
@@ -108,7 +135,45 @@ export function matchSupplierProduct(
     }
   }
 
-  return findTitleVendorMatch(supplierProduct, shopifyVariants);
+  return findTitleVendorMatch(supplierProduct, titleCandidatesFor(supplierProduct, shopifyVariants, brandCandidateCache));
+}
+
+function groupVariantsByIdentifier(
+  shopifyVariants: ShopifyVariant[],
+  getValue: (variant: ShopifyVariant) => string | undefined,
+): Map<string, ShopifyVariant[]> {
+  const index = new Map<string, ShopifyVariant[]>();
+  for (const variant of shopifyVariants) {
+    const key = normalizeIdentifier(getValue(variant));
+    if (!key) {
+      continue;
+    }
+    const matches = index.get(key) ?? [];
+    matches.push(variant);
+    index.set(key, matches);
+  }
+  return index;
+}
+
+function titleCandidatesFor(
+  supplierProduct: SupplierProduct,
+  shopifyVariants: ShopifyVariant[],
+  brandCandidateCache: Map<string, ShopifyVariant[]>,
+): ShopifyVariant[] {
+  const supplierBrand = canonicalBrand(supplierProduct.brand ?? supplierProduct.supplierName);
+  if (!supplierBrand) {
+    return shopifyVariants;
+  }
+
+  const cached = brandCandidateCache.get(supplierBrand);
+  if (cached) {
+    return cached;
+  }
+
+  const candidates = shopifyVariants.filter((variant) => brandMatches(supplierBrand, variant));
+  const scoped = candidates.length ? candidates : shopifyVariants;
+  brandCandidateCache.set(supplierBrand, scoped);
+  return scoped;
 }
 
 function findManualMapping(

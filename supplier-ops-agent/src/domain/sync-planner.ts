@@ -1,6 +1,6 @@
 import { resolveInventoryQuantity } from "./inventory-policy.ts";
 import { moneyEqual, roundMoney } from "./money.ts";
-import { matchSupplierProduct } from "./product-matcher.ts";
+import { createProductMatcher, type ProductMatcher } from "./product-matcher.ts";
 import { planPriceUpdate, resolveRegularPrice } from "./pricing-policy.ts";
 import type {
   BlockedIssue,
@@ -20,9 +20,10 @@ export type SupplierSyncInput = {
 export function planSupplierSync(input: SupplierSyncInput): SyncPlan {
   const changes: PlannedChange[] = [];
   const issues: BlockedIssue[] = [];
+  const matcher = createProductMatcher(input.shopifyVariants, input.mappings);
 
   for (const supplierProduct of input.supplierProducts) {
-    planSupplierProduct(input, changes, issues, supplierProduct);
+    planSupplierProduct(matcher, changes, issues, supplierProduct);
   }
 
   return { changes, issues };
@@ -31,9 +32,10 @@ export function planSupplierSync(input: SupplierSyncInput): SyncPlan {
 export async function planSupplierSyncAsync(input: SupplierSyncInput, yieldEvery = 10): Promise<SyncPlan> {
   const changes: PlannedChange[] = [];
   const issues: BlockedIssue[] = [];
+  const matcher = createProductMatcher(input.shopifyVariants, input.mappings);
 
   for (const [index, supplierProduct] of input.supplierProducts.entries()) {
-    planSupplierProduct(input, changes, issues, supplierProduct);
+    planSupplierProduct(matcher, changes, issues, supplierProduct);
     if ((index + 1) % yieldEvery === 0) {
       await yieldToEventLoop();
     }
@@ -43,12 +45,12 @@ export async function planSupplierSyncAsync(input: SupplierSyncInput, yieldEvery
 }
 
 function planSupplierProduct(
-  input: SupplierSyncInput,
+  matcher: ProductMatcher,
   changes: PlannedChange[],
   issues: BlockedIssue[],
   supplierProduct: SupplierProduct,
 ): void {
-  const match = matchSupplierProduct(supplierProduct, input.shopifyVariants, input.mappings);
+  const match = matcher.match(supplierProduct);
 
   if (match.status === "blocked") {
     issues.push({

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { matchSupplierProduct } from "../src/domain/product-matcher.ts";
+import { createProductMatcher, matchSupplierProduct } from "../src/domain/product-matcher.ts";
 import type { ProductMapping, ShopifyVariant, SupplierProduct } from "../src/domain/types.ts";
 
 const variants: ShopifyVariant[] = [
@@ -355,4 +355,18 @@ test("matcher blocks duplicate exact SKU matches", () => {
     status: "blocked",
     reason: "Multiple Shopify variants matched supplier SKU MOLD",
   });
+});
+
+test("indexed matcher reuses Shopify lookup indexes without changing match behavior", () => {
+  const matcher = createProductMatcher(variants, []);
+  const product: SupplierProduct = {
+    supplierId: "systemic-formulas",
+    supplierName: "Systemic Formulas",
+    brand: "Systemic Formulas",
+    title: "VRM3 Micro by Systemic Formulas",
+    stockStatus: "in_stock",
+    capturedAt: "2026-05-24T12:00:00.000Z",
+  };
+
+  assert.deepEqual(matcher.match(product), matchSupplierProduct(product, variants, []));
 });
