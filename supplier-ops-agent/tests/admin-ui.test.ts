@@ -94,6 +94,27 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /<meta name="shopify-api-key" content="test-api-key">/);
   assert.match(html, /class="app-tabs"/);
   assert.doesNotMatch(html, /class="sidebar"/);
+  assert.match(html, /Start Here/);
+  assert.match(html, /Run the safe check/);
+  assert.match(html, /Choose an agent/);
+  assert.match(html, /Review drafts and handoffs/);
+  assert.match(html, /Shopify shortcuts/);
+  assert.match(html, /Open Products/);
+  assert.match(html, /Open Orders/);
+  assert.match(html, /Open Blog/);
+  assert.match(html, /Open Marketing/);
+  assert.match(html, /Open Flow/);
+  assert.match(html, /data-shopify-admin-link/);
+  assert.match(html, /data-shopify-path="\/products"/);
+  assert.match(html, /Agent task launcher/);
+  assert.match(html, /Safe supplier sync/);
+  assert.match(html, /Refresh BI radar/);
+  assert.match(html, /Review Product Ops/);
+  assert.match(html, /Open Blog Publisher/);
+  assert.match(html, /Create campaign brief/);
+  assert.match(html, /Open Flow templates/);
+  assert.match(html, /action="\/api\/market-radar"/);
+  assert.match(html, /action="\/api\/campaign-drafts"/);
 });
 
 test("admin UI shows supplier and Shopify context for blocked issues", () => {
@@ -314,6 +335,10 @@ test("dashboard renders a command center with sub-agent selection and prioritize
     assert.match(html, new RegExp(label));
   }
 
+  assert.match(html, /Agent command center/);
+  assert.match(html, /What this agent does/);
+  assert.match(html, /Run from here/);
+  assert.match(html, /Shopify handoff/);
   assert.match(html, /Action Queue/);
   assert.match(html, /Market Radar/);
   assert.match(html, /Revenue Plays/);
@@ -372,4 +397,37 @@ test("admin UI renders blog, campaign, flow, and source workbench controls", () 
   assert.match(sourcesHtml, /Source Connections/);
   assert.match(sourcesHtml, /Truth Social/);
   assert.match(sourcesHtml, /manual_only/);
+});
+
+test("supplier page explains how to use supplier coverage instead of only showing a table", () => {
+  const html = renderAdminPage({
+    activePath: "/suppliers",
+    suppliers: [
+      {
+        id: "emerson-ecologics",
+        name: "Emerson Ecologics",
+        mode: "website",
+        brands: ["Emerson"],
+        notes: "Main supplier.",
+      },
+    ],
+    runs: [],
+    changes: [],
+    issues: [],
+    productOpsOutputs: [],
+    marketRadarOutputs: [],
+    revenuePlays: [],
+    sourceConnections: [],
+    blogDrafts: [],
+    campaignDrafts: [],
+    alerts: [],
+    shopifyApiKey: "test-api-key",
+    applyChangesEnabled: false,
+  });
+
+  assert.match(html, /Supplier Command Center/);
+  assert.match(html, /What you do here/);
+  assert.match(html, /Check whether each supplier is connected/);
+  assert.match(html, /Open Shopify products/);
+  assert.match(html, /Start with dry-run sync/);
 });

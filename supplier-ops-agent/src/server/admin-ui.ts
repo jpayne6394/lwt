@@ -72,6 +72,8 @@ export function renderAdminPage(model: AdminPageModel): string {
           <div id="sync-status" class="sync-status" role="status" aria-live="polite"></div>
         </header>
         <nav class="app-tabs" aria-label="Supplier Ops sections">${NAV_ITEMS.map((item) => navLink(item, model.activePath)).join("")}</nav>
+        ${renderCommandHub(model)}
+        ${renderShopifyShortcutPanel()}
         ${renderContent(model)}
       </main>
     </div>
@@ -130,6 +132,7 @@ function renderDashboard(model: AdminPageModel): string {
       ${metric("Latest Issues", latestRun?.issueCount ?? 0)}
     </section>
     ${renderAgentDock(activeAgent, latestRun, latestProductOps, latestRadar, model.revenuePlays)}
+    ${renderAgentCommandCenter(activeAgent)}
     ${renderAgentWorkspace(model, latestRun, latestProductOps, latestRadar, issueCounts)}
     <div class="dashboard-grid">
       ${renderLatestRunPanel(latestRun)}
@@ -139,6 +142,192 @@ function renderDashboard(model: AdminPageModel): string {
       <h2>Alerts</h2>
       ${model.alerts.length ? model.alerts.map(renderAlert).join("") : `<p class="empty">No alerts yet.</p>`}
     </section>`;
+}
+
+function renderCommandHub(model: AdminPageModel): string {
+  const latestRun = model.runs[0];
+  const latestRadar = model.marketRadarOutputs[0];
+  const latestProductOps = model.productOpsOutputs[0];
+  const reviewCount = latestProductOps?.summary.reviewRequired ?? 0;
+  const nextStep = latestRun
+    ? reviewCount > 0
+      ? "Review blocked or uncertain product work before enabling writes."
+      : latestRadar
+        ? "Pick an agent below and turn the latest signals into a draft, Flow checklist, or product action."
+        : "Refresh BI Market Radar so the app can recommend revenue tasks."
+    : "Run the safe check first. It builds the briefing without changing Shopify.";
+
+  return `<section class="command-hub">
+    <div class="command-copy">
+      <span class="eyebrow">Start Here</span>
+      <h2>Run the store from one place</h2>
+      <p>${escapeHtml(nextStep)}</p>
+      <div class="command-steps" aria-label="Main workflow">
+        ${commandStep("1", "Run the safe check", "Dry-run inventory, pricing, and product readiness before Shopify writes.")}
+        ${commandStep("2", "Choose an agent", "BI, Inventory, Product Ops, Campaign, Blog, and Flow each have a focused workbench.")}
+        ${commandStep("3", "Review drafts and handoffs", "Approve Shopify-side work only after you like the recommendation.")}
+      </div>
+    </div>
+    ${renderAgentTaskLauncher()}
+  </section>`;
+}
+
+function commandStep(number: string, title: string, detail: string): string {
+  return `<article class="command-step">
+    <strong>${escapeHtml(number)}</strong>
+    <span>${escapeHtml(title)}</span>
+    <small>${escapeHtml(detail)}</small>
+  </article>`;
+}
+
+function shopifyShortcut(label: string, path: string, detail: string): string {
+  return `<a class="shortcut-card" href="https://admin.shopify.com${escapeHtml(path)}" target="_top" rel="noreferrer" data-shopify-admin-link data-shopify-path="${escapeHtml(path)}">
+    <strong>${escapeHtml(label)}</strong>
+    <span>${escapeHtml(detail)}</span>
+  </a>`;
+}
+
+function renderShopifyShortcutPanel(): string {
+  return `<section class="shopify-shortcuts">
+    <div class="panel-heading compact">
+      <h2>Shopify shortcuts</h2>
+      <span>6</span>
+    </div>
+    <div class="shortcut-grid">
+      ${shopifyShortcut("Open Products", "/products", "Edit products, variants, images, tags, and collections.")}
+      ${shopifyShortcut("Open Orders", "/orders", "Check order flow, fulfillment status, and sales context.")}
+      ${shopifyShortcut("Open Blog", "/content/blogs", "Review or publish drafted wellness articles.")}
+      ${shopifyShortcut("Open Marketing", "/marketing", "Build Shopify Email campaigns from campaign briefs.")}
+      ${shopifyShortcut("Open Flow", "/apps/flow", "Create automations and triggered emails from Flow templates.")}
+      ${shopifyShortcut("Open Customers", "/customers", "Review customer segments, tags, and lifecycle flows.")}
+    </div>
+  </section>`;
+}
+
+function renderAgentTaskLauncher(): string {
+  return `<section class="task-launcher">
+    <div class="panel-heading compact">
+      <h2>Agent task launcher</h2>
+      <span>6</span>
+    </div>
+    <div class="launcher-grid">
+      <form class="launcher-card" method="post" action="/api/runs?dryRun=true" data-run-form data-running-label="Running safe supplier sync...">
+        <span>Inventory Ops</span>
+        <strong>Safe supplier sync</strong>
+        <small>Check stock, pricing, supplier failures, and product readiness without changing Shopify.</small>
+        <button type="submit">Run safe sync</button>
+      </form>
+      <form class="launcher-card" method="post" action="/api/market-radar" data-run-form data-running-label="Refreshing BI radar...">
+        <span>BI Analyst</span>
+        <strong>Refresh BI radar</strong>
+        <small>Review sales windows, outside-market signals, competitor prices, and revenue plays.</small>
+        <button type="submit">Refresh radar</button>
+      </form>
+      <a class="launcher-card" href="/?agent=product_ops">
+        <span>Product Ops</span>
+        <strong>Review Product Ops</strong>
+        <small>Find products that are ready, risky, out of stock, or need cleanup.</small>
+        <em>Open review queue</em>
+      </a>
+      <a class="launcher-card" href="/?agent=blog">
+        <span>Blog Publisher</span>
+        <strong>Open Blog Publisher</strong>
+        <small>Turn rough thoughts into structured Shopify draft articles for review.</small>
+        <em>Draft article</em>
+      </a>
+      <form class="launcher-card" method="post" action="/api/campaign-drafts">
+        <span>Campaign Planner</span>
+        <strong>Create campaign brief</strong>
+        <small>Create a Shopify Email handoff brief from the latest product and BI signals.</small>
+        <button type="submit">Create brief</button>
+      </form>
+      <a class="launcher-card" href="/?agent=flow">
+        <span>Flow Launchpad</span>
+        <strong>Open Flow templates</strong>
+        <small>Copy professional triggered-email templates and open Shopify Flow setup notes.</small>
+        <em>Open templates</em>
+      </a>
+    </div>
+  </section>`;
+}
+
+function renderAgentCommandCenter(activeAgent: ActiveAgent): string {
+  const detail = agentCommandDetail(activeAgent);
+  return `<section class="agent-command-center">
+    <div>
+      <span class="eyebrow">Agent command center</span>
+      <h2>${escapeHtml(detail.title)}</h2>
+      <p>${escapeHtml(detail.summary)}</p>
+    </div>
+    <div class="agent-command-grid">
+      <article>
+        <span>What this agent does</span>
+        <strong>${escapeHtml(detail.does)}</strong>
+      </article>
+      <article>
+        <span>Run from here</span>
+        <strong>${escapeHtml(detail.run)}</strong>
+      </article>
+      <article>
+        <span>Shopify handoff</span>
+        <strong>${escapeHtml(detail.handoff)}</strong>
+      </article>
+    </div>
+  </section>`;
+}
+
+function agentCommandDetail(agent: ActiveAgent): { title: string; summary: string; does: string; run: string; handoff: string } {
+  switch (agent) {
+    case "bi":
+      return {
+        title: "BI Analyst",
+        summary: "Researches sales, inventory, supplier context, competitor prices, and market signals, then turns them into revenue plays.",
+        does: "Explains what is happening and why it matters.",
+        run: "Refresh Market Radar.",
+        handoff: "Blog, campaign, pricing, bundle, restock, and Flow ideas.",
+      };
+    case "inventory":
+      return {
+        title: "Inventory Ops",
+        summary: "Keeps Shopify stock, supplier availability, price changes, and safety guardrails visible before anything writes.",
+        does: "Reviews planned inventory and pricing changes.",
+        run: "Dry-run sync first, write sync only after review.",
+        handoff: "Products, inventory, and change ledger.",
+      };
+    case "campaign":
+      return {
+        title: "Campaign Planner",
+        summary: "Turns BI and product signals into Shopify Email briefs, subject lines, segments, and product picks.",
+        does: "Drafts professional email campaign plans.",
+        run: "Create campaign brief.",
+        handoff: "Shopify Marketing and Shopify Email.",
+      };
+    case "blog":
+      return {
+        title: "Blog Publisher",
+        summary: "Takes your rough thoughts and turns them into structured draft articles that match wellness content styles.",
+        does: "Creates review-first blog drafts.",
+        run: "Create template draft.",
+        handoff: "Shopify Blog draft articles.",
+      };
+    case "flow":
+      return {
+        title: "Flow Launchpad",
+        summary: "Gives you Flow setup checklists and copy-ready triggered email templates for automations inside Shopify Flow.",
+        does: "Plans automations without editing workflows automatically.",
+        run: "Copy a template or open Flow.",
+        handoff: "Shopify Flow app.",
+      };
+    case "product_ops":
+    default:
+      return {
+        title: "Product Ops",
+        summary: "Checks product readiness, promotion status, data cleanup, supplier confidence, and tasks before products are pushed harder.",
+        does: "Shows what is ready, risky, or needs cleanup.",
+        run: "Review Product Ops queues.",
+        handoff: "Products, collections, campaigns, and blog source lists.",
+      };
+  }
 }
 
 function storeHealthLine(run: SyncRun | undefined, output: ProductOpsOutputRecord | undefined): string {
@@ -342,7 +531,7 @@ function renderAgentWorkspace(
     return `<section class="panel agent-workspace">
       <div class="panel-heading">
         <h2>Flow Launchpad</h2>
-        <a class="button-link" href="https://admin.shopify.com/apps/flow" target="_top" rel="noreferrer" data-flow-admin-link>Open Shopify Flow app</a>
+        <a class="button-link" href="https://admin.shopify.com/apps/flow" target="_top" rel="noreferrer" data-flow-admin-link data-shopify-admin-link data-shopify-path="/apps/flow">Open Shopify Flow app</a>
       </div>
       <p>Use this as the planning surface for automations. V1 gives you setup checklists and professional email copy to paste into Shopify Flow-triggered email actions; it does not auto-edit workflows.</p>
     </section>
@@ -639,7 +828,28 @@ function renderSourceCard(source: SourceConnectionCard): string {
 }
 
 function renderSuppliers(suppliers: SupplierConfig[]): string {
-  return `<section class="panel">
+  return `<section class="supplier-guide">
+    <div>
+      <span class="eyebrow">Supplier Command Center</span>
+      <h2>Make sure each supplier can feed Shopify</h2>
+      <p>This page is where you check supplier coverage before trusting an inventory, pricing, blog, campaign, or Flow recommendation.</p>
+    </div>
+    <div class="guide-grid">
+      <article>
+        <strong>What you do here</strong>
+        <span>Check whether each supplier is connected, what source mode it uses, and what brands it covers.</span>
+      </article>
+      <article>
+        <strong>Start with dry-run sync</strong>
+        <span>Run the safe sync from the top button. It should produce issues and changes without touching Shopify.</span>
+      </article>
+      <article>
+        <strong>Open Shopify products</strong>
+        <a class="inline-link" href="https://admin.shopify.com/products" target="_top" rel="noreferrer" data-shopify-admin-link data-shopify-path="/products">Compare supplier coverage against Shopify products</a>
+      </article>
+    </div>
+  </section>
+  <section class="panel">
     <h2>Supplier coverage</h2>
     <table>
       <thead><tr><th>Supplier</th><th>Mode</th><th>Brands</th><th>Notes</th></tr></thead>
@@ -845,6 +1055,34 @@ function styles(): string {
     .run-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .sync-status { min-height: 22px; color: var(--muted); font-size: 13px; flex-basis: 100%; }
     .sync-status.error { color: var(--error); }
+    .eyebrow { color: var(--accent-strong); font-size: 12px; font-weight: 820; letter-spacing: 0; text-transform: uppercase; }
+    .command-hub { display: grid; grid-template-columns: minmax(360px, 1.05fr) minmax(320px, 0.95fr); gap: 16px; align-items: stretch; margin-bottom: 16px; }
+    .command-copy, .shopify-shortcuts, .agent-command-center, .supplier-guide { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+    .command-copy { background: #f8fbfa; border-color: #b9d7d1; display: grid; gap: 14px; }
+    .command-copy h2, .agent-command-center h2, .supplier-guide h2 { margin: 4px 0 0; font-size: 22px; line-height: 1.2; }
+    .command-steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .command-step { display: grid; grid-template-columns: auto 1fr; gap: 4px 9px; padding: 12px; border: 1px solid #cfe4df; border-radius: 6px; background: white; }
+    .command-step strong { grid-row: span 2; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: #0f1f1d; color: white; font-size: 13px; }
+    .command-step span { color: var(--text); font-weight: 760; line-height: 1.25; }
+    .command-step small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .shopify-shortcuts { display: grid; align-content: start; gap: 10px; }
+    .shortcut-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .shortcut-card { display: grid; gap: 4px; min-height: 74px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: #fbfcfc; color: var(--text); text-decoration: none; }
+    .shortcut-card:hover { border-color: #9bbcb6; background: #f5fbf9; }
+    .shortcut-card strong { font-size: 13px; }
+    .shortcut-card span { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .task-launcher { background: #182725; border: 1px solid #182725; border-radius: var(--radius); padding: 16px; margin-bottom: 16px; color: white; }
+    .command-hub .task-launcher { margin-bottom: 0; }
+    .task-launcher .panel-heading h2 { color: white; }
+    .task-launcher .panel-heading span { background: rgba(185, 240, 221, 0.12); color: #b9f0dd; }
+    .launcher-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 10px; }
+    .launcher-card { display: grid; gap: 7px; align-content: start; min-height: 174px; padding: 13px; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 6px; background: rgba(255, 255, 255, 0.06); color: white; text-decoration: none; }
+    .launcher-card:hover { border-color: rgba(185, 240, 221, 0.42); background: rgba(255, 255, 255, 0.1); }
+    .launcher-card span { color: #b9f0dd; font-size: 12px; font-weight: 780; }
+    .launcher-card strong { font-size: 15px; line-height: 1.3; }
+    .launcher-card small { color: #cfe0dc; font-size: 12px; line-height: 1.4; }
+    .launcher-card button, .launcher-card em { align-self: end; justify-self: start; margin-top: auto; min-height: 34px; border-radius: 6px; background: #f8fbfa; color: #0f1f1d; font-size: 13px; font-weight: 760; font-style: normal; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; }
+    .launcher-card button:hover { background: #dff7ef; }
     .briefing { background: #0f1f1d; color: #f8fbfa; border-radius: var(--radius); padding: 22px; margin-bottom: 16px; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
     .briefing h2 { margin: 0 0 6px; font-size: 22px; }
     .briefing p { color: #cfe0dc; max-width: 760px; }
@@ -862,6 +1100,13 @@ function styles(): string {
     .agent-card span { color: var(--muted); font-size: 12px; }
     .agent-card .agent-name { color: var(--text); font-size: 14px; font-weight: 760; }
     .agent-card em { color: var(--accent-strong); font-size: 12px; font-style: normal; font-weight: 700; }
+    .agent-command-center { display: grid; grid-template-columns: minmax(260px, 0.8fr) minmax(420px, 1.2fr); gap: 16px; align-items: start; background: #0f1f1d; color: #f8fbfa; border-color: #0f1f1d; margin-bottom: 16px; }
+    .agent-command-center .eyebrow { color: #b9f0dd; }
+    .agent-command-center p { color: #cfe0dc; margin-top: 8px; }
+    .agent-command-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .agent-command-grid article { display: grid; gap: 6px; padding: 12px; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 6px; background: rgba(255, 255, 255, 0.06); }
+    .agent-command-grid span { color: #b9f0dd; font-size: 12px; font-weight: 780; text-transform: uppercase; letter-spacing: 0; }
+    .agent-command-grid strong { color: white; font-size: 13px; line-height: 1.35; }
     .dashboard-grid { display: grid; grid-template-columns: minmax(300px, 0.75fr) minmax(420px, 1.25fr); gap: 16px; align-items: start; }
     .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
     .panel-heading.compact { margin-bottom: 8px; }
@@ -901,6 +1146,12 @@ function styles(): string {
     .mini-card strong { font-size: 14px; }
     .radar-explanation { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; margin-bottom: 10px; background: #fbfcfc; }
     .radar-explanation p { margin-top: 4px; }
+    .supplier-guide { display: grid; grid-template-columns: minmax(260px, 0.7fr) minmax(420px, 1.3fr); gap: 16px; margin-bottom: 16px; }
+    .supplier-guide p { margin-top: 8px; }
+    .guide-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .guide-grid article { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: #fbfcfc; }
+    .guide-grid strong { font-size: 13px; }
+    .guide-grid span, .guide-grid a { font-size: 12px; line-height: 1.4; }
     .section-note { margin-bottom: 14px; max-width: 860px; }
     .template-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
     .template-card { border: 1px solid var(--border); border-radius: 6px; background: #fbfcfc; padding: 14px; display: grid; gap: 12px; min-width: 0; }
@@ -926,12 +1177,13 @@ function styles(): string {
     .alert.warning { border-color: #fedf89; color: var(--warning); background: #fffbeb; }
     .alert.info { background: #f5fbff; }
     @media (max-width: 1100px) {
-      .dashboard-grid { grid-template-columns: 1fr; }
+      .dashboard-grid, .command-hub, .agent-command-center, .supplier-guide { grid-template-columns: 1fr; }
     }
     @media (max-width: 860px) {
       .main { padding: 18px; }
       .topbar { align-items: flex-start; flex-direction: column; }
       .briefing { flex-direction: column; }
+      .command-steps, .agent-command-grid, .guide-grid { grid-template-columns: 1fr; }
       .agent-stats, .template-grid { grid-template-columns: 1fr; }
       .app-tabs { overflow-x: auto; flex-wrap: nowrap; }
     }
@@ -952,11 +1204,11 @@ function clientScript(): string {
   return `
     const syncStatus = document.getElementById("sync-status");
     const runForms = Array.from(document.querySelectorAll("[data-run-form]"));
-    const flowAdminLinks = Array.from(document.querySelectorAll("[data-flow-admin-link]"));
     const shopifyStoreMatch = (document.referrer || "").match(/admin\\.shopify\\.com\\/store\\/([^/]+)/);
-    const shopifyFlowUrl = shopifyStoreMatch ? "https://admin.shopify.com/store/" + shopifyStoreMatch[1] + "/apps/flow" : "https://admin.shopify.com/apps/flow";
-    flowAdminLinks.forEach((link) => {
-      link.href = shopifyFlowUrl;
+    const shopifyStoreBase = shopifyStoreMatch ? "https://admin.shopify.com/store/" + shopifyStoreMatch[1] : "https://admin.shopify.com";
+    Array.from(document.querySelectorAll("[data-shopify-admin-link]")).forEach((link) => {
+      const path = link.getAttribute("data-shopify-path") || "";
+      link.href = shopifyStoreBase + path;
     });
 
     Array.from(document.querySelectorAll("[data-copy-template]")).forEach((button) => {
