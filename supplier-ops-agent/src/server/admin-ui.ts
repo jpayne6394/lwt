@@ -1,4 +1,5 @@
 import type { AlertMessage } from "../alerts/alert-service.ts";
+import { normalizeActionInput, productOpsTaskToQueueInput } from "../action-queue/action-queue-service.ts";
 import type { ActionQueueEvent, ActionQueueItem, ActionQueueStatus } from "../action-queue/types.ts";
 import { FLOW_EMAIL_TEMPLATES, templatePlainTextForFlow } from "../campaigns/flow-email-templates.ts";
 import type { CampaignDraftRecord } from "../campaigns/types.ts";
@@ -131,17 +132,15 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
   const latestProductOps = model.productOpsOutputs[0];
   const latestRadar = model.marketRadarOutputs[0];
   const logs = model.businessActionLogs ?? [];
-  const actionQueueItems = model.actionQueueItems ?? [];
+  const actionQueueItems = mergeActionQueueItems(model.actionQueueItems ?? [], productOpsQueueItems(latestProductOps));
   const actionQueueEvents = model.actionQueueEvents ?? [];
   const openQueueItems = actionQueueItems.filter((item) => isOpenActionQueueStatus(item.status)).slice(0, 12);
   const pendingQueueItems = openQueueItems.filter((item) => item.status === "new" || item.status === "edited" || item.status === "approved");
   const pendingApprovalActions =
-    actionQueueItems.length > 0
-      ? []
-      : latestReport?.actions_requiring_owner_approval ??
-        logs
-          .filter((log) => log.approval_status === "suggested" || log.approval_status === "drafted")
-          .map((log) => log.recommendation);
+    latestReport?.actions_requiring_owner_approval ??
+    logs
+      .filter((log) => log.approval_status === "suggested" || log.approval_status === "drafted")
+      .map((log) => log.recommendation);
   const inventoryRisks = latestReport?.inventory_risks ?? productOpsInventoryItems(latestProductOps);
   const promoRecommendations = latestReport?.products_to_promote ?? radarRevenueItems(latestRadar, model.revenuePlays);
   const removeFromPromo = latestReport?.products_to_remove_from_promotion ?? [];
@@ -151,13 +150,21 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
   const urgentIssues = latestReport?.urgent_issues ?? issueCockpitItems(model.issues, latestRun);
   const actionPlanItems = [...urgentIssues, ...pendingApprovalActions, ...inventoryRisks, ...promoRecommendations, ...draftCampaignActions].slice(0, 6);
   const queuePlanItems = [...pendingQueueItems, ...openQueueItems.filter((item) => !pendingQueueItems.includes(item))].slice(0, 6);
-  const planCockpitItems = actionQueueItems.length > 0 ? queuePlanItems.map(queueItemToCockpitItem) : actionPlanItems.map(actionToCockpitItem);
+  const planCockpitItems = uniqueCockpitItems([...queuePlanItems.map(queueItemToCockpitItem), ...actionPlanItems.map(actionToCockpitItem)]).slice(0, 6);
   const revenueQueueItems = openQueueItems.filter((item) => item.action_type === "PROMOTE" || item.action_type === "WRITE" || /market|campaign|blog|promotion/i.test(item.area));
   const stockQueueItems = openQueueItems.filter((item) => /stock|inventory|supplier/i.test(item.area + " " + item.title + " " + item.description));
-  const needsApprovalCount = actionQueueItems.length > 0 ? pendingQueueItems.length : pendingApprovalActions.length || latestProductOps?.summary.reviewRequired || 0;
+  const promotionSuggestionItems = uniqueCockpitItems([
+    ...revenueQueueItems.map(queueItemToCockpitItem),
+    ...promoRecommendations.map(actionToCockpitItem),
+    ...draftCampaignActions.map(actionToCockpitItem),
+    ...campaignItems,
+  ]);
+  const inventoryRiskItems = uniqueCockpitItems([...stockQueueItems.map(queueItemToCockpitItem), ...inventoryRisks.map(actionToCockpitItem)]);
+  const pendingApprovalItems = uniqueCockpitItems([...pendingQueueItems.map(queueItemToCockpitItem), ...pendingApprovalActions.map(actionToCockpitItem)]);
+  const needsApprovalCount = pendingApprovalItems.length || latestProductOps?.summary.reviewRequired || 0;
   const inventoryRiskCount =
-    stockQueueItems.length || inventoryRisks.length || (latestProductOps ? latestProductOps.summary.lowStock + latestProductOps.summary.outOfStock : 0);
-  const promoteCount = revenueQueueItems.length || promoRecommendations.length || latestProductOps?.summary.promoteReady || latestRadar?.summary.highConfidencePlays || 0;
+    inventoryRiskItems.length || (latestProductOps ? latestProductOps.summary.lowStock + latestProductOps.summary.outOfStock : 0);
+  const promoteCount = promotionSuggestionItems.length || latestProductOps?.summary.promoteReady || latestRadar?.summary.highConfidencePlays || 0;
   const latestIssueCount = latestRun?.issueCount ?? model.issues.length;
   const draftsReadyCount = campaignItems.length + model.blogDrafts.length + draftCampaignActions.length;
   const safetyMode = model.aiProvider === "openai" ? "AI-assisted: approval still required" : "Mock mode: review only";
@@ -179,8 +186,8 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
     </section>
     <section class="metrics cockpit-metrics">
       ${metric("Needs approval", needsApprovalCount)}
-      ${metric("Stock watch", inventoryRiskCount)}
-      ${metric("Promote next", promoteCount)}
+      ${metric("Inventory risks", inventoryRiskCount)}
+      ${metric("Promotion ideas", promoteCount)}
       ${metric("Latest issues", latestIssueCount)}
     </section>
     <section class="cockpit-grid">
@@ -201,10 +208,10 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
       </section>
     </section>
     <section class="cockpit-lanes">
-      ${cockpitLane("Today's Plan", planCockpitItems, "Refresh today's plan to build the first review list.")}
-      ${cockpitLane("Revenue Moves", actionQueueItems.length > 0 ? revenueQueueItems.map(queueItemToCockpitItem) : [...promoRecommendations.map(actionToCockpitItem), ...draftCampaignActions.map(actionToCockpitItem), ...campaignItems], "Promotion and campaign ideas will appear here after a report or radar refresh.")}
-      ${cockpitLane("Stock Watch", actionQueueItems.length > 0 ? stockQueueItems.map(queueItemToCockpitItem) : inventoryRisks.map(actionToCockpitItem), "No low-stock or out-of-stock focus items yet.")}
-      ${cockpitLane("Pending Approvals", actionQueueItems.length > 0 ? pendingQueueItems.map(queueItemToCockpitItem) : pendingApprovalActions.map(actionToCockpitItem), "No approvals are waiting yet.")}
+      ${cockpitLane("Today's Business Brief", planCockpitItems, "Refresh today's plan to build the first review list.")}
+      ${cockpitLane("Promotion Suggestions", promotionSuggestionItems, "Promotion and campaign ideas will appear here after a report or radar refresh.")}
+      ${cockpitLane("Inventory Risks", inventoryRiskItems, "No low-stock or out-of-stock focus items yet.")}
+      ${cockpitLane("Pending Approvals", pendingApprovalItems, "No approvals are waiting yet.")}
       ${cockpitLane("Shopify Action Queue", queue.map((item) => queueItemToCockpitItem(item, true)), "Approved Shopify work will queue here before execution.")}
       ${cockpitLane("Recent Activity", recentActivityItems, "No recent cockpit activity yet.")}
     </section>
@@ -243,6 +250,20 @@ function renderCockpitItems(items: CockpitItem[], emptyText: string): string {
     .join("")}</div>`;
 }
 
+function uniqueCockpitItems(items: CockpitItem[]): CockpitItem[] {
+  const seen = new Set<string>();
+  const unique: CockpitItem[] = [];
+  for (const item of items) {
+    const key = `${item.label}|${item.title}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    unique.push(item);
+  }
+  return unique;
+}
+
 function actionToCockpitItem(action: BusinessRecommendedAction): CockpitItem {
   return {
     title: action.title,
@@ -266,6 +287,62 @@ function logToCockpitItem(log: BusinessActionLogRecord): CockpitItem {
     ...actionToCockpitItem(log.recommendation),
     detail: log.execution_result ?? log.recommendation.reason,
   };
+}
+
+function productOpsQueueItems(output: ProductOpsOutputRecord | undefined): ActionQueueItem[] {
+  if (!output) {
+    return [];
+  }
+
+  const capturedAt = output.finishedAt || output.createdAt;
+  const taskItems = [...output.promotionTasks, ...output.cleanupTasks, ...output.reviewTasks].map((task) =>
+    normalizeActionInput(productOpsTaskToQueueInput(task, output), capturedAt),
+  );
+  const productItems =
+    output.promotionTasks.length > 0
+      ? []
+      : output.productsToPromote.map((product) => normalizeActionInput(productToQueueInput(product, output), capturedAt));
+
+  return mergeActionQueueItems(taskItems, productItems);
+}
+
+function productToQueueInput(product: ProductOpsProductResult, output: ProductOpsOutputRecord) {
+  const reason = product.reasons.join(" ") || "Product Ops marked this product promote-ready after supplier and catalog checks.";
+  return {
+    source_workflow: "product-ops",
+    source_agent: "Product Ops",
+    action_type: "PROMOTE" as const,
+    priority: "High" as const,
+    area: "Promotion",
+    title: `Promote ${product.title}`,
+    description: reason,
+    reason,
+    related_product_handle: null,
+    related_product_title: product.title,
+    related_vendor: product.vendor ?? product.supplierName,
+    related_collection: null,
+    related_campaign: null,
+    risk_level: "Low" as const,
+    status: "new" as const,
+    owner: "LWT",
+    due_date: null,
+    confidence_score: product.matchConfidence,
+    source_payload: { product, runId: output.runId },
+    source_reference: output.runId,
+  };
+}
+
+function mergeActionQueueItems(primary: ActionQueueItem[], secondary: ActionQueueItem[]): ActionQueueItem[] {
+  const seen = new Set<string>();
+  const merged: ActionQueueItem[] = [];
+  for (const item of [...primary, ...secondary]) {
+    if (seen.has(item.dedupe_key)) {
+      continue;
+    }
+    seen.add(item.dedupe_key);
+    merged.push(item);
+  }
+  return merged.sort((left, right) => right.updated_at.localeCompare(left.updated_at));
 }
 
 function isOpenActionQueueStatus(status: ActionQueueStatus): boolean {

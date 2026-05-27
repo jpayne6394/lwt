@@ -80,7 +80,7 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /Run write sync/);
   assert.match(html, /action="\/api\/runs\?dryRun=true"/);
   assert.match(html, /id="sync-status"/);
-  assert.match(html, /Promote next/);
+  assert.match(html, /Promotion ideas/);
   assert.match(html, /<strong>5<\/strong>/);
   assert.match(html, /Needs approval/);
   assert.match(html, /<strong>2<\/strong>/);
@@ -95,7 +95,7 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /Today&#39;s cockpit/);
   assert.match(html, /Refresh today&#39;s plan/);
   assert.match(html, /Start here/);
-  assert.match(html, /Today&#39;s Plan/);
+  assert.match(html, /Today&#39;s Business Brief/);
   assert.match(html, /Shopify shortcuts/);
   assert.match(html, /Open Products/);
   assert.match(html, /Open Orders/);
@@ -225,7 +225,7 @@ test("dashboard renders a simple daily business cockpit with prioritized next st
           variantsChecked: 4538,
           suppliersChecked: 4,
           promoteReady: 0,
-          lowStock: 0,
+          lowStock: 1,
           outOfStock: 47,
           needsDataCleanup: 0,
           badPage: 0,
@@ -233,9 +233,35 @@ test("dashboard renders a simple daily business cockpit with prioritized next st
           reviewRequired: 172,
           errors: 0,
         },
-        productsToPromote: [],
+        productsToPromote: [
+          {
+            supplierId: "emerson-ecologics",
+            supplierName: "Emerson Ecologics",
+            productId: "gid://shopify/Product/22",
+            variantId: "gid://shopify/ProductVariant/22",
+            title: "Magnesium Glycinate",
+            vendor: "Living Well Today",
+            sku: "MAG-GLY",
+            promotionStatus: "PROMOTE_READY",
+            matchConfidence: 0.98,
+            flags: [],
+            reasons: ["Ready for promotion and stocked."],
+            price: 34,
+            stockStatus: "in_stock",
+          },
+        ],
         productsToAvoid: [],
-        promotionTasks: [],
+        promotionTasks: [
+          {
+            actionType: "PROMOTE",
+            title: "Promote Magnesium Glycinate",
+            detail: "Product Ops marked this product promote-ready after supplier and catalog checks.",
+            promotionStatus: "PROMOTE_READY",
+            productId: "gid://shopify/Product/22",
+            variantId: "gid://shopify/ProductVariant/22",
+            sku: "MAG-GLY",
+          },
+        ],
         cleanupTasks: [],
         reviewTasks: [
           {
@@ -339,15 +365,20 @@ test("dashboard renders a simple daily business cockpit with prioritized next st
     autonomyMode: "approval",
   });
 
-  for (const label of ["Today&#39;s cockpit", "Start here", "Today&#39;s Plan", "Revenue Moves", "Stock Watch", "Recent Activity"]) {
+  for (const label of ["Today&#39;s cockpit", "Start here", "Today&#39;s Business Brief", "Promotion Suggestions", "Inventory Risks", "Recent Activity"]) {
     assert.match(html, new RegExp(label));
   }
 
   assert.match(html, /Mock mode: review only/);
   assert.match(html, /Needs approval/);
-  assert.match(html, /Promote next/);
+  assert.match(html, /Promotion ideas/);
   assert.match(html, /Drafts ready/);
   assert.match(html, /Write a magnesium sleep guide/);
+  assert.match(html, /Promote Magnesium Glycinate/);
+  assert.match(html, /Product Ops marked this product promote-ready/);
+  assert.match(html, /Pending Approvals[\s\S]*Supplier match uncertain or guardrail blocked for Magnesium/);
+  assert.match(html, /Inventory Risks[\s\S]*Supplier match uncertain or guardrail blocked for Magnesium/);
+  assert.match(html, /Promotion Suggestions[\s\S]*Promote Magnesium Glycinate/);
   assert.match(html, /Sleep support email brief/);
   assert.match(html, /Open Products/);
   assert.match(html, /Open Marketing/);
@@ -557,8 +588,8 @@ test("admin UI renders the mock-mode cockpit without developer labels", () => {
     "Start here",
     "Pending Approvals",
     "Recent Activity",
-    "Stock Watch",
-    "Revenue Moves",
+    "Inventory Risks",
+    "Promotion Suggestions",
     "Shopify Action Queue",
     "Refresh today&#39;s plan",
     "Draft a Shopify Email campaign",
