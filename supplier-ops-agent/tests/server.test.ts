@@ -233,6 +233,66 @@ test("server exposes safe Market Radar refresh and draft endpoints", async () =>
   }
 });
 
+test("server exposes manual action queue creation, approval logging, and safe exports", async () => {
+  const repository = new MemoryRepository();
+  const server = startServer(
+    {
+      repository,
+      suppliers: [],
+      alerts: new AlertService(),
+      runNow: async () => {},
+      startRun: () => true,
+      shopifyApiKey: "test-key",
+      applyChangesEnabled: false,
+    },
+    { port: 0, host: "127.0.0.1" },
+  );
+
+  await onceListening(server);
+  try {
+    const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const createResponse = await fetch(`${baseUrl}/api/action-queue`, {
+      method: "POST",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify({
+        action_type: "WRITE",
+        priority: "High",
+        area: "Campaign",
+        title: "Draft replenishment email",
+        description: "Create draft copy only.",
+        reason: "Customers may need reminder education.",
+      }),
+    });
+    assert.equal(createResponse.status, 201);
+    const created = (await createResponse.json()) as { item: { id: string; status: string; title: string } };
+    assert.equal(created.item.status, "new");
+
+    const approveResponse = await fetch(`${baseUrl}/api/action-queue/approve`, {
+      method: "POST",
+      headers: { accept: "application/json", "content-type": "application/json" },
+      body: JSON.stringify({
+        id: created.item.id,
+        actor: "Justin",
+        note: "Approved for draft only.",
+      }),
+    });
+    assert.equal(approveResponse.status, 200);
+    assert.equal((await approveResponse.json() as { item: { status: string } }).item.status, "approved");
+
+    const events = await repository.recentActionQueueEvents?.(10);
+    assert.ok(events?.some((event) => event.event_type === "approved" && event.note === "Approved for draft only."));
+
+    const csvResponse = await fetch(`${baseUrl}/api/action-queue/export?format=csv`);
+    const csv = await csvResponse.text();
+    assert.equal(csvResponse.status, 200);
+    assert.match(csv, /Action Type,Priority,Area,Title,Status/);
+    assert.match(csv, /WRITE,High,Campaign,Draft replenishment email,approved/);
+    assert.doesNotMatch(csv, /send email/i);
+  } finally {
+    server.close();
+  }
+});
+
 test("server renders the daily cockpit on the root path unless an agent workbench is requested", async () => {
   const server = startServer(
     {

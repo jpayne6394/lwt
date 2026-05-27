@@ -13,6 +13,7 @@ import type { BusinessActionLogRecord, DailyCommandReport } from "../business-os
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
 import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
+import type { ActionQueueEvent, ActionQueueItem } from "../action-queue/types.ts";
 
 export class PostgresRepository implements SupplierOpsRepository {
   readonly #pool: any;
@@ -340,6 +341,78 @@ export class PostgresRepository implements SupplierOpsRepository {
   async recentDailyCommandReports(limit = 20): Promise<DailyCommandReport[]> {
     const result = await this.#pool.query(`select payload from daily_command_reports order by created_at desc limit $1`, [limit]);
     return result.rows.map((row: any) => row.payload as DailyCommandReport);
+  }
+
+  async upsertActionQueueItem(item: ActionQueueItem): Promise<ActionQueueItem> {
+    await this.#pool.query(
+      `insert into action_queue_items
+       (id, dedupe_key, status, source_workflow, source_agent, action_type, priority, area, payload, created_at, updated_at, last_seen_at)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12)
+       on conflict (id) do update set
+         dedupe_key = excluded.dedupe_key,
+         status = excluded.status,
+         source_workflow = excluded.source_workflow,
+         source_agent = excluded.source_agent,
+         action_type = excluded.action_type,
+         priority = excluded.priority,
+         area = excluded.area,
+         payload = excluded.payload,
+         updated_at = excluded.updated_at,
+         last_seen_at = excluded.last_seen_at`,
+      [
+        item.id,
+        item.dedupe_key,
+        item.status,
+        item.source_workflow,
+        item.source_agent,
+        item.action_type,
+        item.priority,
+        item.area,
+        JSON.stringify(item),
+        item.created_at,
+        item.updated_at,
+        item.last_seen_at,
+      ],
+    );
+    return item;
+  }
+
+  async findActionQueueItemByDedupeKey(dedupeKey: string): Promise<ActionQueueItem | null> {
+    const result = await this.#pool.query(`select payload from action_queue_items where dedupe_key = $1 limit 1`, [dedupeKey]);
+    return (result.rows[0]?.payload as ActionQueueItem | undefined) ?? null;
+  }
+
+  async findActionQueueItemById(id: string): Promise<ActionQueueItem | null> {
+    const result = await this.#pool.query(`select payload from action_queue_items where id = $1`, [id]);
+    return (result.rows[0]?.payload as ActionQueueItem | undefined) ?? null;
+  }
+
+  async listActionQueueItems(limit = 100): Promise<ActionQueueItem[]> {
+    const result = await this.#pool.query(`select payload from action_queue_items order by updated_at desc limit $1`, [limit]);
+    return result.rows.map((row: any) => row.payload as ActionQueueItem);
+  }
+
+  async listCompletedActionQueueItems(limit = 100): Promise<ActionQueueItem[]> {
+    const result = await this.#pool.query(
+      `select payload from action_queue_items
+       where status in ('done', 'rejected', 'ignored')
+       order by updated_at desc limit $1`,
+      [limit],
+    );
+    return result.rows.map((row: any) => row.payload as ActionQueueItem);
+  }
+
+  async recordActionQueueEvent(event: ActionQueueEvent): Promise<void> {
+    await this.#pool.query(
+      `insert into action_queue_events (id, action_id, event_type, actor, note, payload, created_at)
+       values ($1, $2, $3, $4, $5, $6::jsonb, $7)`,
+      [event.id, event.action_id, event.event_type, event.actor, event.note, JSON.stringify(event), event.created_at],
+    );
+  }
+
+  async recentActionQueueEvents(limit = 100): Promise<ActionQueueEvent[]> {
+    const result = await this.#pool.query(`select payload from action_queue_events order by created_at desc limit $1`, [limit]);
+    return result.rows.map((row: any) => row.payload as ActionQueueEvent);
   }
 }
 

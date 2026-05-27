@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { URL } from "node:url";
 
+import { createActionQueueService } from "../action-queue/action-queue-service.ts";
 import type { AlertService } from "../alerts/alert-service.ts";
 import type { BuildCampaignDraftInput, CampaignDraftRecord } from "../campaigns/types.ts";
 import type { BuildBlogDraftInput, BlogDraftRecord } from "../content/types.ts";
@@ -186,8 +187,107 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     return;
   }
 
+  if (request.method === "POST" && url.pathname === "/api/action-queue") {
+    const queue = createActionQueueService(context.repository);
+    const body = await readBody(request);
+    const title = String(body.title ?? "").trim();
+    if (!title) {
+      sendJson(response, 400, { ok: false, error: "Action title is required" });
+      return;
+    }
+
+    try {
+      const item = await queue.enqueue({
+        source_workflow: String(body.source_workflow ?? "manual"),
+        source_agent: String(body.source_agent ?? "Operator"),
+        action_type: (body.action_type as any) ?? "REVIEW",
+        priority: (body.priority as any) ?? "Medium",
+        area: String(body.area ?? "Operations"),
+        title,
+        description: String(body.description ?? body.reason ?? "Manual action created in the command center."),
+        reason: String(body.reason ?? body.description ?? "Manual action created in the command center."),
+        related_product_handle: body.related_product_handle ? String(body.related_product_handle) : null,
+        related_product_title: body.related_product_title ? String(body.related_product_title) : null,
+        related_vendor: body.related_vendor ? String(body.related_vendor) : null,
+        related_collection: body.related_collection ? String(body.related_collection) : null,
+        related_campaign: body.related_campaign ? String(body.related_campaign) : null,
+        risk_level: (body.risk_level as any) ?? "Low",
+        owner: body.owner ? String(body.owner) : "LWT",
+        due_date: body.due_date ? String(body.due_date) : null,
+        confidence_score: body.confidence_score ? Number(body.confidence_score) : null,
+        source_payload: { manual: true },
+        source_reference: body.source_reference ? String(body.source_reference) : null,
+      });
+      sendJson(response, 201, { ok: true, item });
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Action queue create failed" });
+    }
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname.startsWith("/api/action-queue/")) {
+    const queue = createActionQueueService(context.repository);
+    const body = await readBody(request);
+    const id = String(body.id ?? "");
+    const actor = String(body.actor ?? "LWT");
+    const note = String(body.note ?? "");
+    if (!id) {
+      sendJson(response, 400, { ok: false, error: "Action id is required" });
+      return;
+    }
+
+    try {
+      const actionPath = url.pathname.replace("/api/action-queue/", "");
+      const item =
+        actionPath === "approve"
+          ? await queue.approve(id, { actor, note })
+          : actionPath === "reject"
+            ? await queue.reject(id, { actor, note })
+            : actionPath === "complete"
+              ? await queue.complete(id, { actor, note })
+              : actionPath === "edit"
+                ? await queue.edit(id, {
+                    actor,
+                    note,
+                    updates: {
+                      title: body.title ? String(body.title) : undefined,
+                      description: body.description ? String(body.description) : undefined,
+                      reason: body.reason ? String(body.reason) : undefined,
+                      priority: body.priority as any,
+                      area: body.area ? String(body.area) : undefined,
+                      owner: body.owner ? String(body.owner) : undefined,
+                      due_date: body.due_date ? String(body.due_date) : null,
+                    },
+                  })
+                : null;
+      if (!item) {
+        sendJson(response, 404, { ok: false, error: "Unknown action queue operation" });
+        return;
+      }
+      sendJson(response, 200, { ok: true, item });
+    } catch (error) {
+      sendJson(response, 404, { ok: false, error: error instanceof Error ? error.message : "Action queue update failed" });
+    }
+    return;
+  }
+
   if (request.method !== "GET") {
     sendText(response, 405, "Method not allowed");
+    return;
+  }
+
+  if (url.pathname === "/api/action-queue/export") {
+    const queue = createActionQueueService(context.repository);
+    const format = url.searchParams.get("format") ?? "json";
+    if (format === "csv") {
+      response.writeHead(200, {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": "attachment; filename=\"lwt-action-queue.csv\"",
+      });
+      response.end(await queue.exportCsv());
+      return;
+    }
+    sendJson(response, 200, JSON.parse(await queue.exportJson()));
     return;
   }
 
@@ -208,6 +308,8 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     campaignDrafts,
     dailyCommandReports,
     businessActionLogs,
+    actionQueueItems,
+    actionQueueEvents,
   ] = await Promise.all([
     context.repository.recentRuns(30),
     context.repository.recentChanges(100),
@@ -219,6 +321,8 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     context.repository.recentCampaignDrafts?.(50) ?? Promise.resolve([]),
     context.repository.recentDailyCommandReports?.(10) ?? Promise.resolve([]),
     context.repository.recentBusinessActionLogs?.(100) ?? Promise.resolve([]),
+    context.repository.listActionQueueItems?.(100) ?? Promise.resolve([]),
+    context.repository.recentActionQueueEvents?.(100) ?? Promise.resolve([]),
   ]);
 
   const html = renderAdminPage({
@@ -241,6 +345,8 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     autonomyMode: context.autonomyMode,
     dailyCommandReports,
     businessActionLogs,
+    actionQueueItems,
+    actionQueueEvents,
   });
 
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });

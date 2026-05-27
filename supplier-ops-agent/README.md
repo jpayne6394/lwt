@@ -87,6 +87,26 @@ The Chief of Staff creates a daily command report with inventory risks, products
 
 Approval statuses are `suggested`, `drafted`, `approved`, `rejected`, `executed`, `failed`, and `rolled_back`. Action logs store timestamp, agent name, input data, recommendation, approval status, execution result, and rollback information.
 
+## LWT Action Queue
+
+The LWT Action Queue is the shared backbone for recommendations from Product Ops, Market Radar, the Business OS daily command report, and manually created tasks. It standardizes every recommendation into one review-first schema with source workflow, source agent, action type, priority, area, title, description, related product/collection/campaign context, risk level, owner, due date, source reference, status, timestamps, and a dedupe key.
+
+Queue statuses are `new`, `accepted`, `approved`, `edited`, `in_progress`, `waiting`, `done`, `rejected`, and `ignored`. Approvals, edits, rejections, completions, and repeated deduped recommendations are written to an event log. The dashboard reads from this queue first, so the cockpit shows the same pending work regardless of which agent created it.
+
+Safe API endpoints:
+
+```bash
+POST /api/action-queue
+POST /api/action-queue/approve
+POST /api/action-queue/edit
+POST /api/action-queue/reject
+POST /api/action-queue/complete
+GET  /api/action-queue/export?format=json
+GET  /api/action-queue/export?format=csv
+```
+
+These endpoints only create, update, log, and export queue records. They do not write to Shopify, send emails, delete products, or execute product/homepage changes.
+
 Guardrails keep the app safe by default:
 
 - No unsupported medical claims.

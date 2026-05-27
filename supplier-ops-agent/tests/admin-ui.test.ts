@@ -508,6 +508,47 @@ test("admin UI renders the mock-mode cockpit without developer labels", () => {
         rollback_information: "Discard the draft.",
       },
     ],
+    actionQueueItems: [
+      {
+        id: "queue_1",
+        dedupe_key: "market-radar|PROMOTE|magnesium-glycinate|draft-a-shopify-email-campaign",
+        source_workflow: "market-radar",
+        source_agent: "BI",
+        action_type: "PROMOTE",
+        priority: "High",
+        area: "Market Signals",
+        title: "Draft a Shopify Email campaign",
+        description: "Campaign draft only.",
+        reason: "Market signals and stocked products support a review-first email.",
+        related_product_handle: "magnesium-glycinate",
+        related_product_title: "Magnesium Glycinate",
+        related_vendor: "Living Well Today",
+        related_collection: "Sleep Support",
+        related_campaign: "Sleep support email",
+        risk_level: "Low",
+        status: "new",
+        owner: "LWT",
+        due_date: null,
+        confidence_score: 0.84,
+        source_payload: { signal_count: 4 },
+        source_reference: "market_radar_1",
+        occurrence_count: 1,
+        created_at: "2026-05-26T12:00:00.000Z",
+        updated_at: "2026-05-26T12:00:00.000Z",
+        last_seen_at: "2026-05-26T12:00:00.000Z",
+      },
+    ],
+    actionQueueEvents: [
+      {
+        id: "event_1",
+        action_id: "queue_1",
+        event_type: "approved",
+        actor: "Justin",
+        note: "Approved for draft only.",
+        created_at: "2026-05-26T12:05:00.000Z",
+        snapshot: {},
+      },
+    ],
   });
 
   for (const label of [
@@ -521,6 +562,12 @@ test("admin UI renders the mock-mode cockpit without developer labels", () => {
     "Shopify Action Queue",
     "Refresh today&#39;s plan",
     "Draft a Shopify Email campaign",
+    "High",
+    "Market Signals",
+    "Approved for draft only",
+    "data-action-queue-form",
+    "action=\"/api/action-queue/approve\"",
+    "action=\"/api/action-queue/reject\"",
   ]) {
     assert.match(html, new RegExp(label));
   }

@@ -1,6 +1,7 @@
 import { AlertService } from "./alerts/alert-service.ts";
 import { createWebhookEmailSender } from "./alerts/email.ts";
 import { createLlmClient } from "../lib/llm/index.ts";
+import { createActionQueueService, revenuePlayToQueueInput } from "./action-queue/action-queue-service.ts";
 import { createChiefOfStaffAgent } from "./business-os/chief-of-staff-agent.ts";
 import { buildCampaignDraft } from "./campaigns/campaign-draft-planner.ts";
 import type { BuildCampaignDraftInput } from "./campaigns/types.ts";
@@ -31,6 +32,7 @@ export async function createRuntime() {
     sendEmail: createWebhookEmailSender(config.emailWebhookUrl),
   });
   const repository = await createRepository(config.databaseUrl, config.storagePath);
+  const actionQueue = createActionQueueService(repository);
   const adapters = createAdaptersFromEnv(suppliers);
   const shopify = createShopifyClients(config);
   const llm = createLlmClient({
@@ -117,6 +119,9 @@ export async function createRuntime() {
         now,
       });
       await repository.recordMarketRadarOutput?.(output);
+      for (const play of output.revenuePlays) {
+        await actionQueue.enqueue(revenuePlayToQueueInput(play, output.startedAt), output.finishedAt);
+      }
       return output;
     },
     createBlogDraft: async (input: BuildBlogDraftInput) => {

@@ -4,6 +4,7 @@ import type { BlogDraftRecord } from "../content/types.ts";
 import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
 import type { BusinessActionLogRecord, DailyCommandReport } from "../business-os/types.ts";
+import type { ActionQueueEvent, ActionQueueItem } from "../action-queue/types.ts";
 
 export type SyncRunStatus = "running" | "completed" | "completed_with_issues" | "failed";
 
@@ -71,6 +72,13 @@ export type SupplierOpsRepository = {
   recentBusinessActionLogs?(limit?: number): Promise<BusinessActionLogRecord[]>;
   recordDailyCommandReport?(report: DailyCommandReport): Promise<void>;
   recentDailyCommandReports?(limit?: number): Promise<DailyCommandReport[]>;
+  upsertActionQueueItem?(item: ActionQueueItem): Promise<ActionQueueItem>;
+  findActionQueueItemByDedupeKey?(dedupeKey: string): Promise<ActionQueueItem | null>;
+  findActionQueueItemById?(id: string): Promise<ActionQueueItem | null>;
+  listActionQueueItems?(limit?: number): Promise<ActionQueueItem[]>;
+  listCompletedActionQueueItems?(limit?: number): Promise<ActionQueueItem[]>;
+  recordActionQueueEvent?(event: ActionQueueEvent): Promise<void>;
+  recentActionQueueEvents?(limit?: number): Promise<ActionQueueEvent[]>;
   recentRuns(limit?: number): Promise<SyncRun[]>;
   recentChanges(limit?: number): Promise<AppliedChangeRecord[]>;
   recentIssues(limit?: number): Promise<BlockedIssueRecord[]>;

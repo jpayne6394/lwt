@@ -1,4 +1,5 @@
 import { AlertService } from "../alerts/alert-service.ts";
+import { createActionQueueService, productOpsTaskToQueueInput } from "../action-queue/action-queue-service.ts";
 import { planSupplierSyncAsync } from "../domain/sync-planner.ts";
 import type { BlockedIssue, PlannedChange, ShopifyVariant, SupplierProduct, SyncPlan } from "../domain/types.ts";
 import { buildProductOpsRunOutputAsync } from "../product-ops/product-ops-agent.ts";
@@ -151,6 +152,10 @@ async function recordProductOpsOutput(input: {
   });
 
   await input.input.repository.recordProductOpsOutput?.(input.run.id, output);
+  const actionQueue = createActionQueueService(input.input.repository);
+  for (const task of [...output.promotionTasks, ...output.cleanupTasks, ...output.reviewTasks]) {
+    await actionQueue.enqueue(productOpsTaskToQueueInput(task, output), output.finishedAt);
+  }
   return output;
 }
 

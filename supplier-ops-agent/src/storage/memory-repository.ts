@@ -13,6 +13,7 @@ import type { BusinessActionLogRecord, DailyCommandReport } from "../business-os
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
 import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
+import type { ActionQueueEvent, ActionQueueItem } from "../action-queue/types.ts";
 
 export type MemoryRepositorySeed = {
   shopifyVariants?: ShopifyVariant[];
@@ -33,6 +34,8 @@ export class MemoryRepository implements SupplierOpsRepository {
   readonly #campaignDrafts: CampaignDraftRecord[] = [];
   readonly #businessActionLogs: BusinessActionLogRecord[] = [];
   readonly #dailyCommandReports: DailyCommandReport[] = [];
+  readonly #actionQueueItems: ActionQueueItem[] = [];
+  readonly #actionQueueEvents: ActionQueueEvent[] = [];
 
   constructor(seed: MemoryRepositorySeed = {}) {
     this.#shopifyVariants = seed.shopifyVariants ?? [];
@@ -203,6 +206,43 @@ export class MemoryRepository implements SupplierOpsRepository {
     return this.#dailyCommandReports.slice(0, limit);
   }
 
+  async upsertActionQueueItem(item: ActionQueueItem): Promise<ActionQueueItem> {
+    const existingIndex = this.#actionQueueItems.findIndex((candidate) => candidate.id === item.id);
+    if (existingIndex >= 0) {
+      this.#actionQueueItems[existingIndex] = item;
+    } else {
+      this.#actionQueueItems.unshift(item);
+    }
+    this.#actionQueueItems.sort((left, right) => right.updated_at.localeCompare(left.updated_at));
+    return item;
+  }
+
+  async findActionQueueItemByDedupeKey(dedupeKey: string): Promise<ActionQueueItem | null> {
+    return this.#actionQueueItems.find((candidate) => candidate.dedupe_key === dedupeKey) ?? null;
+  }
+
+  async findActionQueueItemById(id: string): Promise<ActionQueueItem | null> {
+    return this.#actionQueueItems.find((candidate) => candidate.id === id) ?? null;
+  }
+
+  async listActionQueueItems(limit = 100): Promise<ActionQueueItem[]> {
+    return this.#actionQueueItems.slice(0, limit);
+  }
+
+  async listCompletedActionQueueItems(limit = 100): Promise<ActionQueueItem[]> {
+    return this.#actionQueueItems
+      .filter((item) => item.status === "done" || item.status === "rejected" || item.status === "ignored")
+      .slice(0, limit);
+  }
+
+  async recordActionQueueEvent(event: ActionQueueEvent): Promise<void> {
+    this.#actionQueueEvents.unshift(event);
+  }
+
+  async recentActionQueueEvents(limit = 100): Promise<ActionQueueEvent[]> {
+    return this.#actionQueueEvents.slice(0, limit);
+  }
+
   async recentRuns(limit = 20): Promise<SyncRun[]> {
     return this.#runs.slice(0, limit);
   }
@@ -249,6 +289,14 @@ export class MemoryRepository implements SupplierOpsRepository {
 
   listDailyCommandReports(): DailyCommandReport[] {
     return [...this.#dailyCommandReports];
+  }
+
+  listActionQueue(): ActionQueueItem[] {
+    return [...this.#actionQueueItems];
+  }
+
+  listActionQueueEvents(): ActionQueueEvent[] {
+    return [...this.#actionQueueEvents];
   }
 }
 

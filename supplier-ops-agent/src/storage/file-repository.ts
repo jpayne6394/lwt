@@ -7,6 +7,7 @@ import type { BusinessActionLogRecord, DailyCommandReport } from "../business-os
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
 import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
+import type { ActionQueueEvent, ActionQueueItem } from "../action-queue/types.ts";
 import type {
   AppliedChangeRecord,
   BlockedIssueRecord,
@@ -31,6 +32,8 @@ type FileRepositoryState = {
   campaignDrafts: CampaignDraftRecord[];
   businessActionLogs: BusinessActionLogRecord[];
   dailyCommandReports: DailyCommandReport[];
+  actionQueueItems: ActionQueueItem[];
+  actionQueueEvents: ActionQueueEvent[];
 };
 
 const EMPTY_STATE: FileRepositoryState = {
@@ -47,6 +50,8 @@ const EMPTY_STATE: FileRepositoryState = {
   campaignDrafts: [],
   businessActionLogs: [],
   dailyCommandReports: [],
+  actionQueueItems: [],
+  actionQueueEvents: [],
 };
 
 const MAX_RUNS = 50;
@@ -59,6 +64,8 @@ const MAX_REVENUE_PLAYS = 200;
 const MAX_CONTENT_DRAFTS = 100;
 const MAX_BUSINESS_ACTION_LOGS = 500;
 const MAX_DAILY_COMMAND_REPORTS = 30;
+const MAX_ACTION_QUEUE_ITEMS = 1000;
+const MAX_ACTION_QUEUE_EVENTS = 2000;
 
 export class FileRepository implements SupplierOpsRepository {
   readonly #filePath: string;
@@ -286,6 +293,48 @@ export class FileRepository implements SupplierOpsRepository {
     return this.#state.dailyCommandReports.slice(0, limit);
   }
 
+  async upsertActionQueueItem(item: ActionQueueItem): Promise<ActionQueueItem> {
+    const existingIndex = this.#state.actionQueueItems.findIndex((candidate) => candidate.id === item.id);
+    if (existingIndex >= 0) {
+      this.#state.actionQueueItems[existingIndex] = item;
+    } else {
+      this.#state.actionQueueItems.unshift(item);
+    }
+    this.#state.actionQueueItems = this.#state.actionQueueItems
+      .sort((left, right) => right.updated_at.localeCompare(left.updated_at))
+      .slice(0, MAX_ACTION_QUEUE_ITEMS);
+    await this.#persist();
+    return item;
+  }
+
+  async findActionQueueItemByDedupeKey(dedupeKey: string): Promise<ActionQueueItem | null> {
+    return this.#state.actionQueueItems.find((candidate) => candidate.dedupe_key === dedupeKey) ?? null;
+  }
+
+  async findActionQueueItemById(id: string): Promise<ActionQueueItem | null> {
+    return this.#state.actionQueueItems.find((candidate) => candidate.id === id) ?? null;
+  }
+
+  async listActionQueueItems(limit = 100): Promise<ActionQueueItem[]> {
+    return this.#state.actionQueueItems.slice(0, limit);
+  }
+
+  async listCompletedActionQueueItems(limit = 100): Promise<ActionQueueItem[]> {
+    return this.#state.actionQueueItems
+      .filter((item) => item.status === "done" || item.status === "rejected" || item.status === "ignored")
+      .slice(0, limit);
+  }
+
+  async recordActionQueueEvent(event: ActionQueueEvent): Promise<void> {
+    this.#state.actionQueueEvents.unshift(event);
+    this.#state.actionQueueEvents = this.#state.actionQueueEvents.slice(0, MAX_ACTION_QUEUE_EVENTS);
+    await this.#persist();
+  }
+
+  async recentActionQueueEvents(limit = 100): Promise<ActionQueueEvent[]> {
+    return this.#state.actionQueueEvents.slice(0, limit);
+  }
+
   async #persist(): Promise<void> {
     const state = JSON.stringify(
       {
@@ -338,6 +387,8 @@ async function readState(filePath: string): Promise<FileRepositoryState> {
       campaignDrafts: Array.isArray(parsed.campaignDrafts) ? parsed.campaignDrafts : [],
       businessActionLogs: Array.isArray(parsed.businessActionLogs) ? parsed.businessActionLogs : [],
       dailyCommandReports: Array.isArray(parsed.dailyCommandReports) ? parsed.dailyCommandReports : [],
+      actionQueueItems: Array.isArray(parsed.actionQueueItems) ? parsed.actionQueueItems : [],
+      actionQueueEvents: Array.isArray(parsed.actionQueueEvents) ? parsed.actionQueueEvents : [],
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

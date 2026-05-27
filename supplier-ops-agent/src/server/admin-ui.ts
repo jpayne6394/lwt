@@ -1,4 +1,5 @@
 import type { AlertMessage } from "../alerts/alert-service.ts";
+import type { ActionQueueEvent, ActionQueueItem, ActionQueueStatus } from "../action-queue/types.ts";
 import { FLOW_EMAIL_TEMPLATES, templatePlainTextForFlow } from "../campaigns/flow-email-templates.ts";
 import type { CampaignDraftRecord } from "../campaigns/types.ts";
 import { WELLNESS_BLOG_PROFILES } from "../content/blog-template-builder.ts";
@@ -31,6 +32,8 @@ export type AdminPageModel = {
   autonomyMode?: string;
   dailyCommandReports?: DailyCommandReport[];
   businessActionLogs?: BusinessActionLogRecord[];
+  actionQueueItems?: ActionQueueItem[];
+  actionQueueEvents?: ActionQueueEvent[];
 };
 
 const NAV_ITEMS = [
@@ -128,32 +131,37 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
   const latestProductOps = model.productOpsOutputs[0];
   const latestRadar = model.marketRadarOutputs[0];
   const logs = model.businessActionLogs ?? [];
+  const actionQueueItems = model.actionQueueItems ?? [];
+  const actionQueueEvents = model.actionQueueEvents ?? [];
+  const openQueueItems = actionQueueItems.filter((item) => isOpenActionQueueStatus(item.status)).slice(0, 12);
+  const pendingQueueItems = openQueueItems.filter((item) => item.status === "new" || item.status === "edited" || item.status === "approved");
   const pendingApprovalActions =
-    latestReport?.actions_requiring_owner_approval ??
-    logs
-      .filter((log) => log.approval_status === "suggested" || log.approval_status === "drafted")
-      .map((log) => log.recommendation);
+    actionQueueItems.length > 0
+      ? []
+      : latestReport?.actions_requiring_owner_approval ??
+        logs
+          .filter((log) => log.approval_status === "suggested" || log.approval_status === "drafted")
+          .map((log) => log.recommendation);
   const inventoryRisks = latestReport?.inventory_risks ?? productOpsInventoryItems(latestProductOps);
   const promoRecommendations = latestReport?.products_to_promote ?? radarRevenueItems(latestRadar, model.revenuePlays);
   const removeFromPromo = latestReport?.products_to_remove_from_promotion ?? [];
   const draftCampaignActions = latestReport?.email_campaign_ideas ?? logs.map((log) => log.recommendation).filter((action) => action.type === "WRITE").slice(0, 5);
   const campaignItems = model.campaignDrafts.slice(0, 4).map(campaignToCockpitItem);
-  const queue = logs.slice(0, 12).map((log) => log.recommendation);
+  const queue = openQueueItems;
   const urgentIssues = latestReport?.urgent_issues ?? issueCockpitItems(model.issues, latestRun);
-  const planItems = [
-    ...urgentIssues,
-    ...pendingApprovalActions,
-    ...inventoryRisks,
-    ...promoRecommendations,
-    ...draftCampaignActions,
-  ].slice(0, 6);
-  const needsApprovalCount = pendingApprovalActions.length || latestProductOps?.summary.reviewRequired || 0;
+  const actionPlanItems = [...urgentIssues, ...pendingApprovalActions, ...inventoryRisks, ...promoRecommendations, ...draftCampaignActions].slice(0, 6);
+  const queuePlanItems = [...pendingQueueItems, ...openQueueItems.filter((item) => !pendingQueueItems.includes(item))].slice(0, 6);
+  const planCockpitItems = actionQueueItems.length > 0 ? queuePlanItems.map(queueItemToCockpitItem) : actionPlanItems.map(actionToCockpitItem);
+  const revenueQueueItems = openQueueItems.filter((item) => item.action_type === "PROMOTE" || item.action_type === "WRITE" || /market|campaign|blog|promotion/i.test(item.area));
+  const stockQueueItems = openQueueItems.filter((item) => /stock|inventory|supplier/i.test(item.area + " " + item.title + " " + item.description));
+  const needsApprovalCount = actionQueueItems.length > 0 ? pendingQueueItems.length : pendingApprovalActions.length || latestProductOps?.summary.reviewRequired || 0;
   const inventoryRiskCount =
-    inventoryRisks.length || (latestProductOps ? latestProductOps.summary.lowStock + latestProductOps.summary.outOfStock : 0);
-  const promoteCount = promoRecommendations.length || latestProductOps?.summary.promoteReady || latestRadar?.summary.highConfidencePlays || 0;
+    stockQueueItems.length || inventoryRisks.length || (latestProductOps ? latestProductOps.summary.lowStock + latestProductOps.summary.outOfStock : 0);
+  const promoteCount = revenueQueueItems.length || promoRecommendations.length || latestProductOps?.summary.promoteReady || latestRadar?.summary.highConfidencePlays || 0;
   const latestIssueCount = latestRun?.issueCount ?? model.issues.length;
   const draftsReadyCount = campaignItems.length + model.blogDrafts.length + draftCampaignActions.length;
   const safetyMode = model.aiProvider === "openai" ? "AI-assisted: approval still required" : "Mock mode: review only";
+  const recentActivityItems = actionQueueEvents.length > 0 ? actionQueueEvents.map(queueEventToCockpitItem) : logs.map(logToCockpitItem);
 
   return `
     <section class="cockpit-hero">
@@ -177,9 +185,9 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
     </section>
     <section class="cockpit-grid">
       <section class="panel cockpit-start">
-        <div class="panel-heading compact"><h2>Start here</h2><span>${planItems.length}</span></div>
+        <div class="panel-heading compact"><h2>Start here</h2><span>${planCockpitItems.length}</span></div>
         <p class="section-note">Work top to bottom. Approve only what you trust; everything here is a draft or review item.</p>
-        ${renderCockpitItems(planItems.map(actionToCockpitItem), "Refresh today's plan to build the first review list.")}
+        ${renderCockpitItems(planCockpitItems, "Refresh today's plan to build the first review list.")}
       </section>
       <section class="panel cockpit-safe">
         <h2>Safe mode</h2>
@@ -193,12 +201,12 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
       </section>
     </section>
     <section class="cockpit-lanes">
-      ${cockpitLane("Today's Plan", planItems.map(actionToCockpitItem), "Refresh today's plan to build the first review list.")}
-      ${cockpitLane("Revenue Moves", [...promoRecommendations.map(actionToCockpitItem), ...draftCampaignActions.map(actionToCockpitItem), ...campaignItems], "Promotion and campaign ideas will appear here after a report or radar refresh.")}
-      ${cockpitLane("Stock Watch", inventoryRisks.map(actionToCockpitItem), "No low-stock or out-of-stock focus items yet.")}
-      ${cockpitLane("Pending Approvals", pendingApprovalActions.map(actionToCockpitItem), "No approvals are waiting yet.")}
-      ${cockpitLane("Shopify Action Queue", queue.map(actionToCockpitItem), "Approved Shopify work will queue here before execution.")}
-      ${cockpitLane("Recent Activity", logs.map(logToCockpitItem), "No recent cockpit activity yet.")}
+      ${cockpitLane("Today's Plan", planCockpitItems, "Refresh today's plan to build the first review list.")}
+      ${cockpitLane("Revenue Moves", actionQueueItems.length > 0 ? revenueQueueItems.map(queueItemToCockpitItem) : [...promoRecommendations.map(actionToCockpitItem), ...draftCampaignActions.map(actionToCockpitItem), ...campaignItems], "Promotion and campaign ideas will appear here after a report or radar refresh.")}
+      ${cockpitLane("Stock Watch", actionQueueItems.length > 0 ? stockQueueItems.map(queueItemToCockpitItem) : inventoryRisks.map(actionToCockpitItem), "No low-stock or out-of-stock focus items yet.")}
+      ${cockpitLane("Pending Approvals", actionQueueItems.length > 0 ? pendingQueueItems.map(queueItemToCockpitItem) : pendingApprovalActions.map(actionToCockpitItem), "No approvals are waiting yet.")}
+      ${cockpitLane("Shopify Action Queue", queue.map((item) => queueItemToCockpitItem(item, true)), "Approved Shopify work will queue here before execution.")}
+      ${cockpitLane("Recent Activity", recentActivityItems, "No recent cockpit activity yet.")}
     </section>
     ${renderShopifyShortcutPanel()}`;
 }
@@ -208,6 +216,7 @@ type CockpitItem = {
   detail: string;
   label: string;
   status?: string;
+  actionsHtml?: string;
 };
 
 function cockpitLane(title: string, items: CockpitItem[], emptyText: string): string {
@@ -228,6 +237,7 @@ function renderCockpitItems(items: CockpitItem[], emptyText: string): string {
         <span>${escapeHtml(item.label)}${item.status ? ` / ${escapeHtml(item.status)}` : ""}</span>
         <strong>${escapeHtml(item.title)}</strong>
         <small>${escapeHtml(item.detail)}</small>
+        ${item.actionsHtml ?? ""}
       </article>`,
     )
     .join("")}</div>`;
@@ -255,6 +265,51 @@ function logToCockpitItem(log: BusinessActionLogRecord): CockpitItem {
   return {
     ...actionToCockpitItem(log.recommendation),
     detail: log.execution_result ?? log.recommendation.reason,
+  };
+}
+
+function isOpenActionQueueStatus(status: ActionQueueStatus): boolean {
+  return status === "new" || status === "accepted" || status === "approved" || status === "edited" || status === "in_progress" || status === "waiting";
+}
+
+function queueItemToCockpitItem(item: ActionQueueItem, withActions = false): CockpitItem {
+  const product = item.related_product_title || item.related_product_handle;
+  return {
+    title: item.title,
+    detail: [item.description || item.reason, product ? `Related: ${product}` : ""].filter(Boolean).join(" "),
+    label: `${item.priority} / ${item.area}`,
+    status: friendlyStatus(item.status),
+    actionsHtml: withActions ? renderActionQueueControls(item) : undefined,
+  };
+}
+
+function renderActionQueueControls(item: ActionQueueItem): string {
+  if (!isOpenActionQueueStatus(item.status)) {
+    return "";
+  }
+  return `<div class="queue-actions">
+    ${actionQueueControlForm("/api/action-queue/approve", item.id, "Approve", "Approved from the command cockpit.")}
+    ${actionQueueControlForm("/api/action-queue/reject", item.id, "Reject", "Rejected from the command cockpit.")}
+    ${actionQueueControlForm("/api/action-queue/complete", item.id, "Done", "Marked done from the command cockpit.")}
+  </div>`;
+}
+
+function actionQueueControlForm(action: string, id: string, label: string, note: string): string {
+  return `<form method="post" action="${escapeHtml(action)}" data-action-queue-form>
+    <input type="hidden" name="id" value="${escapeHtml(id)}">
+    <input type="hidden" name="actor" value="LWT">
+    <input type="hidden" name="note" value="${escapeHtml(note)}">
+    <button type="submit">${escapeHtml(label)}</button>
+  </form>`;
+}
+
+function queueEventToCockpitItem(event: ActionQueueEvent): CockpitItem {
+  const snapshot = event.snapshot as Partial<ActionQueueItem>;
+  return {
+    title: snapshot.title ?? friendlyStatus(event.event_type),
+    detail: event.note,
+    label: `${event.actor} / ${friendlyStatus(event.event_type)}`,
+    status: formatDate(event.created_at),
   };
 }
 
@@ -1368,6 +1423,11 @@ function styles(): string {
     .cockpit-item span { color: var(--accent-strong); font-size: 12px; font-weight: 780; text-transform: uppercase; letter-spacing: 0; }
     .cockpit-item strong { color: var(--text); font-size: 14px; line-height: 1.3; }
     .cockpit-item small { color: var(--muted); font-size: 12px; line-height: 1.42; }
+    .queue-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+    .queue-actions form { margin: 0; }
+    .queue-actions button { min-height: 30px; padding: 0 10px; font-size: 12px; border-radius: 5px; }
+    .queue-actions form:nth-child(2) button { background: #6b7280; }
+    .queue-actions form:nth-child(3) button { background: #36485c; }
     .business-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px; margin-bottom: 16px; border-radius: var(--radius); background: #0f1f1d; color: #f8fbfa; }
     .business-hero .eyebrow { color: #b9f0dd; }
     .business-hero h2 { margin: 4px 0 8px; font-size: 28px; line-height: 1.14; }
@@ -1523,6 +1583,7 @@ function clientScript(): string {
   return `
     const syncStatus = document.getElementById("sync-status");
     const runForms = Array.from(document.querySelectorAll("[data-run-form]"));
+    const actionQueueForms = Array.from(document.querySelectorAll("[data-action-queue-form]"));
     const shopifyStoreMatch = (document.referrer || "").match(/admin\\.shopify\\.com\\/store\\/([^/]+)/);
     const shopifyStoreBase = shopifyStoreMatch ? "https://admin.shopify.com/store/" + shopifyStoreMatch[1] : "https://admin.shopify.com";
     Array.from(document.querySelectorAll("[data-shopify-admin-link]")).forEach((link) => {
@@ -1587,6 +1648,43 @@ function clientScript(): string {
             button.disabled = false;
             button.textContent = button.dataset.originalText || button.textContent || "Run sync";
           });
+        }
+      });
+    });
+
+    actionQueueForms.forEach((form) => {
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const button = event.submitter || form.querySelector("button");
+        if (button) {
+          button.disabled = true;
+          button.dataset.originalText = button.textContent || "";
+          button.textContent = "Saving...";
+        }
+
+        try {
+          const response = await fetch(form.action, {
+            method: "POST",
+            headers: {
+              accept: "application/json",
+              "x-requested-with": "supplier-ops-fetch",
+            },
+            body: new URLSearchParams(new FormData(form)),
+          });
+          const body = await response.json();
+          if (!response.ok || !body.ok) {
+            throw new Error(body.error || "Action update failed");
+          }
+          window.location.assign("/command");
+        } catch (error) {
+          if (syncStatus) {
+            syncStatus.classList.add("error");
+            syncStatus.textContent = error instanceof Error ? error.message : "Action update failed";
+          }
+          if (button) {
+            button.disabled = false;
+            button.textContent = button.dataset.originalText || "Save";
+          }
         }
       });
     });

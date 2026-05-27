@@ -7,6 +7,7 @@ import { createMerchandisingAgent } from "./agents/merchandising-agent.ts";
 import { createOperatorAgent } from "./agents/operator-agent.ts";
 import { createResearchAgent } from "./agents/research-agent.ts";
 import { createSeoProductCleanupAgent } from "./agents/seo-product-cleanup-agent.ts";
+import { businessActionToQueueInput, createActionQueueService } from "../action-queue/action-queue-service.ts";
 import type { SubAgent } from "./agents/shared.ts";
 import type {
   AutonomyMode,
@@ -132,6 +133,7 @@ async function recordActions(
   input: BusinessAgentInput,
   actions: BusinessRecommendedAction[],
 ): Promise<void> {
+  const actionQueue = createActionQueueService(repository);
   for (const action of actions) {
     const record: BusinessActionLogRecord = {
       id: `action_log_${Date.now()}_${Math.random().toString(16).slice(2)}`,
@@ -148,5 +150,6 @@ async function recordActions(
       rollback_information: action.rollback_plan,
     };
     await repository.recordBusinessActionLog?.(record);
+    await actionQueue.enqueue(businessActionToQueueInput(action, record.id), record.timestamp);
   }
 }

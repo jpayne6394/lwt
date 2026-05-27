@@ -150,6 +150,38 @@ create table if not exists daily_command_reports (
   created_at timestamptz not null default now()
 );
 
+create table if not exists action_queue_items (
+  id text primary key,
+  dedupe_key text not null unique,
+  status text not null,
+  source_workflow text not null,
+  source_agent text not null,
+  action_type text not null,
+  priority text not null,
+  area text not null,
+  payload jsonb not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now()
+);
+
+create index if not exists action_queue_items_status_idx on action_queue_items (status);
+create index if not exists action_queue_items_area_idx on action_queue_items (area);
+create index if not exists action_queue_items_priority_idx on action_queue_items (priority);
+
+create table if not exists action_queue_events (
+  id text primary key,
+  action_id text not null,
+  event_type text not null,
+  actor text not null,
+  note text not null,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists action_queue_events_action_id_idx on action_queue_events (action_id);
+create index if not exists action_queue_events_event_type_idx on action_queue_events (event_type);
+
 create table if not exists alert_history (
   id text primary key,
   severity text not null,
