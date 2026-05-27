@@ -110,6 +110,7 @@ export function createChiefOfStaffAgent(options: {
         urgent_issues: urgentIssues,
         actions_requiring_owner_approval: approvalActions,
         operating_cycle: operatingCycle,
+        intelligence: options.llm.getStatus(),
       };
 
       await options.repository.recordDailyCommandReport?.(report);

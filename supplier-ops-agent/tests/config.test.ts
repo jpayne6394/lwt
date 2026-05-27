@@ -32,9 +32,28 @@ test("loadConfig defaults Shopify writes off unless APPLY_CHANGES is explicitly 
 });
 
 test("loadConfig exposes free-first AI provider and approval autonomy settings", () => {
-  assert.equal(loadConfig({}).aiProvider, "mock");
+  assert.equal(loadConfig({}).aiProvider, "hybrid");
   assert.equal(loadConfig({}).autonomyMode, "approval");
   assert.equal(loadConfig({ OPENAI_API_KEY: "sk-test" }).openaiApiKey, "sk-test");
+  assert.equal(loadConfig({ AI_PROVIDER: "hybrid" }).aiProvider, "hybrid");
   assert.equal(loadConfig({ AI_PROVIDER: "openai", AUTONOMY_MODE: "supervised" }).aiProvider, "openai");
   assert.equal(loadConfig({ AI_PROVIDER: "openai", AUTONOMY_MODE: "supervised" }).autonomyMode, "supervised");
+});
+
+test("loadConfig exposes protected local intelligence relay settings", () => {
+  const config = loadConfig({
+    LOCAL_LLM_RELAY_URL: "https://local-brain.example",
+    LOCAL_LLM_RELAY_TOKEN: "relay-secret",
+    LOCAL_LLM_MODEL: "auto",
+    LOCAL_LLM_TIMEOUT_MS: "12000",
+    LOCAL_LLM_DATA_SCOPE: "internal",
+    LOCAL_LLM_MAX_INPUT_CHARS: "18000",
+  });
+
+  assert.equal(config.localLlmRelayUrl, "https://local-brain.example");
+  assert.equal(config.localLlmRelayToken, "relay-secret");
+  assert.equal(config.localLlmModel, "auto");
+  assert.equal(config.localLlmTimeoutMs, 12000);
+  assert.equal(config.localLlmDataScope, "internal");
+  assert.equal(config.localLlmMaxInputChars, 18000);
 });

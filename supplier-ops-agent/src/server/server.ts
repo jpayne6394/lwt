@@ -6,6 +6,7 @@ import type { AlertService } from "../alerts/alert-service.ts";
 import type { BuildCampaignDraftInput, CampaignDraftRecord } from "../campaigns/types.ts";
 import type { BuildBlogDraftInput, BlogDraftRecord } from "../content/types.ts";
 import type { DailyCommandReport } from "../business-os/types.ts";
+import type { IntelligenceMetadata } from "../intelligence/types.ts";
 import type { MarketRadarRunOutput, SourceConnectionCard } from "../market-radar/types.ts";
 import type { SupplierOpsRepository } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
@@ -28,6 +29,7 @@ export type ServerContext = {
   applyChangesEnabled: boolean;
   aiProvider?: string;
   autonomyMode?: string;
+  getAiStatus?: () => IntelligenceMetadata;
 };
 
 export type StartServerOptions = {
@@ -343,6 +345,7 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     applyChangesEnabled: context.applyChangesEnabled,
     aiProvider: context.aiProvider,
     autonomyMode: context.autonomyMode,
+    aiStatus: context.getAiStatus?.(),
     dailyCommandReports,
     businessActionLogs,
     actionQueueItems,

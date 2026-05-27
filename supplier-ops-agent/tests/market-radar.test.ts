@@ -6,8 +6,10 @@ import { buildBlogDraft, WELLNESS_BLOG_PROFILES } from "../src/content/blog-temp
 import { extractCompetitorPrice } from "../src/market-radar/competitor-price-monitor.ts";
 import { buildSourceConnectionCards } from "../src/market-radar/source-connection-registry.ts";
 import { buildMarketRadarOutput } from "../src/market-radar/market-radar-service.ts";
+import { enhanceBlogDraftWithLlm, enhanceCampaignDraftWithLlm, enhanceMarketRadarWithLlm } from "../src/intelligence/local-enhancers.ts";
 import type { ProductOpsOutputRecord } from "../src/product-ops/types.ts";
 import type { ShopifyVariant } from "../src/domain/types.ts";
+import type { LlmClient } from "../lib/llm/index.ts";
 
 const magnesiumVariant: ShopifyVariant = {
   productId: "gid://shopify/Product/1",
@@ -188,3 +190,87 @@ test("campaign draft planner creates a Shopify Email handoff from a revenue play
   assert.match(draft.bodyText, /Magnesium Glycinate/);
   assert.match(draft.shopifyEmailAdminPath, /marketing/);
 });
+
+test("local intelligence can improve Market Radar explanations without changing safe structure", async () => {
+  const radar = buildMarketRadarOutput({
+    shopifyVariants: [magnesiumVariant],
+    productOpsOutput: productOps,
+    sourceConnections: buildSourceConnectionCards({}),
+    marketSignals: [
+      {
+        sourceId: "open-web",
+        sourceLabel: "Open Web",
+        topic: "magnesium sleep",
+        title: "Magnesium sleep chatter",
+        url: "https://example.com/sleep",
+        capturedAt: "2026-05-25T12:00:00.000Z",
+        keywords: ["magnesium", "sleep"],
+      },
+    ],
+    now: "2026-05-25T12:00:00.000Z",
+  });
+
+  const enhanced = await enhanceMarketRadarWithLlm(radar, localDecisionClient({
+    summary: "Local AI: sleep support demand is active and stocked magnesium is the cleanest revenue move.",
+    explanations: [{ topic: "magnesium sleep", explanation: "Local AI explanation with evidence-aware customer language." }],
+    revenuePlays: [{ id: radar.revenuePlays[0].id, explanation: "Local AI play: turn stocked magnesium into a helpful sleep support article." }],
+  }));
+
+  assert.match(enhanced.explanations[0].explanation, /Local AI explanation/);
+  assert.match(enhanced.revenuePlays[0].explanation, /Local AI play/);
+  assert.equal(enhanced.revenuePlays[0].claimWarnings.length, 0);
+  assert.equal(enhanced.intelligence?.localBrain.status, "connected");
+});
+
+test("local intelligence can polish blog and campaign drafts while staying draft-only", async () => {
+  const blog = buildBlogDraft({
+    profileId: "educational-guide",
+    title: "Magnesium for Better Sleep",
+    roughThoughts: "Make it professional and helpful.",
+    relatedProducts: [magnesiumVariant],
+    now: "2026-05-25T12:00:00.000Z",
+  });
+  const campaign = buildCampaignDraft({
+    title: "Magnesium sleep support campaign",
+    products: [magnesiumVariant],
+    now: "2026-05-25T12:00:00.000Z",
+  });
+  const llm = localDecisionClient({
+    title: "Magnesium Sleep Support Guide",
+    summary: "Local AI polished guide summary.",
+    bodyHtml: "<article><h1>Magnesium Sleep Support Guide</h1><p>Helpful nighttime routine support.</p></article>",
+    subjectLines: ["A calmer nighttime routine starts here", "Magnesium support for your evening routine"],
+    previewText: "A practical note from Living Well Today.",
+    bodyText: "Polished local AI campaign copy with educational positioning.",
+  });
+
+  const enhancedBlog = await enhanceBlogDraftWithLlm(blog, { roughThoughts: "Make it professional and helpful." }, llm);
+  const enhancedCampaign = await enhanceCampaignDraftWithLlm(campaign, {}, llm);
+
+  assert.equal(enhancedBlog.status, "DRAFT_READY");
+  assert.match(enhancedBlog.bodyHtml, /Helpful nighttime routine support/);
+  assert.equal(enhancedBlog.intelligence?.localBrain.status, "connected");
+  assert.equal(enhancedCampaign.status, "DRAFT_READY");
+  assert.match(enhancedCampaign.bodyText, /Polished local AI campaign copy/);
+  assert.equal(enhancedCampaign.intelligence?.localBrain.status, "connected");
+});
+
+function localDecisionClient(decision: Record<string, unknown>): LlmClient {
+  return {
+    provider: "hybrid",
+    getStatus: () => ({
+      provider: "hybrid",
+      dataScope: "internal",
+      maxInputChars: 24000,
+      localBrain: {
+        status: "connected",
+        mode: "local",
+        model: "qwen3:8b",
+        message: "Local brain connected.",
+      },
+    }),
+    async decide() {
+      return decision as any;
+    },
+  };
+}

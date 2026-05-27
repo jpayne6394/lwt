@@ -5,6 +5,7 @@ import { createChiefOfStaffAgent } from "../src/business-os/chief-of-staff-agent
 import { applyBusinessGuardrails } from "../src/business-os/guardrails.ts";
 import { createShopifyToolbox } from "../src/business-os/shopify-tools.ts";
 import type { BusinessAgentResult, BusinessRecommendedAction } from "../src/business-os/types.ts";
+import type { LlmClient } from "../lib/llm/index.ts";
 import { createLlmClient } from "../lib/llm/index.ts";
 import { MemoryRepository } from "../src/storage/memory-repository.ts";
 import type { ShopifyVariant } from "../src/domain/types.ts";
@@ -114,6 +115,51 @@ test("Chief of Staff builds a daily command report from structured sub-agent out
   assert.ok(logs.length >= report.actions_requiring_owner_approval.length);
   assert.ok(logs.every((log) => log.timestamp && log.agent_name && log.recommendation && log.approval_status));
   assert.ok(logs.every((log) => typeof log.rollback_information === "string"));
+});
+
+test("Chief of Staff can use local-enhanced summaries while deterministic lanes stay intact", async () => {
+  const repository = new MemoryRepository({ shopifyVariants: [sampleVariant, lowStockVariant] });
+  const localLlm: LlmClient = {
+    provider: "hybrid",
+    getStatus: () => ({
+      provider: "hybrid",
+      dataScope: "internal",
+      maxInputChars: 24000,
+      localBrain: {
+        status: "connected",
+        mode: "local",
+        model: "qwen3:8b",
+        message: "Local brain connected.",
+      },
+    }),
+    async decide() {
+      return {
+        summary: "Local Chief of Staff: inventory is the first decision and email is the revenue follow-up.",
+        risk_level: "medium",
+        recommended_actions: [
+          action("REVIEW", "Review local AI daily brief", "Local model improved the executive explanation.", "Chief of Staff Agent"),
+        ],
+        requires_approval: true,
+        safe_to_auto_execute: false,
+        reasoning_summary: "Local intelligence improved wording only; deterministic agents still own scoring.",
+        rollback_plan: "Use the deterministic daily report.",
+      } satisfies BusinessAgentResult;
+    },
+  };
+  const agent = createChiefOfStaffAgent({
+    repository,
+    llm: localLlm,
+    autonomyMode: "approval",
+  });
+
+  const report = await agent.buildDailyCommandReport();
+
+  assert.match(report.chief_of_staff.summary, /Local Chief of Staff/);
+  assert.equal(report.intelligence?.localBrain.status, "connected");
+  assert.equal(report.intelligence?.localBrain.model, "qwen3:8b");
+  assert.ok(report.operating_cycle.lanes.review.some((item) => item.type === "FIX" || item.risk_level === "high"));
+  assert.ok(report.operating_cycle.lanes.draft.some((item) => item.type === "WRITE"));
+  assert.ok(report.actions_requiring_owner_approval.every((item) => item.requires_approval));
 });
 
 test("guardrails force sensitive medical, vendor, price, email, and homepage actions into approval review", () => {

@@ -61,17 +61,35 @@ TRUTH_SOCIAL_APPROVED_ACCESS=false
 
 Blog Publisher uses saved wellness templates, not paid AI calls. It can create local article drafts and then create Shopify draft articles after approval. Campaign Planner creates Shopify Email handoff briefs; it does not send emails. Flow Launchpad stores setup ideas, links into the Shopify Flow app, and includes copy-ready professional email templates for Flow-triggered customer and internal operations emails. It does not auto-edit workflows.
 
-## Business Operating Agent
+## Hybrid local intelligence
 
-The Business OS page adds a Chief of Staff Agent that coordinates modular sub-agents in mock mode now and OpenAI mode later. It is not a chatbot: every agent returns structured JSON, recommendations are logged, and Shopify tools stay behind approval.
+The Business OS page adds a Chief of Staff Agent that coordinates modular sub-agents in free-first hybrid mode now and OpenAI mode later. It is not a chatbot: every agent returns structured JSON, recommendations are logged, and Shopify tools stay behind approval.
 
-Environment defaults are free-first:
+Environment defaults are free-first. `hybrid` tries a protected local Ollama-style relay when it is configured and falls back to deterministic rules/templates when it is not:
 
 ```bash
-AI_PROVIDER=mock
+AI_PROVIDER=hybrid
 OPENAI_API_KEY=
 AUTONOMY_MODE=approval
+LOCAL_LLM_RELAY_URL=
+LOCAL_LLM_RELAY_TOKEN=
+LOCAL_LLM_MODEL=auto
+LOCAL_LLM_TIMEOUT_MS=15000
+LOCAL_LLM_DATA_SCOPE=internal
+LOCAL_LLM_MAX_INPUT_CHARS=24000
 ```
+
+To run the optional local brain on your computer:
+
+```bash
+# 1. Start Ollama locally and pull at least one chat model.
+# 2. Set a private relay token, then run:
+LOCAL_LLM_RELAY_TOKEN=your-long-random-token npm run local-llm-relay
+```
+
+If you expose that relay through a tunnel for Render, put the tunnel URL in `LOCAL_LLM_RELAY_URL` and the same token in `LOCAL_LLM_RELAY_TOKEN`. The relay requires `Authorization: Bearer <token>`, auto-detects the best installed chat model when `LOCAL_LLM_MODEL=auto`, and does not log raw prompts or model responses.
+
+Hybrid intelligence can polish Chief of Staff reasoning, Market Radar explanations, blog drafts, Shopify Email briefs, and Flow email copy. The deterministic rule engine still owns risk scoring, action lanes, approvals, and Shopify safety. If the local brain is offline, malformed, or slow, the app keeps working in fallback mode.
 
 Sub-agents:
 

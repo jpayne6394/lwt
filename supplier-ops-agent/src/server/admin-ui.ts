@@ -6,6 +6,7 @@ import type { CampaignDraftRecord } from "../campaigns/types.ts";
 import { WELLNESS_BLOG_PROFILES } from "../content/blog-template-builder.ts";
 import type { BlogDraftRecord } from "../content/types.ts";
 import type { BusinessActionLogRecord, BusinessRecommendedAction, DailyCommandReport, DailyOperatingCycle } from "../business-os/types.ts";
+import type { IntelligenceMetadata } from "../intelligence/types.ts";
 import type { MarketRadarOutputRecord, RevenuePlayRecord, SourceConnectionCard } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsProductResult, ProductOpsTask } from "../product-ops/types.ts";
 import type { BlockedIssueRecord, AppliedChangeRecord, SyncRun } from "../storage/repository.ts";
@@ -31,6 +32,7 @@ export type AdminPageModel = {
   applyChangesEnabled: boolean;
   aiProvider?: string;
   autonomyMode?: string;
+  aiStatus?: IntelligenceMetadata;
   dailyCommandReports?: DailyCommandReport[];
   businessActionLogs?: BusinessActionLogRecord[];
   actionQueueItems?: ActionQueueItem[];
@@ -171,7 +173,9 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
   const promoteCount = promotionSuggestionItems.length || latestProductOps?.summary.promoteReady || latestRadar?.summary.highConfidencePlays || 0;
   const latestIssueCount = latestRun?.issueCount ?? model.issues.length;
   const draftsReadyCount = campaignItems.length + model.blogDrafts.length + draftCampaignActions.length;
-  const safetyMode = model.aiProvider === "openai" ? "AI-assisted: approval still required" : "Mock mode: review only";
+  const intelligence = latestReport?.intelligence ?? latestRadar?.intelligence ?? model.aiStatus;
+  const safetyMode = intelligenceSafetyLabel(intelligence, model.aiProvider);
+  const localBrainLabel = localBrainStatusLabel(intelligence);
   const recentActivityItems = actionQueueEvents.length > 0 ? actionQueueEvents.map(queueEventToCockpitItem) : logs.map(logToCockpitItem);
   const decisionSummary = operatingCycle?.business_health.summary ?? latestReport?.chief_of_staff.summary ?? "Review what to promote, fix, write, automate, or ignore before anything touches Shopify.";
   const riskLevel = latestReport?.chief_of_staff.risk_level ?? (inventoryRiskCount || needsApprovalCount || latestIssueCount ? "medium" : "low");
@@ -190,6 +194,7 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
             ${briefSignal("Risk level", friendlyStatus(riskLevel), riskLevel === "high" ? "danger" : riskLevel === "medium" ? "warning" : "success")}
             ${briefSignal("Top opportunity", topOpportunity, "accent")}
             ${briefSignal("Safety mode", safetyMode, "safe")}
+            ${briefSignal("Local Brain", localBrainLabel, intelligence?.localBrain.status === "connected" ? "success" : "warning")}
             ${briefSignal("Issue signals", `${latestIssueCount} latest`, latestIssueCount ? "warning" : "success")}
           </div>
         </div>
@@ -221,7 +226,7 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
           ${renderShopifyShortcutPanel()}
         </aside>
       </section>
-      ${renderAgentCompanion()}
+      ${renderAgentCompanion(intelligence)}
     </section>`;
 }
 
@@ -349,14 +354,18 @@ function cycleLaneSummary(label: string, actions: BusinessRecommendedAction[]): 
   </article>`;
 }
 
-function renderAgentCompanion(): string {
+function renderAgentCompanion(intelligence: IntelligenceMetadata | undefined): string {
+  const companionMode = intelligence?.localBrain.status === "connected" ? `Local ${intelligence.localBrain.model ?? "model"}` : "Fallback";
+  const companionNote = intelligence?.localBrain.status === "connected"
+    ? "Local brain is available for Draft, Plan, Review, and Improve. It still cannot write Shopify, send emails, or publish content."
+    : "Fallback mode uses templates and rules. Connect the local brain relay for richer drafts and reasoning.";
   return `<aside class="agent-companion" id="agent-companion" aria-label="Agent Companion">
     <details data-agent-companion>
       <summary>Agent Companion</summary>
       <div class="companion-panel">
         <div class="panel-heading compact">
           <h2>Agent Companion</h2>
-          <span>Mock</span>
+          <span>${escapeHtml(companionMode)}</span>
         </div>
         <p data-companion-context>Pick a Draft, Plan, Review, or Improve action and I will help shape it into a safe queued task.</p>
         <div class="companion-prompts" aria-label="Companion actions">
@@ -365,10 +374,23 @@ function renderAgentCompanion(): string {
           <button type="button" data-companion-open data-companion-intent="Review an action before approval">Review</button>
           <button type="button" data-companion-open data-companion-intent="Improve blog or campaign copy safely">Improve</button>
         </div>
-        <p class="section-note">Mock mode only. This drawer can shape drafts and decisions, but it cannot write Shopify, send emails, or publish content.</p>
+        <p class="section-note">${escapeHtml(companionNote)}</p>
       </div>
     </details>
   </aside>`;
+}
+
+function intelligenceSafetyLabel(intelligence: IntelligenceMetadata | undefined, provider: string | undefined): string {
+  if (provider === "openai") return "AI-assisted: approval still required";
+  if (intelligence?.localBrain.status === "connected") return "Hybrid: local brain ready";
+  if (provider === "hybrid") return "Hybrid: rules fallback";
+  return "Mock mode: review only";
+}
+
+function localBrainStatusLabel(intelligence: IntelligenceMetadata | undefined): string {
+  if (!intelligence) return "unavailable";
+  const model = intelligence.localBrain.model ? ` / ${intelligence.localBrain.model}` : "";
+  return `${intelligence.localBrain.status}${model}`;
 }
 
 function cockpitLane(title: string, items: CockpitItem[], emptyText: string): string {
@@ -1726,7 +1748,7 @@ function styles(): string {
     .executive-hero-copy { display: grid; gap: 14px; min-width: 0; }
     .executive-hero-actions { display: flex; align-items: flex-start; justify-content: flex-end; gap: 10px; flex-wrap: wrap; min-width: 230px; }
     .executive-hero-actions button { box-shadow: 0 12px 26px rgba(0, 0, 0, 0.16); }
-    .executive-brief-grid { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 10px; }
+    .executive-brief-grid { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 10px; }
     .brief-signal {
       min-height: 78px;
       display: grid;
@@ -2093,7 +2115,7 @@ function clientScript(): string {
           companion.open = true;
           const intent = control.getAttribute("data-companion-intent") || control.textContent || "Review this action";
           if (companionContext) {
-            companionContext.textContent = "Working in mock mode: " + intent + ". I can turn this into a safer draft, checklist, or approval-ready queue note without executing it.";
+            companionContext.textContent = "Working in review-first mode: " + intent + ". I can turn this into a safer draft, checklist, or approval-ready queue note without executing it.";
           }
           companion.scrollIntoView({ block: "nearest", behavior: "smooth" });
         }

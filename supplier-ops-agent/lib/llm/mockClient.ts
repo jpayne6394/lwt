@@ -4,6 +4,20 @@ import type { LlmClient, LlmDecisionRequest } from "./index.ts";
 export function createMockLlmClient(_options: { autonomyMode: string }): LlmClient {
   return {
     provider: "mock",
+    getStatus() {
+      return {
+        provider: "mock",
+        dataScope: "catalog",
+        maxInputChars: 0,
+        generatedAt: new Date().toISOString(),
+        localBrain: {
+          status: "unavailable",
+          mode: "rules",
+          model: null,
+          message: "Mock mode is using deterministic rules and templates.",
+        },
+      };
+    },
     async decide<T>(request: LlmDecisionRequest): Promise<T> {
       const decision: BusinessAgentResult = {
         summary: `${request.agentName} mock decision for ${request.task}.`,

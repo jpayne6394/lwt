@@ -1,4 +1,5 @@
 import type { ShopifyVariant } from "../domain/types.ts";
+import type { IntelligenceMetadata } from "../intelligence/types.ts";
 
 export type SalesWindowKey = "today" | "7d" | "30d" | "90d" | "365d";
 
@@ -135,6 +136,7 @@ export type MarketRadarRunOutput = {
   sourceConnections: SourceConnectionCard[];
   revenuePlays: RevenuePlayRecord[];
   errors: string[];
+  intelligence?: IntelligenceMetadata;
 };
 
 export type MarketRadarOutputRecord = MarketRadarRunOutput & {

@@ -7,6 +7,7 @@ import { buildCampaignDraft } from "./campaigns/campaign-draft-planner.ts";
 import type { BuildCampaignDraftInput } from "./campaigns/types.ts";
 import { buildBlogDraft } from "./content/blog-template-builder.ts";
 import type { BuildBlogDraftInput } from "./content/types.ts";
+import { enhanceBlogDraftWithLlm, enhanceCampaignDraftWithLlm, enhanceMarketRadarWithLlm } from "./intelligence/local-enhancers.ts";
 import { fetchCompetitorPriceSnapshots } from "./market-radar/competitor-price-monitor.ts";
 import { buildMarketRadarOutput } from "./market-radar/market-radar-service.ts";
 import { fetchOpenWebSignals } from "./market-radar/open-web-source.ts";
@@ -39,6 +40,12 @@ export async function createRuntime() {
     provider: config.aiProvider,
     apiKey: config.openaiApiKey,
     autonomyMode: config.autonomyMode,
+    localRelayUrl: config.localLlmRelayUrl,
+    localRelayToken: config.localLlmRelayToken,
+    localLlmModel: config.localLlmModel,
+    localLlmTimeoutMs: config.localLlmTimeoutMs,
+    localLlmDataScope: config.localLlmDataScope,
+    localLlmMaxInputChars: config.localLlmMaxInputChars,
   });
   const chiefOfStaff = createChiefOfStaffAgent({
     repository,
@@ -109,7 +116,7 @@ export async function createRuntime() {
               })
               .catch(() => cachedVariants);
 
-      const output = buildMarketRadarOutput({
+      const baseOutput = buildMarketRadarOutput({
         shopifyVariants: variants,
         productOpsOutput: productOpsOutputs[0],
         sourceConnections: sourceConnections(),
@@ -118,6 +125,7 @@ export async function createRuntime() {
         orders,
         now,
       });
+      const output = await enhanceMarketRadarWithLlm(baseOutput, llm);
       await repository.recordMarketRadarOutput?.(output);
       for (const play of output.revenuePlays) {
         await actionQueue.enqueue(revenuePlayToQueueInput(play, output.startedAt), output.finishedAt);
@@ -125,12 +133,12 @@ export async function createRuntime() {
       return output;
     },
     createBlogDraft: async (input: BuildBlogDraftInput) => {
-      const draft = buildBlogDraft(input);
+      const draft = await enhanceBlogDraftWithLlm(buildBlogDraft(input), input as unknown as Record<string, unknown>, llm);
       await repository.recordBlogDraft?.(draft);
       return draft;
     },
     createCampaignDraft: async (input: BuildCampaignDraftInput) => {
-      const draft = buildCampaignDraft(input);
+      const draft = await enhanceCampaignDraftWithLlm(buildCampaignDraft(input), input as unknown as Record<string, unknown>, llm);
       await repository.recordCampaignDraft?.(draft);
       return draft;
     },
@@ -165,6 +173,7 @@ export async function createRuntime() {
     applyChangesEnabled: config.applyChanges,
     aiProvider: config.aiProvider,
     autonomyMode: config.autonomyMode,
+    getAiStatus: () => llm.getStatus(),
   };
 
   return {

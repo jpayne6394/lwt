@@ -1,9 +1,18 @@
+import type { AiProvider, AutonomyMode } from "../business-os/types.ts";
+import type { LocalLlmDataScope } from "../intelligence/types.ts";
+
 export type RuntimeConfig = {
   port: number;
   host: string;
-  aiProvider: "mock" | "openai";
+  aiProvider: AiProvider;
   openaiApiKey?: string;
-  autonomyMode: "approval" | "supervised" | "autonomous";
+  autonomyMode: AutonomyMode;
+  localLlmRelayUrl?: string;
+  localLlmRelayToken?: string;
+  localLlmModel: string;
+  localLlmTimeoutMs: number;
+  localLlmDataScope: LocalLlmDataScope;
+  localLlmMaxInputChars: number;
   databaseUrl?: string;
   storagePath: string;
   shopifyApiKey?: string;
@@ -38,6 +47,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     aiProvider: parseAiProvider(env.AI_PROVIDER),
     openaiApiKey: env.OPENAI_API_KEY,
     autonomyMode: parseAutonomyMode(env.AUTONOMY_MODE),
+    localLlmRelayUrl: env.LOCAL_LLM_RELAY_URL,
+    localLlmRelayToken: env.LOCAL_LLM_RELAY_TOKEN,
+    localLlmModel: env.LOCAL_LLM_MODEL ?? "auto",
+    localLlmTimeoutMs: parsePositiveNumber(env.LOCAL_LLM_TIMEOUT_MS, 15000),
+    localLlmDataScope: parseLocalDataScope(env.LOCAL_LLM_DATA_SCOPE),
+    localLlmMaxInputChars: parsePositiveNumber(env.LOCAL_LLM_MAX_INPUT_CHARS, 24000),
     databaseUrl: env.DATABASE_URL,
     storagePath:
       env.SUPPLIER_OPS_DATA_PATH ??
@@ -63,7 +78,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
 }
 
 function parseAiProvider(value: string | undefined): RuntimeConfig["aiProvider"] {
-  return value === "openai" ? "openai" : "mock";
+  if (value === "mock" || value === "openai" || value === "hybrid") {
+    return value;
+  }
+  return "hybrid";
 }
 
 function parseAutonomyMode(value: string | undefined): RuntimeConfig["autonomyMode"] {
@@ -71,6 +89,18 @@ function parseAutonomyMode(value: string | undefined): RuntimeConfig["autonomyMo
     return value;
   }
   return "approval";
+}
+
+function parseLocalDataScope(value: string | undefined): LocalLlmDataScope {
+  if (value === "catalog" || value === "business" || value === "internal") {
+    return value;
+  }
+  return "internal";
+}
+
+function parsePositiveNumber(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function parseList(value: string | undefined): string[] {

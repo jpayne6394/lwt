@@ -1,4 +1,5 @@
 import type { RevenuePlayRecord } from "../market-radar/types.ts";
+import type { IntelligenceMetadata } from "../intelligence/types.ts";
 
 export type CampaignDraftStatus = "DRAFT_READY" | "APPROVED" | "DISMISSED";
 
@@ -13,6 +14,7 @@ export type CampaignDraftRecord = {
   productTitles: string[];
   segmentIdea: string;
   shopifyEmailAdminPath: string;
+  intelligence?: IntelligenceMetadata;
   createdAt: string;
   updatedAt: string;
 };

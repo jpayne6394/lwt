@@ -1,3 +1,5 @@
+import type { IntelligenceMetadata } from "../intelligence/types.ts";
+
 export type RiskLevel = "low" | "medium" | "high";
 
 export type ApprovalStatus = "suggested" | "drafted" | "approved" | "rejected" | "executed" | "failed" | "rolled_back";
@@ -6,7 +8,7 @@ export type BusinessActionType = "PROMOTE" | "FIX" | "WRITE" | "AUTOMATE" | "REV
 
 export type AutonomyMode = "approval" | "supervised" | "autonomous";
 
-export type AiProvider = "mock" | "openai";
+export type AiProvider = "mock" | "hybrid" | "openai";
 
 export type BusinessAgentName =
   | "Chief of Staff Agent"
@@ -63,6 +65,7 @@ export type DailyCommandReport = {
   urgent_issues: BusinessRecommendedAction[];
   actions_requiring_owner_approval: BusinessRecommendedAction[];
   operating_cycle?: DailyOperatingCycle;
+  intelligence?: IntelligenceMetadata;
 };
 
 export type OperatingCycleLane = "do_today" | "review" | "draft" | "wait" | "ignore";

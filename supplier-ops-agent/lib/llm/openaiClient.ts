@@ -4,6 +4,20 @@ import type { LlmClient, LlmDecisionRequest } from "./index.ts";
 export function createOpenAiLlmClient(options: { apiKey?: string; autonomyMode: AutonomyMode }): LlmClient {
   return {
     provider: "openai",
+    getStatus() {
+      return {
+        provider: "openai",
+        dataScope: "internal",
+        maxInputChars: 24000,
+        generatedAt: new Date().toISOString(),
+        localBrain: {
+          status: "unavailable",
+          mode: "openai",
+          model: "gpt-4.1-mini",
+          message: "OpenAI provider is configured; local brain relay is not used.",
+        },
+      };
+    },
     async decide<T>(request: LlmDecisionRequest): Promise<T> {
       if (!options.apiKey) {
         throw new Error("OPENAI_API_KEY is required when AI_PROVIDER=openai");

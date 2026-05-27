@@ -1,4 +1,5 @@
 import type { MarketRadarMatchedProduct } from "../market-radar/types.ts";
+import type { IntelligenceMetadata } from "../intelligence/types.ts";
 
 export type BlogDraftStatus = "DRAFT_READY" | "CREATED_IN_SHOPIFY" | "DISMISSED";
 
@@ -22,6 +23,7 @@ export type BlogDraftRecord = {
   handle: string;
   relatedProducts: MarketRadarMatchedProduct[];
   claimWarnings: string[];
+  intelligence?: IntelligenceMetadata;
   shopifyArticleId?: string;
   shopifyArticleHandle?: string;
   createdAt: string;

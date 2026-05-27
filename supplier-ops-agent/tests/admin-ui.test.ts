@@ -496,8 +496,19 @@ test("admin UI renders the mock-mode cockpit without developer labels", () => {
     alerts: [],
     shopifyApiKey: "test-api-key",
     applyChangesEnabled: false,
-    aiProvider: "mock",
+    aiProvider: "hybrid",
     autonomyMode: "approval",
+    aiStatus: {
+      provider: "hybrid",
+      dataScope: "internal",
+      maxInputChars: 24000,
+      localBrain: {
+        status: "connected",
+        mode: "local",
+        model: "qwen3:8b",
+        message: "Local brain connected.",
+      },
+    },
     dailyCommandReports: [
       {
         id: "daily_command_1",
@@ -668,7 +679,10 @@ test("admin UI renders the mock-mode cockpit without developer labels", () => {
 
   for (const label of [
     "CEO Daily Brief",
-    "Mock mode: review only",
+    "Hybrid: local brain ready",
+    "Local Brain",
+    "connected",
+    "qwen3:8b",
     "Decision Queue",
     "Pending Approvals",
     "Recent Activity",
