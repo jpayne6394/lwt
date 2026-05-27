@@ -315,7 +315,9 @@ test("server renders the daily cockpit on the root path unless an agent workbenc
     const homeResponse = await fetch(`${baseUrl}/`);
     const homeHtml = await homeResponse.text();
     assert.equal(homeResponse.status, 200);
-    assert.match(homeHtml, /Today&#39;s cockpit/);
+    assert.match(homeHtml, /CEO Daily Brief/);
+    assert.match(homeHtml, /Decision Queue/);
+    assert.match(homeHtml, /Agent Workrooms/);
     assert.match(homeHtml, /Mock mode: review only/);
     assert.doesNotMatch(homeHtml, /Agent command center/);
 

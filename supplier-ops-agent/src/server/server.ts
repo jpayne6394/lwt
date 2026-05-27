@@ -370,7 +370,15 @@ function wantsJson(request: IncomingMessage): boolean {
 }
 
 function parseActiveAgent(value: string | null): ActiveAgent | undefined {
-  if (value === "bi" || value === "inventory" || value === "product_ops" || value === "campaign" || value === "blog" || value === "flow") {
+  if (
+    value === "bi" ||
+    value === "inventory" ||
+    value === "product_ops" ||
+    value === "campaign" ||
+    value === "blog" ||
+    value === "flow" ||
+    value === "customer_email"
+  ) {
     return value;
   }
   return undefined;

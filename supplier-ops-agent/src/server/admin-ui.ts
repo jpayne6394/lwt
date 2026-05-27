@@ -11,7 +11,7 @@ import type { ProductOpsOutputRecord, ProductOpsProductResult, ProductOpsTask } 
 import type { BlockedIssueRecord, AppliedChangeRecord, SyncRun } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
 
-export type ActiveAgent = "bi" | "inventory" | "product_ops" | "campaign" | "blog" | "flow";
+export type ActiveAgent = "bi" | "inventory" | "product_ops" | "campaign" | "blog" | "flow" | "customer_email";
 
 export type AdminPageModel = {
   activePath: string;
@@ -169,53 +169,54 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
   const draftsReadyCount = campaignItems.length + model.blogDrafts.length + draftCampaignActions.length;
   const safetyMode = model.aiProvider === "openai" ? "AI-assisted: approval still required" : "Mock mode: review only";
   const recentActivityItems = actionQueueEvents.length > 0 ? actionQueueEvents.map(queueEventToCockpitItem) : logs.map(logToCockpitItem);
+  const decisionSummary = latestReport?.chief_of_staff.summary ?? "Review what to promote, fix, write, automate, or ignore before anything touches Shopify.";
+  const riskLevel = latestReport?.chief_of_staff.risk_level ?? (inventoryRiskCount || needsApprovalCount || latestIssueCount ? "medium" : "low");
+  const topOpportunity =
+    promotionSuggestionItems[0]?.title ??
+    (latestRadar ? "Review BI revenue plays" : "Refresh BI Market Radar for revenue ideas");
 
   return `
-    <section class="cockpit-hero">
-      <div>
-        <h2>Today&#39;s cockpit</h2>
-        <p>${escapeHtml(latestReport?.chief_of_staff.summary ?? "A simple daily plan for what to review, promote, draft, and fix. Nothing changes in Shopify from mock mode.")}</p>
-        <div class="cockpit-status-row">
-          <span>${escapeHtml(safetyMode)}</span>
-          <span>${model.applyChangesEnabled ? "Write requests still need approval" : "No Shopify writes from this view"}</span>
+    <section class="executive-shell">
+      <section class="executive-hero">
+        <div class="executive-hero-copy">
+          <h2>CEO Daily Brief</h2>
+          <p>${escapeHtml(decisionSummary)}</p>
+          <div class="executive-brief-grid" aria-label="Daily command signals">
+            ${briefSignal("Risk level", friendlyStatus(riskLevel), riskLevel === "high" ? "danger" : riskLevel === "medium" ? "warning" : "success")}
+            ${briefSignal("Top opportunity", topOpportunity, "accent")}
+            ${briefSignal("Safety mode", safetyMode, "safe")}
+            ${briefSignal("Issue signals", `${latestIssueCount} latest`, latestIssueCount ? "warning" : "success")}
+          </div>
         </div>
-      </div>
-      <form method="post" action="/api/command/daily-report" data-run-form data-running-label="Building command report...">
-        <button type="submit">Refresh today&#39;s plan</button>
-      </form>
-    </section>
-    <section class="metrics cockpit-metrics">
-      ${metric("Needs approval", needsApprovalCount)}
-      ${metric("Inventory risks", inventoryRiskCount)}
-      ${metric("Promotion ideas", promoteCount)}
-      ${metric("Latest issues", latestIssueCount)}
-    </section>
-    <section class="cockpit-grid">
-      <section class="panel cockpit-start">
-        <div class="panel-heading compact"><h2>Start here</h2><span>${planCockpitItems.length}</span></div>
-        <p class="section-note">Work top to bottom. Approve only what you trust; everything here is a draft or review item.</p>
-        ${renderCockpitItems(planCockpitItems, "Refresh today's plan to build the first review list.")}
-      </section>
-      <section class="panel cockpit-safe">
-        <h2>Safe mode</h2>
-        <p><strong>${escapeHtml(safetyMode)}</strong></p>
-        <p class="section-note">Use this page to decide. Product changes, price changes, customer emails, and homepage updates stay review-first.</p>
-        <div class="quick-counts">
-          <span><strong>${draftsReadyCount}</strong> Drafts ready</span>
-          <span><strong>${removeFromPromo.length}</strong> Pull back</span>
-          <span><strong>${queue.length}</strong> In queue</span>
+        <div class="executive-hero-actions">
+          <form method="post" action="/api/command/daily-report" data-run-form data-running-label="Building CEO brief...">
+            <button type="submit">Refresh CEO brief</button>
+          </form>
+          <button class="secondary" type="button" data-companion-open data-companion-intent="Plan the day from the CEO Daily Brief">Open Agent Companion</button>
         </div>
       </section>
-    </section>
-    <section class="cockpit-lanes">
-      ${cockpitLane("Today's Business Brief", planCockpitItems, "Refresh today's plan to build the first review list.")}
-      ${cockpitLane("Promotion Suggestions", promotionSuggestionItems, "Promotion and campaign ideas will appear here after a report or radar refresh.")}
-      ${cockpitLane("Inventory Risks", inventoryRiskItems, "No low-stock or out-of-stock focus items yet.")}
-      ${cockpitLane("Pending Approvals", pendingApprovalItems, "No approvals are waiting yet.")}
-      ${cockpitLane("Shopify Action Queue", queue.map((item) => queueItemToCockpitItem(item, true)), "Approved Shopify work will queue here before execution.")}
-      ${cockpitLane("Recent Activity", recentActivityItems, "No recent cockpit activity yet.")}
-    </section>
-    ${renderShopifyShortcutPanel()}`;
+      <section class="executive-metrics" aria-label="Executive command metrics">
+        ${executiveMetric("Revenue Plays", promoteCount, "Blog, email, bundle, Flow, and promotion ideas ready for review.", "accent")}
+        ${executiveMetric("Inventory Risk", inventoryRiskCount, "Supplier, stock, or price issues that could block promotion.", "warning")}
+        ${executiveMetric("Pending Approvals", needsApprovalCount, "Actions waiting for approve, edit, reject, or handoff.", "danger")}
+        ${executiveMetric("Drafts Ready", draftsReadyCount, "Blog and campaign drafts prepared for owner review.", "success")}
+      </section>
+      <section class="executive-layout">
+        <div class="executive-primary">
+          ${cockpitLane("Today's Business Brief", planCockpitItems, "Refresh CEO brief to build the first review list.")}
+          ${cockpitLane("Inventory Risks", inventoryRiskItems, "No low-stock or out-of-stock focus items yet.")}
+          ${cockpitLane("Promotion Suggestions", promotionSuggestionItems, "Promotion and campaign ideas will appear here after a report or radar refresh.")}
+          ${renderExecutiveWorkrooms(latestRun, latestProductOps, latestRadar, model.revenuePlays, draftsReadyCount)}
+          ${cockpitLane("Recent Activity", recentActivityItems, "No recent cockpit activity yet.")}
+        </div>
+        <aside class="executive-side" aria-label="Decision rail">
+          ${renderDecisionQueue(queue, "Approved Shopify work stays in the Shopify Action Queue until you explicitly execute it.")}
+          ${renderExecutiveSafeMode(safetyMode, model.applyChangesEnabled, draftsReadyCount, removeFromPromo.length, queue.length)}
+          ${renderShopifyShortcutPanel()}
+        </aside>
+      </section>
+      ${renderAgentCompanion()}
+    </section>`;
 }
 
 type CockpitItem = {
@@ -225,6 +226,106 @@ type CockpitItem = {
   status?: string;
   actionsHtml?: string;
 };
+
+function briefSignal(label: string, value: string, tone: "accent" | "warning" | "danger" | "success" | "safe"): string {
+  return `<article class="brief-signal ${escapeHtml(tone)}">
+    <span>${escapeHtml(label)}</span>
+    <strong>${escapeHtml(value)}</strong>
+  </article>`;
+}
+
+function executiveMetric(label: string, value: number | string, detail: string, tone: "accent" | "warning" | "danger" | "success"): string {
+  return `<article class="executive-metric ${escapeHtml(tone)}">
+    <span>${escapeHtml(label)}</span>
+    <strong>${escapeHtml(String(value))}</strong>
+    <small>${escapeHtml(detail)}</small>
+  </article>`;
+}
+
+function renderDecisionQueue(items: ActionQueueItem[], note: string): string {
+  const queueItems = items.slice(0, 7).map((item) => queueItemToCockpitItem(item, true));
+  return `<section class="panel decision-queue">
+    <div class="panel-heading compact">
+      <div>
+        <h2>Decision Queue</h2>
+        <p>${escapeHtml(note)}</p>
+      </div>
+      <span>${items.length}</span>
+    </div>
+    ${renderCockpitItems(queueItems, "No approval-ready actions yet. Refresh CEO brief, BI radar, or Product Ops to build the first queue.")}
+  </section>`;
+}
+
+function renderExecutiveSafeMode(safetyMode: string, applyChangesEnabled: boolean, draftsReady: number, pullBack: number, queueCount: number): string {
+  return `<section class="panel executive-safe-mode">
+    <h2>Safe Mode</h2>
+    <p><strong>${escapeHtml(safetyMode)}</strong></p>
+    <p class="section-note">${applyChangesEnabled ? "Write mode can be requested, but risky actions still require approval." : "No Shopify writes, emails, product deletes, or homepage changes happen from this cockpit."}</p>
+    <div class="quick-counts">
+      <span><strong>${draftsReady}</strong> Drafts ready</span>
+      <span><strong>${pullBack}</strong> Pull back</span>
+      <span><strong>${queueCount}</strong> In queue</span>
+    </div>
+  </section>`;
+}
+
+function renderExecutiveWorkrooms(
+  run: SyncRun | undefined,
+  output: ProductOpsOutputRecord | undefined,
+  radar: MarketRadarOutputRecord | undefined,
+  revenuePlays: RevenuePlayRecord[],
+  draftsReady: number,
+): string {
+  const rooms: Array<{ label: string; href: string; value: number | string; detail: string }> = [
+    { label: "BI Analyst", href: "/?agent=bi", value: radar?.summary.revenuePlays ?? revenuePlays.length, detail: "Market pulse, competitor pricing, revenue plays." },
+    { label: "Inventory Ops", href: "/?agent=inventory", value: run?.changeCount ?? 0, detail: "Supplier stock, price guardrails, dry-run changes." },
+    { label: "Product Ops", href: "/?agent=product_ops", value: output?.summary.reviewRequired ?? 0, detail: "Promotion readiness, cleanup, review tasks." },
+    { label: "Marketing", href: "/?agent=campaign", value: output?.summary.promoteReady ?? 0, detail: "Campaign briefs and Shopify Email handoffs." },
+    { label: "Blog Publisher", href: "/?agent=blog", value: draftsReady, detail: "Draft article ideas and wellness templates." },
+    { label: "Flow Launchpad", href: "/?agent=flow", value: revenuePlays.filter((play) => play.targetAgent === "flow").length, detail: "Flow setup ideas and triggered email templates." },
+    { label: "Customer/Email", href: "/?agent=customer_email", value: draftsReady, detail: "Inbox notes, lifecycle drafts, and customer-safe messaging." },
+  ];
+
+  return `<section class="panel workroom-switcher">
+    <div class="panel-heading compact">
+      <h2>Agent Workrooms</h2>
+      <span>${rooms.length}</span>
+    </div>
+    <div class="workroom-grid">
+      ${rooms
+        .map(
+          (room) => `<a class="workroom-card" href="${escapeHtml(room.href)}">
+            <span>${escapeHtml(room.label)}</span>
+            <strong>${escapeHtml(String(room.value))}</strong>
+            <small>${escapeHtml(room.detail)}</small>
+          </a>`,
+        )
+        .join("")}
+    </div>
+  </section>`;
+}
+
+function renderAgentCompanion(): string {
+  return `<aside class="agent-companion" id="agent-companion" aria-label="Agent Companion">
+    <details data-agent-companion>
+      <summary>Agent Companion</summary>
+      <div class="companion-panel">
+        <div class="panel-heading compact">
+          <h2>Agent Companion</h2>
+          <span>Mock</span>
+        </div>
+        <p data-companion-context>Pick a Draft, Plan, Review, or Improve action and I will help shape it into a safe queued task.</p>
+        <div class="companion-prompts" aria-label="Companion actions">
+          <button type="button" data-companion-open data-companion-intent="Draft a professional Shopify Email template">Draft</button>
+          <button type="button" data-companion-open data-companion-intent="Plan a revenue play from BI and inventory data">Plan</button>
+          <button type="button" data-companion-open data-companion-intent="Review an action before approval">Review</button>
+          <button type="button" data-companion-open data-companion-intent="Improve blog or campaign copy safely">Improve</button>
+        </div>
+        <p class="section-note">Mock mode only. This drawer can shape drafts and decisions, but it cannot write Shopify, send emails, or publish content.</p>
+      </div>
+    </details>
+  </aside>`;
+}
 
 function cockpitLane(title: string, items: CockpitItem[], emptyText: string): string {
   return `<section class="panel">
@@ -245,6 +346,7 @@ function renderCockpitItems(items: CockpitItem[], emptyText: string): string {
         <strong>${escapeHtml(item.title)}</strong>
         <small>${escapeHtml(item.detail)}</small>
         ${item.actionsHtml ?? ""}
+        <button class="companion-mini" type="button" data-companion-open data-companion-intent="${escapeHtml(item.title)}">Review with companion</button>
       </article>`,
     )
     .join("")}</div>`;
@@ -366,8 +468,10 @@ function renderActionQueueControls(item: ActionQueueItem): string {
   }
   return `<div class="queue-actions">
     ${actionQueueControlForm("/api/action-queue/approve", item.id, "Approve", "Approved from the command cockpit.")}
+    ${renderActionQueueEditControl(item)}
     ${actionQueueControlForm("/api/action-queue/reject", item.id, "Reject", "Rejected from the command cockpit.")}
     ${actionQueueControlForm("/api/action-queue/complete", item.id, "Done", "Marked done from the command cockpit.")}
+    ${shopifyActionLink(item)}
   </div>`;
 }
 
@@ -378,6 +482,48 @@ function actionQueueControlForm(action: string, id: string, label: string, note:
     <input type="hidden" name="note" value="${escapeHtml(note)}">
     <button type="submit">${escapeHtml(label)}</button>
   </form>`;
+}
+
+function renderActionQueueEditControl(item: ActionQueueItem): string {
+  return `<details class="queue-edit">
+    <summary>Edit</summary>
+    <form method="post" action="/api/action-queue/edit" data-action-queue-form>
+      <input type="hidden" name="id" value="${escapeHtml(item.id)}">
+      <input type="hidden" name="actor" value="LWT">
+      <input type="hidden" name="note" value="Edited from the executive command cockpit.">
+      <label>Title
+        <input name="title" value="${escapeHtml(item.title)}">
+      </label>
+      <label>Priority
+        <select name="priority">
+          ${["Critical", "High", "Medium", "Low"].map((priority) => `<option value="${priority}"${item.priority === priority ? " selected" : ""}>${priority}</option>`).join("")}
+        </select>
+      </label>
+      <label>Area
+        <input name="area" value="${escapeHtml(item.area)}">
+      </label>
+      <label>Owner
+        <input name="owner" value="${escapeHtml(item.owner ?? "")}">
+      </label>
+      <button type="submit">Save edit</button>
+    </form>
+  </details>`;
+}
+
+function shopifyActionLink(item: ActionQueueItem): string {
+  const path = shopifyActionPath(item);
+  return `<a class="queue-shopify-link" href="https://admin.shopify.com${escapeHtml(path)}" target="_top" rel="noreferrer" data-shopify-action-link data-shopify-admin-link data-shopify-path="${escapeHtml(path)}">Open in Shopify</a>`;
+}
+
+function shopifyActionPath(item: ActionQueueItem): string {
+  const searchableProduct = item.related_product_title || item.related_product_handle;
+  const searchableProductPath = searchableProduct ? `/products?query=${encodeURIComponent(searchableProduct)}` : "/products";
+  const context = `${item.action_type} ${item.area} ${item.title} ${item.related_campaign ?? ""}`.toLowerCase();
+  if (context.includes("flow") || item.action_type === "AUTOMATE") return "/apps/flow";
+  if (context.includes("blog") || context.includes("article")) return "/content/blogs";
+  if (context.includes("campaign") || context.includes("email") || item.action_type === "WRITE") return "/marketing";
+  if (context.includes("customer")) return "/customers";
+  return searchableProductPath;
 }
 
 function queueEventToCockpitItem(event: ActionQueueEvent): CockpitItem {
@@ -730,6 +876,14 @@ function agentCommandDetail(agent: ActiveAgent): { title: string; summary: strin
         run: "Copy a template or open Flow.",
         handoff: "Shopify Flow app.",
       };
+    case "customer_email":
+      return {
+        title: "Customer/Email",
+        summary: "Turns customer questions, lifecycle moments, and inbox patterns into safe draft responses and campaign ideas for review.",
+        does: "Prepares customer-safe messaging without sending.",
+        run: "Review lifecycle and inbox opportunities.",
+        handoff: "Shopify Inbox, Customers, and Shopify Email.",
+      };
     case "product_ops":
     default:
       return {
@@ -791,6 +945,7 @@ function renderAgentDock(
     { id: "campaign", label: "Campaign Planner", signal: "Promotion candidates", value: output?.summary.promoteReady ?? 0 },
     { id: "blog", label: "Blog Publisher", signal: "Draft sources", value: output?.summary.promoteReady ?? 0 },
     { id: "flow", label: "Flow Launchpad", signal: "Automation ideas", value: revenuePlays.filter((play) => play.targetAgent === "flow").length },
+    { id: "customer_email", label: "Customer/Email", signal: "Lifecycle drafts", value: output?.summary.reviewRequired ?? 0 },
   ];
 
   return `<section class="agent-dock" aria-label="Sub-agent selector">
@@ -949,6 +1104,24 @@ function renderAgentWorkspace(
     </section>
     ${renderFlowEmailTemplates()}
     ${renderFlowIdeas(radar?.revenuePlays ?? model.revenuePlays)}`;
+  }
+
+  if (activeAgent === "customer_email") {
+    return `<section class="panel agent-workspace">
+      <div class="panel-heading">
+        <h2>Customer/Email Workroom</h2>
+        <a class="button-link" href="https://admin.shopify.com/customers" target="_top" rel="noreferrer" data-shopify-admin-link data-shopify-path="/customers">Open Shopify Customers</a>
+      </div>
+      <p>Prepare lifecycle notes, inbox-safe response angles, and Shopify Email ideas for review. Nothing sends from this app.</p>
+      <div class="agent-stats">
+        ${metric("Campaign Drafts", model.campaignDrafts.length)}
+        ${metric("Blog Drafts", model.blogDrafts.length)}
+        ${metric("Review Tasks", output?.summary.reviewRequired ?? 0)}
+        ${metric("Claim Flags", radar?.summary.lightClaimWarnings ?? 0)}
+      </div>
+    </section>
+    ${renderCampaignDrafts(model.campaignDrafts)}
+    ${renderFlowEmailTemplates()}`;
   }
 
   return `<section class="panel agent-workspace">
@@ -1457,6 +1630,11 @@ function styles(): string {
       --border: #d9dee3;
       --accent: #006c67;
       --accent-strong: #004c49;
+      --graphite: #111817;
+      --graphite-2: #1d2826;
+      --gold: #b87922;
+      --coral: #c5483a;
+      --success: #277b5d;
       --warning: #9a6700;
       --error: #b42318;
       --radius: 8px;
@@ -1483,6 +1661,136 @@ function styles(): string {
     .sync-status { min-height: 22px; color: var(--muted); font-size: 13px; flex-basis: 100%; }
     .sync-status.error { color: var(--error); }
     .eyebrow { color: var(--accent-strong); font-size: 12px; font-weight: 820; letter-spacing: 0; text-transform: uppercase; }
+    .executive-shell { display: grid; gap: 16px; }
+    .executive-hero {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 22px;
+      padding: 24px;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(135deg, rgba(0, 108, 103, 0.26), rgba(17, 24, 23, 0) 44%),
+        linear-gradient(180deg, #1d2826 0%, #111817 100%);
+      border: 1px solid #203734;
+      box-shadow: 0 18px 45px rgba(17, 24, 23, 0.18);
+      color: #f8fbfa;
+    }
+    .executive-hero h2 { margin: 0 0 8px; font-size: 34px; line-height: 1.05; letter-spacing: 0; }
+    .executive-hero p { color: #d9e7e2; max-width: 940px; font-size: 15px; }
+    .executive-hero-copy { display: grid; gap: 14px; min-width: 0; }
+    .executive-hero-actions { display: flex; align-items: flex-start; justify-content: flex-end; gap: 10px; flex-wrap: wrap; min-width: 230px; }
+    .executive-hero-actions button { box-shadow: 0 12px 26px rgba(0, 0, 0, 0.16); }
+    .executive-brief-grid { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 10px; }
+    .brief-signal {
+      min-height: 78px;
+      display: grid;
+      gap: 6px;
+      align-content: center;
+      padding: 11px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .brief-signal span { color: #bad3cc; font-size: 11px; font-weight: 820; text-transform: uppercase; }
+    .brief-signal strong { color: white; font-size: 13px; line-height: 1.3; overflow-wrap: anywhere; }
+    .brief-signal.accent { border-color: rgba(49, 193, 179, 0.28); }
+    .brief-signal.warning { border-color: rgba(184, 121, 34, 0.46); }
+    .brief-signal.danger { border-color: rgba(197, 72, 58, 0.52); }
+    .brief-signal.success, .brief-signal.safe { border-color: rgba(99, 190, 149, 0.34); }
+    .executive-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+    .executive-metric {
+      position: relative;
+      min-height: 118px;
+      display: grid;
+      align-content: space-between;
+      gap: 8px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: 0 8px 24px rgba(17, 24, 23, 0.05);
+    }
+    .executive-metric::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 0 999px 999px 0; background: var(--accent); }
+    .executive-metric.warning::before { background: var(--gold); }
+    .executive-metric.danger::before { background: var(--coral); }
+    .executive-metric.success::before { background: var(--success); }
+    .executive-metric span { color: var(--muted); font-size: 12px; font-weight: 780; text-transform: uppercase; }
+    .executive-metric strong { color: #111817; font-size: 30px; line-height: 1; }
+    .executive-metric small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .executive-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(330px, 0.42fr); gap: 16px; align-items: start; }
+    .executive-primary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+    .executive-primary .workroom-switcher, .executive-primary .panel:first-child { grid-column: 1 / -1; }
+    .executive-side { position: sticky; top: 14px; display: grid; gap: 16px; align-self: start; }
+    .executive-side .shopify-shortcuts { margin-bottom: 0; }
+    .decision-queue { border-color: #b8d9d4; box-shadow: 0 10px 28px rgba(0, 108, 103, 0.08); }
+    .decision-queue .panel-heading { align-items: flex-start; }
+    .decision-queue .panel-heading p { margin-top: 4px; font-size: 12px; line-height: 1.35; max-width: 34ch; }
+    .workroom-switcher { background: #fcfdfd; }
+    .workroom-grid { display: grid; grid-template-columns: repeat(7, minmax(132px, 1fr)); gap: 10px; }
+    .workroom-card {
+      min-height: 126px;
+      display: grid;
+      align-content: space-between;
+      gap: 8px;
+      padding: 13px;
+      color: var(--text);
+      text-decoration: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: linear-gradient(180deg, #ffffff, #f7faf9);
+    }
+    .workroom-card:hover { border-color: #7eb5ad; transform: translateY(-1px); }
+    .workroom-card span { color: var(--accent-strong); font-size: 12px; font-weight: 820; text-transform: uppercase; }
+    .workroom-card strong { color: #111817; font-size: 24px; line-height: 1; }
+    .workroom-card small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .executive-safe-mode { background: #fbfcfc; }
+    .companion-mini {
+      justify-self: start;
+      min-height: 30px;
+      padding: 0 10px;
+      margin-top: 4px;
+      border: 1px solid #bdd8d3;
+      background: #f6fbfa;
+      color: var(--accent-strong);
+      font-size: 12px;
+    }
+    .companion-mini:hover { background: #e7f4f1; }
+    .agent-companion { position: fixed; right: 18px; bottom: 18px; z-index: 50; width: min(380px, calc(100vw - 36px)); pointer-events: none; }
+    .agent-companion details { pointer-events: auto; }
+    .agent-companion summary {
+      width: max-content;
+      margin-left: auto;
+      list-style: none;
+      cursor: pointer;
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      border-radius: 6px;
+      background: #111817;
+      color: white;
+      font-size: 14px;
+      font-weight: 760;
+      box-shadow: 0 16px 34px rgba(17, 24, 23, 0.2);
+    }
+    .agent-companion summary::-webkit-details-marker { display: none; }
+    .companion-panel {
+      display: grid;
+      gap: 12px;
+      margin-top: 10px;
+      padding: 16px;
+      border: 1px solid #b9d7d1;
+      border-radius: var(--radius);
+      background: #ffffff;
+      box-shadow: 0 24px 60px rgba(17, 24, 23, 0.22);
+    }
+    .companion-panel p { font-size: 13px; line-height: 1.45; }
+    .companion-prompts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .companion-prompts button { min-height: 36px; background: #eef6f5; color: var(--accent-strong); }
+    .companion-prompts button:hover { background: #d9ebe7; }
     .cockpit-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 22px; margin-bottom: 16px; border-radius: var(--radius); background: #0f1f1d; color: #f8fbfa; }
     .cockpit-hero h2 { margin: 0 0 8px; font-size: 30px; line-height: 1.12; }
     .cockpit-hero p { color: #d6e5e1; max-width: 880px; }
@@ -1503,8 +1811,43 @@ function styles(): string {
     .queue-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
     .queue-actions form { margin: 0; }
     .queue-actions button { min-height: 30px; padding: 0 10px; font-size: 12px; border-radius: 5px; }
-    .queue-actions form:nth-child(2) button { background: #6b7280; }
-    .queue-actions form:nth-child(3) button { background: #36485c; }
+    .queue-actions > form:nth-of-type(2) button { background: #6b7280; }
+    .queue-actions > form:nth-of-type(3) button { background: #36485c; }
+    .queue-edit { position: relative; }
+    .queue-edit summary, .queue-shopify-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 30px;
+      padding: 0 10px;
+      border-radius: 5px;
+      border: 1px solid #c9d6d3;
+      background: white;
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 700;
+      text-decoration: none;
+      cursor: pointer;
+      list-style: none;
+    }
+    .queue-edit summary::-webkit-details-marker { display: none; }
+    .queue-edit form {
+      position: absolute;
+      right: 0;
+      top: 36px;
+      z-index: 5;
+      width: min(320px, 78vw);
+      display: grid;
+      gap: 8px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: white;
+      box-shadow: 0 18px 36px rgba(17, 24, 23, 0.16);
+    }
+    .queue-edit label { font-size: 12px; }
+    .queue-edit input, .queue-edit select { min-height: 34px; padding: 7px 9px; font-size: 13px; }
+    .queue-shopify-link:hover, .queue-edit summary:hover { background: #eef6f5; }
     .business-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px; margin-bottom: 16px; border-radius: var(--radius); background: #0f1f1d; color: #f8fbfa; }
     .business-hero .eyebrow { color: #b9f0dd; }
     .business-hero h2 { margin: 4px 0 8px; font-size: 28px; line-height: 1.14; }
@@ -1633,7 +1976,9 @@ function styles(): string {
     .alert.warning { border-color: #fedf89; color: var(--warning); background: #fffbeb; }
     .alert.info { background: #f5fbff; }
     @media (max-width: 1100px) {
-      .dashboard-grid, .command-hub, .agent-command-center, .supplier-guide, .business-status-grid, .business-lanes, .cockpit-grid, .cockpit-lanes { grid-template-columns: 1fr; }
+      .dashboard-grid, .command-hub, .agent-command-center, .supplier-guide, .business-status-grid, .business-lanes, .cockpit-grid, .cockpit-lanes, .executive-layout, .executive-primary { grid-template-columns: 1fr; }
+      .executive-side { position: static; }
+      .workroom-grid { grid-template-columns: repeat(4, minmax(150px, 1fr)); }
     }
     @media (max-width: 860px) {
       .main { padding: 18px; }
@@ -1641,6 +1986,10 @@ function styles(): string {
       .briefing { flex-direction: column; }
       .command-steps, .agent-command-grid, .guide-grid { grid-template-columns: 1fr; }
       .agent-stats, .template-grid { grid-template-columns: 1fr; }
+      .executive-hero { grid-template-columns: 1fr; }
+      .executive-hero-actions { justify-content: flex-start; }
+      .executive-brief-grid, .executive-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .workroom-grid { grid-auto-flow: column; grid-auto-columns: minmax(172px, 1fr); grid-template-columns: none; overflow-x: auto; padding-bottom: 4px; }
       .app-tabs { overflow-x: auto; flex-wrap: nowrap; }
     }
     @media (max-width: 560px) {
@@ -1648,6 +1997,10 @@ function styles(): string {
       .run-actions { width: 100%; }
       .run-actions form, .run-actions button { width: 100%; }
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .executive-hero { padding: 18px; }
+      .executive-hero h2 { font-size: 28px; }
+      .executive-brief-grid, .executive-metrics { grid-template-columns: 1fr; }
+      .agent-companion { right: 12px; bottom: 12px; width: calc(100vw - 24px); }
       .agent-dock { grid-auto-flow: column; grid-auto-columns: minmax(152px, 1fr); grid-template-columns: none; overflow-x: auto; padding-bottom: 4px; }
       .agent-card { min-height: 104px; }
       .run-summary div, .settings-list div { grid-template-columns: 1fr; }
@@ -1666,6 +2019,22 @@ function clientScript(): string {
     Array.from(document.querySelectorAll("[data-shopify-admin-link]")).forEach((link) => {
       const path = link.getAttribute("data-shopify-path") || "";
       link.href = shopifyStoreBase + path;
+    });
+
+    const companion = document.querySelector("[data-agent-companion]");
+    const companionContext = document.querySelector("[data-companion-context]");
+    Array.from(document.querySelectorAll("[data-companion-open]")).forEach((control) => {
+      control.addEventListener("click", (event) => {
+        if (companion) {
+          event.preventDefault();
+          companion.open = true;
+          const intent = control.getAttribute("data-companion-intent") || control.textContent || "Review this action";
+          if (companionContext) {
+            companionContext.textContent = "Working in mock mode: " + intent + ". I can turn this into a safer draft, checklist, or approval-ready queue note without executing it.";
+          }
+          companion.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+      });
     });
 
     Array.from(document.querySelectorAll("[data-copy-template]")).forEach((button) => {

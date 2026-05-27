@@ -80,22 +80,26 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /Run write sync/);
   assert.match(html, /action="\/api\/runs\?dryRun=true"/);
   assert.match(html, /id="sync-status"/);
-  assert.match(html, /Promotion ideas/);
+  assert.match(html, /Revenue Plays/);
   assert.match(html, /<strong>5<\/strong>/);
-  assert.match(html, /Needs approval/);
+  assert.match(html, /Pending Approvals/);
   assert.match(html, /<strong>2<\/strong>/);
-  assert.match(html, /Latest issues/);
-  assert.match(html, /<strong>98<\/strong>/);
+  assert.match(html, /Inventory Risk/);
+  assert.match(html, /Drafts Ready/);
   assert.match(html, /data-run-form/);
   assert.match(html, /fetch\(form.action/);
   assert.match(html, /app-bridge/);
   assert.match(html, /<meta name="shopify-api-key" content="test-api-key">/);
   assert.match(html, /class="app-tabs"/);
   assert.doesNotMatch(html, /class="sidebar"/);
-  assert.match(html, /Today&#39;s cockpit/);
-  assert.match(html, /Refresh today&#39;s plan/);
-  assert.match(html, /Start here/);
+  assert.match(html, /CEO Daily Brief/);
+  assert.match(html, /Refresh CEO brief/);
+  assert.match(html, /Decision Queue/);
   assert.match(html, /Today&#39;s Business Brief/);
+  assert.match(html, /Agent Workrooms/);
+  assert.match(html, /Customer\/Email/);
+  assert.match(html, /Agent Companion/);
+  assert.match(html, /data-companion-open/);
   assert.match(html, /Shopify shortcuts/);
   assert.match(html, /Open Products/);
   assert.match(html, /Open Orders/);
@@ -365,14 +369,16 @@ test("dashboard renders a simple daily business cockpit with prioritized next st
     autonomyMode: "approval",
   });
 
-  for (const label of ["Today&#39;s cockpit", "Start here", "Today&#39;s Business Brief", "Promotion Suggestions", "Inventory Risks", "Recent Activity"]) {
+  for (const label of ["CEO Daily Brief", "Decision Queue", "Today&#39;s Business Brief", "Promotion Suggestions", "Inventory Risks", "Agent Workrooms"]) {
     assert.match(html, new RegExp(label));
   }
 
   assert.match(html, /Mock mode: review only/);
-  assert.match(html, /Needs approval/);
-  assert.match(html, /Promotion ideas/);
+  assert.match(html, /Pending Approvals/);
+  assert.match(html, /Revenue Plays/);
   assert.match(html, /Drafts ready/);
+  assert.match(html, /Agent Companion/);
+  assert.match(html, /Customer\/Email/);
   assert.match(html, /Write a magnesium sleep guide/);
   assert.match(html, /Promote Magnesium Glycinate/);
   assert.match(html, /Product Ops marked this product promote-ready/);
@@ -583,22 +589,27 @@ test("admin UI renders the mock-mode cockpit without developer labels", () => {
   });
 
   for (const label of [
-    "Today&#39;s cockpit",
+    "CEO Daily Brief",
     "Mock mode: review only",
-    "Start here",
+    "Decision Queue",
     "Pending Approvals",
     "Recent Activity",
     "Inventory Risks",
     "Promotion Suggestions",
     "Shopify Action Queue",
-    "Refresh today&#39;s plan",
+    "Refresh CEO brief",
+    "Agent Workrooms",
+    "Agent Companion",
     "Draft a Shopify Email campaign",
     "High",
     "Market Signals",
     "Approved for draft only",
     "data-action-queue-form",
     "action=\"/api/action-queue/approve\"",
+    "action=\"/api/action-queue/edit\"",
     "action=\"/api/action-queue/reject\"",
+    "data-shopify-action-link",
+    "data-companion-open",
   ]) {
     assert.match(html, new RegExp(label));
   }
