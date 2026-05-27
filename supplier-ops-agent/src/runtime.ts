@@ -1,5 +1,7 @@
 import { AlertService } from "./alerts/alert-service.ts";
 import { createWebhookEmailSender } from "./alerts/email.ts";
+import { createLlmClient } from "../lib/llm/index.ts";
+import { createChiefOfStaffAgent } from "./business-os/chief-of-staff-agent.ts";
 import { buildCampaignDraft } from "./campaigns/campaign-draft-planner.ts";
 import type { BuildCampaignDraftInput } from "./campaigns/types.ts";
 import { buildBlogDraft } from "./content/blog-template-builder.ts";
@@ -31,6 +33,16 @@ export async function createRuntime() {
   const repository = await createRepository(config.databaseUrl, config.storagePath);
   const adapters = createAdaptersFromEnv(suppliers);
   const shopify = createShopifyClients(config);
+  const llm = createLlmClient({
+    provider: config.aiProvider,
+    apiKey: config.openaiApiKey,
+    autonomyMode: config.autonomyMode,
+  });
+  const chiefOfStaff = createChiefOfStaffAgent({
+    repository,
+    llm,
+    autonomyMode: config.autonomyMode,
+  });
   const sourceConnections = () =>
     buildSourceConnectionCards({
       ...config.sourceCredentials,
@@ -143,8 +155,11 @@ export async function createRuntime() {
       });
       return article;
     },
+    buildDailyCommandReport: () => chiefOfStaff.buildDailyCommandReport(),
     shopifyApiKey: config.shopifyApiKey,
     applyChangesEnabled: config.applyChanges,
+    aiProvider: config.aiProvider,
+    autonomyMode: config.autonomyMode,
   };
 
   return {

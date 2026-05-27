@@ -9,6 +9,7 @@ import type {
 } from "./repository.ts";
 import type { CampaignDraftRecord } from "../campaigns/types.ts";
 import type { BlogDraftRecord } from "../content/types.ts";
+import type { BusinessActionLogRecord, DailyCommandReport } from "../business-os/types.ts";
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
 import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
@@ -289,6 +290,56 @@ export class PostgresRepository implements SupplierOpsRepository {
   async recentCampaignDrafts(limit = 50): Promise<CampaignDraftRecord[]> {
     const result = await this.#pool.query(`select payload from campaign_drafts order by updated_at desc limit $1`, [limit]);
     return result.rows.map((row: any) => row.payload as CampaignDraftRecord);
+  }
+
+  async recordBusinessActionLog(record: BusinessActionLogRecord): Promise<void> {
+    await this.#pool.query(
+      `insert into business_action_logs
+       (id, agent_name, approval_status, input_data, recommendation, execution_result, rollback_information, created_at)
+       values ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7, $8)`,
+      [
+        record.id,
+        record.agent_name,
+        record.approval_status,
+        JSON.stringify(record.input_data),
+        JSON.stringify(record.recommendation),
+        record.execution_result,
+        record.rollback_information,
+        record.timestamp,
+      ],
+    );
+  }
+
+  async recentBusinessActionLogs(limit = 50): Promise<BusinessActionLogRecord[]> {
+    const result = await this.#pool.query(
+      `select id, agent_name, approval_status, input_data, recommendation, execution_result, rollback_information, created_at
+       from business_action_logs order by created_at desc limit $1`,
+      [limit],
+    );
+    return result.rows.map((row: any) => ({
+      id: row.id,
+      timestamp: row.created_at.toISOString(),
+      agent_name: row.agent_name,
+      input_data: row.input_data,
+      recommendation: row.recommendation,
+      approval_status: row.approval_status,
+      execution_result: row.execution_result,
+      rollback_information: row.rollback_information,
+    }));
+  }
+
+  async recordDailyCommandReport(report: DailyCommandReport): Promise<void> {
+    await this.#pool.query(
+      `insert into daily_command_reports (id, payload, created_at)
+       values ($1, $2::jsonb, $3)
+       on conflict (id) do update set payload = excluded.payload`,
+      [report.id, JSON.stringify(report), report.created_at],
+    );
+  }
+
+  async recentDailyCommandReports(limit = 20): Promise<DailyCommandReport[]> {
+    const result = await this.#pool.query(`select payload from daily_command_reports order by created_at desc limit $1`, [limit]);
+    return result.rows.map((row: any) => row.payload as DailyCommandReport);
   }
 }
 

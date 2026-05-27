@@ -431,3 +431,88 @@ test("supplier page explains how to use supplier coverage instead of only showin
   assert.match(html, /Open Shopify products/);
   assert.match(html, /Start with dry-run sync/);
 });
+
+test("admin UI renders the Business Operating Agent command center", () => {
+  const html = renderAdminPage({
+    activePath: "/command",
+    suppliers: [],
+    runs: [],
+    changes: [],
+    issues: [],
+    productOpsOutputs: [],
+    marketRadarOutputs: [],
+    revenuePlays: [],
+    sourceConnections: [],
+    blogDrafts: [],
+    campaignDrafts: [],
+    alerts: [],
+    shopifyApiKey: "test-api-key",
+    applyChangesEnabled: false,
+    aiProvider: "mock",
+    autonomyMode: "approval",
+    dailyCommandReports: [
+      {
+        id: "daily_command_1",
+        created_at: "2026-05-26T12:00:00.000Z",
+        chief_of_staff: {
+          summary: "Review promotion and inventory work before Shopify changes.",
+          risk_level: "medium",
+          recommended_actions: [],
+          requires_approval: true,
+          safe_to_auto_execute: false,
+          reasoning_summary: "Mock mode combines operational signals into review-first work.",
+          rollback_plan: "Reject or roll back drafted actions before execution.",
+        },
+        sub_agents: {},
+        inventory_risks: [],
+        products_to_promote: [],
+        products_to_remove_from_promotion: [],
+        homepage_recommendations: [],
+        email_campaign_ideas: [],
+        seo_product_cleanup_tasks: [],
+        urgent_issues: [],
+        actions_requiring_owner_approval: [],
+      },
+    ],
+    businessActionLogs: [
+      {
+        id: "action_log_1",
+        timestamp: "2026-05-26T12:00:00.000Z",
+        agent_name: "Marketing Agent",
+        input_data: { source: "test" },
+        recommendation: {
+          id: "action_1",
+          type: "WRITE",
+          title: "Draft a Shopify Email campaign",
+          reason: "Promote stocked products after owner review.",
+          agent_name: "Marketing Agent",
+          approval_status: "suggested",
+          risk_level: "medium",
+          requires_approval: true,
+          safe_to_auto_execute: false,
+          rollback_plan: "Discard the draft.",
+        },
+        approval_status: "suggested",
+        execution_result: null,
+        rollback_information: "Discard the draft.",
+      },
+    ],
+  });
+
+  for (const label of [
+    "Business OS",
+    "Daily Command Center",
+    "Pending Approvals",
+    "Agent Logs",
+    "Inventory Risks",
+    "Promo Recommendations",
+    "Draft Campaigns",
+    "Shopify Action Queue",
+    "Build daily command report",
+    "AI Provider",
+    "Autonomy Mode",
+    "Draft a Shopify Email campaign",
+  ]) {
+    assert.match(html, new RegExp(label));
+  }
+});

@@ -3,6 +3,7 @@ import { FLOW_EMAIL_TEMPLATES, templatePlainTextForFlow } from "../campaigns/flo
 import type { CampaignDraftRecord } from "../campaigns/types.ts";
 import { WELLNESS_BLOG_PROFILES } from "../content/blog-template-builder.ts";
 import type { BlogDraftRecord } from "../content/types.ts";
+import type { BusinessActionLogRecord, BusinessRecommendedAction, DailyCommandReport } from "../business-os/types.ts";
 import type { MarketRadarOutputRecord, RevenuePlayRecord, SourceConnectionCard } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsProductResult, ProductOpsTask } from "../product-ops/types.ts";
 import type { BlockedIssueRecord, AppliedChangeRecord, SyncRun } from "../storage/repository.ts";
@@ -26,10 +27,15 @@ export type AdminPageModel = {
   alerts: AlertMessage[];
   shopifyApiKey?: string;
   applyChangesEnabled: boolean;
+  aiProvider?: string;
+  autonomyMode?: string;
+  dailyCommandReports?: DailyCommandReport[];
+  businessActionLogs?: BusinessActionLogRecord[];
 };
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
+  { href: "/command", label: "Business OS" },
   { href: "/suppliers", label: "Suppliers" },
   { href: "/runs", label: "Runs" },
   { href: "/changes", label: "Change Ledger" },
@@ -88,6 +94,9 @@ function navLink(item: { href: string; label: string }, activePath: string): str
 }
 
 function renderContent(model: AdminPageModel): string {
+  if (model.activePath.startsWith("/command")) {
+    return renderBusinessCommandCenter(model);
+  }
   if (model.activePath.startsWith("/suppliers")) {
     return renderSuppliers(model.suppliers);
   }
@@ -107,6 +116,117 @@ function renderContent(model: AdminPageModel): string {
     return renderSettings(model.suppliers, model.applyChangesEnabled);
   }
   return renderDashboard(model);
+}
+
+function renderBusinessCommandCenter(model: AdminPageModel): string {
+  const reports = model.dailyCommandReports ?? [];
+  const latestReport = reports[0];
+  const logs = model.businessActionLogs ?? [];
+  const pendingApprovals = logs.filter((log) => log.approval_status === "suggested" || log.approval_status === "drafted");
+  const inventoryRisks = latestReport?.inventory_risks ?? [];
+  const promoRecommendations = latestReport?.products_to_promote ?? [];
+  const draftCampaigns = latestReport?.email_campaign_ideas ?? logs.map((log) => log.recommendation).filter((action) => action.type === "WRITE").slice(0, 8);
+  const queue = logs.slice(0, 12);
+
+  return `
+    <section class="business-hero">
+      <div>
+        <span class="eyebrow">Business OS</span>
+        <h2>Daily Command Center</h2>
+        <p>${escapeHtml(latestReport?.chief_of_staff.summary ?? "Build a daily command report to coordinate BI, inventory, merchandising, marketing, SEO, research, email, and operator work.")}</p>
+      </div>
+      <form method="post" action="/api/command/daily-report" data-run-form data-running-label="Building command report...">
+        <button type="submit">Build daily command report</button>
+      </form>
+    </section>
+    <section class="metrics health-metrics">
+      ${metric("Pending Approvals", pendingApprovals.length)}
+      ${metric("Inventory Risks", inventoryRisks.length)}
+      ${metric("Promo Recommendations", promoRecommendations.length)}
+      ${metric("Shopify Action Queue", queue.length)}
+    </section>
+    <section class="business-status-grid">
+      <article class="panel">
+        <h2>AI Provider</h2>
+        <p><strong>${escapeHtml(model.aiProvider ?? "mock")}</strong></p>
+        <p class="section-note">Mock mode returns structured decisions without paid API usage. OpenAI mode can be enabled later with an API key.</p>
+      </article>
+      <article class="panel">
+        <h2>Autonomy Mode</h2>
+        <p><strong>${escapeHtml(model.autonomyMode ?? "approval")}</strong></p>
+        <p class="section-note">Approval mode keeps price changes, emails, homepage changes, and Shopify updates in owner review.</p>
+      </article>
+      <article class="panel">
+        <h2>Urgent Issues</h2>
+        ${renderActionList(latestReport?.urgent_issues ?? [], "No urgent high-risk items in the latest report.")}
+      </article>
+    </section>
+    <div class="dashboard-grid">
+      <section class="panel">
+        <div class="panel-heading compact"><h2>Pending Approvals</h2><span>${pendingApprovals.length}</span></div>
+        ${renderActionLogList(pendingApprovals, "No approvals are waiting yet.")}
+      </section>
+      <section class="panel">
+        <div class="panel-heading compact"><h2>Agent Logs</h2><span>${logs.length}</span></div>
+        ${renderActionLogTable(logs)}
+      </section>
+    </div>
+    <section class="business-lanes">
+      ${businessLane("Inventory Risks", inventoryRisks, "Low-stock, out-of-stock, and unknown inventory items will appear here.")}
+      ${businessLane("Promo Recommendations", promoRecommendations, "Promotion candidates stay review-first until approved.")}
+      ${businessLane("Draft Campaigns", draftCampaigns, "Email and campaign ideas are drafts only; nothing sends automatically.")}
+      ${businessLane("Shopify Action Queue", queue.map((log) => log.recommendation), "The model recommends tool calls; the backend validates and executes only approved actions.")}
+    </section>`;
+}
+
+function businessLane(title: string, actions: BusinessRecommendedAction[], emptyText: string): string {
+  return `<section class="panel">
+    <div class="panel-heading compact"><h2>${escapeHtml(title)}</h2><span>${actions.length}</span></div>
+    ${renderActionList(actions, emptyText)}
+  </section>`;
+}
+
+function renderActionList(actions: BusinessRecommendedAction[], emptyText: string): string {
+  if (!actions.length) {
+    return `<p class="empty">${escapeHtml(emptyText)}</p>`;
+  }
+
+  return `<div class="action-queue">${actions
+    .map(
+      (action) => `<article class="action-item">
+        <span>${escapeHtml(action.agent_name)} / ${escapeHtml(action.type)} / ${escapeHtml(action.approval_status)}</span>
+        <strong>${escapeHtml(action.title)}</strong>
+        <small>${escapeHtml(action.reason)}</small>
+        ${action.guardrail_notes?.length ? `<small class="warning-text">${escapeHtml(action.guardrail_notes.join(" "))}</small>` : ""}
+      </article>`,
+    )
+    .join("")}</div>`;
+}
+
+function renderActionLogList(logs: BusinessActionLogRecord[], emptyText: string): string {
+  return renderActionList(logs.map((log) => log.recommendation), emptyText);
+}
+
+function renderActionLogTable(logs: BusinessActionLogRecord[]): string {
+  if (!logs.length) {
+    return `<p class="empty">No agent logs yet.</p>`;
+  }
+
+  return `<table>
+    <thead><tr><th>Time</th><th>Agent</th><th>Recommendation</th><th>Status</th><th>Rollback</th></tr></thead>
+    <tbody>${logs
+      .slice(0, 12)
+      .map(
+        (log) => `<tr>
+          <td>${escapeHtml(formatDate(log.timestamp))}</td>
+          <td>${escapeHtml(log.agent_name)}</td>
+          <td>${escapeHtml(log.recommendation.title)}</td>
+          <td><span class="status-pill">${escapeHtml(log.approval_status)}</span></td>
+          <td>${escapeHtml(log.rollback_information)}</td>
+        </tr>`,
+      )
+      .join("")}</tbody>
+  </table>`;
 }
 
 function renderDashboard(model: AdminPageModel): string {
@@ -990,7 +1110,21 @@ function metric(label: string, value: number): string {
   return `<article class="metric"><span>${escapeHtml(label)}</span><strong>${value}</strong></article>`;
 }
 
+function formatDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 function pageTitle(path: string): string {
+  if (path.startsWith("/command")) return "Business OS";
   if (path.startsWith("/suppliers")) return "Suppliers";
   if (path.startsWith("/runs")) return "Runs";
   if (path.startsWith("/changes")) return "Change Ledger";
@@ -1001,6 +1135,7 @@ function pageTitle(path: string): string {
 }
 
 function pageSubtitle(path: string): string {
+  if (path.startsWith("/command")) return "Daily command center, approvals, agent logs, and Shopify action queue.";
   if (path.startsWith("/suppliers")) return "Configured supplier adapters and coverage.";
   if (path.startsWith("/runs")) return "Weekly and manual sync history.";
   if (path.startsWith("/changes")) return "Dry-run planned changes and real Shopify writes.";
@@ -1056,6 +1191,13 @@ function styles(): string {
     .sync-status { min-height: 22px; color: var(--muted); font-size: 13px; flex-basis: 100%; }
     .sync-status.error { color: var(--error); }
     .eyebrow { color: var(--accent-strong); font-size: 12px; font-weight: 820; letter-spacing: 0; text-transform: uppercase; }
+    .business-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px; margin-bottom: 16px; border-radius: var(--radius); background: #0f1f1d; color: #f8fbfa; }
+    .business-hero .eyebrow { color: #b9f0dd; }
+    .business-hero h2 { margin: 4px 0 8px; font-size: 28px; line-height: 1.14; }
+    .business-hero p { color: #cfe0dc; max-width: 860px; }
+    .business-status-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+    .business-status-grid .panel { min-height: 164px; }
+    .business-lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
     .command-hub { display: grid; grid-template-columns: minmax(360px, 1.05fr) minmax(320px, 0.95fr); gap: 16px; align-items: stretch; margin-bottom: 16px; }
     .command-copy, .shopify-shortcuts, .agent-command-center, .supplier-guide { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
     .command-copy { background: #f8fbfa; border-color: #b9d7d1; display: grid; gap: 14px; }
@@ -1177,7 +1319,7 @@ function styles(): string {
     .alert.warning { border-color: #fedf89; color: var(--warning); background: #fffbeb; }
     .alert.info { background: #f5fbff; }
     @media (max-width: 1100px) {
-      .dashboard-grid, .command-hub, .agent-command-center, .supplier-guide { grid-template-columns: 1fr; }
+      .dashboard-grid, .command-hub, .agent-command-center, .supplier-guide, .business-status-grid, .business-lanes { grid-template-columns: 1fr; }
     }
     @media (max-width: 860px) {
       .main { padding: 18px; }

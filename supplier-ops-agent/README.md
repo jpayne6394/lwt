@@ -61,6 +61,43 @@ TRUTH_SOCIAL_APPROVED_ACCESS=false
 
 Blog Publisher uses saved wellness templates, not paid AI calls. It can create local article drafts and then create Shopify draft articles after approval. Campaign Planner creates Shopify Email handoff briefs; it does not send emails. Flow Launchpad stores setup ideas, links into the Shopify Flow app, and includes copy-ready professional email templates for Flow-triggered customer and internal operations emails. It does not auto-edit workflows.
 
+## Business Operating Agent
+
+The Business OS page adds a Chief of Staff Agent that coordinates modular sub-agents in mock mode now and OpenAI mode later. It is not a chatbot: every agent returns structured JSON, recommendations are logged, and Shopify tools stay behind approval.
+
+Environment defaults are free-first:
+
+```bash
+AI_PROVIDER=mock
+OPENAI_API_KEY=
+AUTONOMY_MODE=approval
+```
+
+Sub-agents:
+
+- Inventory Agent
+- Merchandising Agent
+- Marketing Agent
+- SEO/Product Cleanup Agent
+- Research Agent
+- Customer/Email Agent
+- Operator Agent
+
+The Chief of Staff creates a daily command report with inventory risks, products to promote, products to remove from promotion, homepage recommendations, email campaign ideas, SEO/product cleanup tasks, urgent issues, and actions requiring owner approval.
+
+Approval statuses are `suggested`, `drafted`, `approved`, `rejected`, `executed`, `failed`, and `rolled_back`. Action logs store timestamp, agent name, input data, recommendation, approval status, execution result, and rollback information.
+
+Guardrails keep the app safe by default:
+
+- No unsupported medical claims.
+- No price changes without approval.
+- No product deletion.
+- No overwriting Shopify CSV/product data without backup.
+- No customer email sent without approval.
+- No homepage changes without approval while `AUTONOMY_MODE=approval`.
+
+Shopify wrappers can read products, read collections, read product inventory/status, draft product updates, draft homepage promotion changes, and validate approved product updates. The model never touches Shopify directly; it recommends tool calls, and the backend validates/logs them before anything can execute.
+
 ## Run locally
 
 This workspace did not have `npm` on PATH, so the included scripts use Node's built-in TypeScript stripping in Node 22+.

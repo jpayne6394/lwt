@@ -30,3 +30,11 @@ test("loadConfig defaults Shopify writes off unless APPLY_CHANGES is explicitly 
   assert.equal(loadConfig({ APPLY_CHANGES: "false" }).applyChanges, false);
   assert.equal(loadConfig({ APPLY_CHANGES: "true" }).applyChanges, true);
 });
+
+test("loadConfig exposes free-first AI provider and approval autonomy settings", () => {
+  assert.equal(loadConfig({}).aiProvider, "mock");
+  assert.equal(loadConfig({}).autonomyMode, "approval");
+  assert.equal(loadConfig({ OPENAI_API_KEY: "sk-test" }).openaiApiKey, "sk-test");
+  assert.equal(loadConfig({ AI_PROVIDER: "openai", AUTONOMY_MODE: "supervised" }).aiProvider, "openai");
+  assert.equal(loadConfig({ AI_PROVIDER: "openai", AUTONOMY_MODE: "supervised" }).autonomyMode, "supervised");
+});

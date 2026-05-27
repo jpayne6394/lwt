@@ -9,6 +9,7 @@ import type {
 } from "./repository.ts";
 import type { CampaignDraftRecord } from "../campaigns/types.ts";
 import type { BlogDraftRecord } from "../content/types.ts";
+import type { BusinessActionLogRecord, DailyCommandReport } from "../business-os/types.ts";
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
 import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
@@ -30,6 +31,8 @@ export class MemoryRepository implements SupplierOpsRepository {
   readonly #revenuePlays: RevenuePlayRecord[] = [];
   readonly #blogDrafts: BlogDraftRecord[] = [];
   readonly #campaignDrafts: CampaignDraftRecord[] = [];
+  readonly #businessActionLogs: BusinessActionLogRecord[] = [];
+  readonly #dailyCommandReports: DailyCommandReport[] = [];
 
   constructor(seed: MemoryRepositorySeed = {}) {
     this.#shopifyVariants = seed.shopifyVariants ?? [];
@@ -184,6 +187,22 @@ export class MemoryRepository implements SupplierOpsRepository {
     return this.#campaignDrafts.slice(0, limit);
   }
 
+  async recordBusinessActionLog(record: BusinessActionLogRecord): Promise<void> {
+    this.#businessActionLogs.unshift(record);
+  }
+
+  async recentBusinessActionLogs(limit = 50): Promise<BusinessActionLogRecord[]> {
+    return this.#businessActionLogs.slice(0, limit);
+  }
+
+  async recordDailyCommandReport(report: DailyCommandReport): Promise<void> {
+    this.#dailyCommandReports.unshift(report);
+  }
+
+  async recentDailyCommandReports(limit = 20): Promise<DailyCommandReport[]> {
+    return this.#dailyCommandReports.slice(0, limit);
+  }
+
   async recentRuns(limit = 20): Promise<SyncRun[]> {
     return this.#runs.slice(0, limit);
   }
@@ -222,6 +241,14 @@ export class MemoryRepository implements SupplierOpsRepository {
 
   listRevenuePlays(): RevenuePlayRecord[] {
     return [...this.#revenuePlays];
+  }
+
+  listBusinessActionLogs(): BusinessActionLogRecord[] {
+    return [...this.#businessActionLogs];
+  }
+
+  listDailyCommandReports(): DailyCommandReport[] {
+    return [...this.#dailyCommandReports];
   }
 }
 

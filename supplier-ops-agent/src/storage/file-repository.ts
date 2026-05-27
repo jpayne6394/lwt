@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 
 import type { CampaignDraftRecord } from "../campaigns/types.ts";
 import type { BlogDraftRecord } from "../content/types.ts";
+import type { BusinessActionLogRecord, DailyCommandReport } from "../business-os/types.ts";
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant } from "../domain/types.ts";
 import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
@@ -28,6 +29,8 @@ type FileRepositoryState = {
   revenuePlays: RevenuePlayRecord[];
   blogDrafts: BlogDraftRecord[];
   campaignDrafts: CampaignDraftRecord[];
+  businessActionLogs: BusinessActionLogRecord[];
+  dailyCommandReports: DailyCommandReport[];
 };
 
 const EMPTY_STATE: FileRepositoryState = {
@@ -42,6 +45,8 @@ const EMPTY_STATE: FileRepositoryState = {
   revenuePlays: [],
   blogDrafts: [],
   campaignDrafts: [],
+  businessActionLogs: [],
+  dailyCommandReports: [],
 };
 
 const MAX_RUNS = 50;
@@ -52,6 +57,8 @@ const MAX_PRODUCT_OPS_OUTPUTS = 20;
 const MAX_MARKET_RADAR_OUTPUTS = 20;
 const MAX_REVENUE_PLAYS = 200;
 const MAX_CONTENT_DRAFTS = 100;
+const MAX_BUSINESS_ACTION_LOGS = 500;
+const MAX_DAILY_COMMAND_REPORTS = 30;
 
 export class FileRepository implements SupplierOpsRepository {
   readonly #filePath: string;
@@ -259,6 +266,26 @@ export class FileRepository implements SupplierOpsRepository {
     return this.#state.campaignDrafts.slice(0, limit);
   }
 
+  async recordBusinessActionLog(record: BusinessActionLogRecord): Promise<void> {
+    this.#state.businessActionLogs.unshift(record);
+    this.#state.businessActionLogs = this.#state.businessActionLogs.slice(0, MAX_BUSINESS_ACTION_LOGS);
+    await this.#persist();
+  }
+
+  async recentBusinessActionLogs(limit = 50): Promise<BusinessActionLogRecord[]> {
+    return this.#state.businessActionLogs.slice(0, limit);
+  }
+
+  async recordDailyCommandReport(report: DailyCommandReport): Promise<void> {
+    this.#state.dailyCommandReports.unshift(report);
+    this.#state.dailyCommandReports = this.#state.dailyCommandReports.slice(0, MAX_DAILY_COMMAND_REPORTS);
+    await this.#persist();
+  }
+
+  async recentDailyCommandReports(limit = 20): Promise<DailyCommandReport[]> {
+    return this.#state.dailyCommandReports.slice(0, limit);
+  }
+
   async #persist(): Promise<void> {
     const state = JSON.stringify(
       {
@@ -309,6 +336,8 @@ async function readState(filePath: string): Promise<FileRepositoryState> {
       revenuePlays: Array.isArray(parsed.revenuePlays) ? parsed.revenuePlays : [],
       blogDrafts: Array.isArray(parsed.blogDrafts) ? parsed.blogDrafts : [],
       campaignDrafts: Array.isArray(parsed.campaignDrafts) ? parsed.campaignDrafts : [],
+      businessActionLogs: Array.isArray(parsed.businessActionLogs) ? parsed.businessActionLogs : [],
+      dailyCommandReports: Array.isArray(parsed.dailyCommandReports) ? parsed.dailyCommandReports : [],
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") {

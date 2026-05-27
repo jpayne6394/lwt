@@ -130,6 +130,26 @@ create table if not exists campaign_drafts (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists business_action_logs (
+  id text primary key,
+  agent_name text not null,
+  approval_status text not null,
+  input_data jsonb not null default '{}'::jsonb,
+  recommendation jsonb not null,
+  execution_result text,
+  rollback_information text not null default '',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists business_action_logs_agent_idx on business_action_logs (agent_name);
+create index if not exists business_action_logs_approval_idx on business_action_logs (approval_status);
+
+create table if not exists daily_command_reports (
+  id text primary key,
+  payload jsonb not null,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists alert_history (
   id text primary key,
   severity text not null,

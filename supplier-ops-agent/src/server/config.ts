@@ -1,6 +1,9 @@
 export type RuntimeConfig = {
   port: number;
   host: string;
+  aiProvider: "mock" | "openai";
+  openaiApiKey?: string;
+  autonomyMode: "approval" | "supervised" | "autonomous";
   databaseUrl?: string;
   storagePath: string;
   shopifyApiKey?: string;
@@ -32,6 +35,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
   return {
     port: Number(env.PORT ?? 8080),
     host: env.HOST ?? "0.0.0.0",
+    aiProvider: parseAiProvider(env.AI_PROVIDER),
+    openaiApiKey: env.OPENAI_API_KEY,
+    autonomyMode: parseAutonomyMode(env.AUTONOMY_MODE),
     databaseUrl: env.DATABASE_URL,
     storagePath:
       env.SUPPLIER_OPS_DATA_PATH ??
@@ -54,6 +60,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
       truthSocial: Boolean(env.TRUTH_SOCIAL_APPROVED_ACCESS === "true"),
     },
   };
+}
+
+function parseAiProvider(value: string | undefined): RuntimeConfig["aiProvider"] {
+  return value === "openai" ? "openai" : "mock";
+}
+
+function parseAutonomyMode(value: string | undefined): RuntimeConfig["autonomyMode"] {
+  if (value === "supervised" || value === "autonomous") {
+    return value;
+  }
+  return "approval";
 }
 
 function parseList(value: string | undefined): string[] {

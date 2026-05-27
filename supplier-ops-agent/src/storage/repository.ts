@@ -3,6 +3,7 @@ import type { CampaignDraftRecord } from "../campaigns/types.ts";
 import type { BlogDraftRecord } from "../content/types.ts";
 import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
+import type { BusinessActionLogRecord, DailyCommandReport } from "../business-os/types.ts";
 
 export type SyncRunStatus = "running" | "completed" | "completed_with_issues" | "failed";
 
@@ -66,6 +67,10 @@ export type SupplierOpsRepository = {
   recentBlogDrafts?(limit?: number): Promise<BlogDraftRecord[]>;
   recordCampaignDraft?(draft: CampaignDraftRecord): Promise<void>;
   recentCampaignDrafts?(limit?: number): Promise<CampaignDraftRecord[]>;
+  recordBusinessActionLog?(record: BusinessActionLogRecord): Promise<void>;
+  recentBusinessActionLogs?(limit?: number): Promise<BusinessActionLogRecord[]>;
+  recordDailyCommandReport?(report: DailyCommandReport): Promise<void>;
+  recentDailyCommandReports?(limit?: number): Promise<DailyCommandReport[]>;
   recentRuns(limit?: number): Promise<SyncRun[]>;
   recentChanges(limit?: number): Promise<AppliedChangeRecord[]>;
   recentIssues(limit?: number): Promise<BlockedIssueRecord[]>;

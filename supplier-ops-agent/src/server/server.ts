@@ -4,6 +4,7 @@ import { URL } from "node:url";
 import type { AlertService } from "../alerts/alert-service.ts";
 import type { BuildCampaignDraftInput, CampaignDraftRecord } from "../campaigns/types.ts";
 import type { BuildBlogDraftInput, BlogDraftRecord } from "../content/types.ts";
+import type { DailyCommandReport } from "../business-os/types.ts";
 import type { MarketRadarRunOutput, SourceConnectionCard } from "../market-radar/types.ts";
 import type { SupplierOpsRepository } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
@@ -21,8 +22,11 @@ export type ServerContext = {
   createBlogDraft?: (input: BuildBlogDraftInput) => Promise<BlogDraftRecord>;
   createCampaignDraft?: (input: BuildCampaignDraftInput) => Promise<CampaignDraftRecord>;
   createShopifyDraftArticle?: (draftId: string) => Promise<{ id: string; handle: string; title: string }>;
+  buildDailyCommandReport?: () => Promise<DailyCommandReport>;
   shopifyApiKey?: string;
   applyChangesEnabled: boolean;
+  aiProvider?: string;
+  autonomyMode?: string;
 };
 
 export type StartServerOptions = {
@@ -58,6 +62,26 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
       sendJson(response, 202, { ok: true, output, redirect: "/?agent=bi" });
     } catch (error) {
       sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Market Radar failed" });
+    }
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/command/daily-report") {
+    if (!context.buildDailyCommandReport) {
+      sendJson(response, 501, { ok: false, error: "Business Operating Agent is not configured" });
+      return;
+    }
+
+    try {
+      const report = await context.buildDailyCommandReport();
+      if (wantsJson(request)) {
+        sendJson(response, 201, { ok: true, report, redirect: "/command" });
+      } else {
+        response.writeHead(303, { Location: "/command" });
+        response.end();
+      }
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Command report failed" });
     }
     return;
   }
@@ -167,13 +191,24 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     return;
   }
 
-  const allowedPaths = new Set(["/", "/suppliers", "/runs", "/changes", "/issues", "/sources", "/settings"]);
+  const allowedPaths = new Set(["/", "/command", "/suppliers", "/runs", "/changes", "/issues", "/sources", "/settings"]);
   if (!allowedPaths.has(url.pathname)) {
     sendText(response, 404, "Not found");
     return;
   }
 
-  const [runs, changes, issues, productOpsOutputs, marketRadarOutputs, revenuePlays, blogDrafts, campaignDrafts] = await Promise.all([
+  const [
+    runs,
+    changes,
+    issues,
+    productOpsOutputs,
+    marketRadarOutputs,
+    revenuePlays,
+    blogDrafts,
+    campaignDrafts,
+    dailyCommandReports,
+    businessActionLogs,
+  ] = await Promise.all([
     context.repository.recentRuns(30),
     context.repository.recentChanges(100),
     context.repository.recentIssues(100),
@@ -182,6 +217,8 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     context.repository.recentRevenuePlays?.(100) ?? Promise.resolve([]),
     context.repository.recentBlogDrafts?.(50) ?? Promise.resolve([]),
     context.repository.recentCampaignDrafts?.(50) ?? Promise.resolve([]),
+    context.repository.recentDailyCommandReports?.(10) ?? Promise.resolve([]),
+    context.repository.recentBusinessActionLogs?.(100) ?? Promise.resolve([]),
   ]);
 
   const html = renderAdminPage({
@@ -200,6 +237,10 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     alerts: context.alerts.list(),
     shopifyApiKey: context.shopifyApiKey,
     applyChangesEnabled: context.applyChangesEnabled,
+    aiProvider: context.aiProvider,
+    autonomyMode: context.autonomyMode,
+    dailyCommandReports,
+    businessActionLogs,
   });
 
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
