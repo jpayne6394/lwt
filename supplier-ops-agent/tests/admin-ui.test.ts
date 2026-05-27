@@ -72,7 +72,7 @@ test("admin UI renders the required Shopify app sections and run-now control", (
     applyChangesEnabled: false,
   });
 
-  for (const label of ["Dashboard", "Suppliers", "Runs", "Change Ledger", "Match Issues", "Settings"]) {
+  for (const label of ["Command Center", "Suppliers", "Runs", "Change Ledger", "Match Issues", "Settings"]) {
     assert.match(html, new RegExp(label));
   }
 
@@ -80,13 +80,11 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /Run write sync/);
   assert.match(html, /action="\/api\/runs\?dryRun=true"/);
   assert.match(html, /id="sync-status"/);
-  assert.match(html, /Product Ops/);
-  assert.match(html, /Promote Ready/);
+  assert.match(html, /Promote next/);
   assert.match(html, /<strong>5<\/strong>/);
-  assert.match(html, /Review Required/);
+  assert.match(html, /Needs approval/);
   assert.match(html, /<strong>2<\/strong>/);
-  assert.match(html, /<dt>Changes<\/dt><dd>206<\/dd>/);
-  assert.match(html, /Latest Issues/);
+  assert.match(html, /Latest issues/);
   assert.match(html, /<strong>98<\/strong>/);
   assert.match(html, /data-run-form/);
   assert.match(html, /fetch\(form.action/);
@@ -94,27 +92,21 @@ test("admin UI renders the required Shopify app sections and run-now control", (
   assert.match(html, /<meta name="shopify-api-key" content="test-api-key">/);
   assert.match(html, /class="app-tabs"/);
   assert.doesNotMatch(html, /class="sidebar"/);
-  assert.match(html, /Start Here/);
-  assert.match(html, /Run the safe check/);
-  assert.match(html, /Choose an agent/);
-  assert.match(html, /Review drafts and handoffs/);
+  assert.match(html, /Today&#39;s cockpit/);
+  assert.match(html, /Refresh today&#39;s plan/);
+  assert.match(html, /Start here/);
+  assert.match(html, /Today&#39;s Plan/);
   assert.match(html, /Shopify shortcuts/);
   assert.match(html, /Open Products/);
   assert.match(html, /Open Orders/);
-  assert.match(html, /Open Blog/);
   assert.match(html, /Open Marketing/);
   assert.match(html, /Open Flow/);
   assert.match(html, /data-shopify-admin-link/);
   assert.match(html, /data-shopify-path="\/products"/);
-  assert.match(html, /Agent task launcher/);
-  assert.match(html, /Safe supplier sync/);
-  assert.match(html, /Refresh BI radar/);
-  assert.match(html, /Review Product Ops/);
-  assert.match(html, /Open Blog Publisher/);
-  assert.match(html, /Create campaign brief/);
-  assert.match(html, /Open Flow templates/);
-  assert.match(html, /action="\/api\/market-radar"/);
-  assert.match(html, /action="\/api\/campaign-drafts"/);
+  assert.match(html, /Mock mode: review only/);
+  assert.doesNotMatch(html, /Agent task launcher/);
+  assert.doesNotMatch(html, /AI Provider/);
+  assert.doesNotMatch(html, /Autonomy Mode/);
 });
 
 test("admin UI shows supplier and Shopify context for blocked issues", () => {
@@ -177,10 +169,9 @@ test("admin UI shows supplier and Shopify context for blocked issues", () => {
   assert.match(html, /matchConfidence/);
 });
 
-test("dashboard renders a command center with sub-agent selection and prioritized actions", () => {
+test("dashboard renders a simple daily business cockpit with prioritized next steps", () => {
   const html = renderAdminPage({
     activePath: "/",
-    activeAgent: "product_ops",
     suppliers: [
       {
         id: "emerson-ecologics",
@@ -325,27 +316,47 @@ test("dashboard renders a command center with sub-agent selection and prioritize
     revenuePlays: [],
     sourceConnections: [],
     blogDrafts: [],
-    campaignDrafts: [],
+    campaignDrafts: [
+      {
+        id: "campaign_1",
+        title: "Sleep support email brief",
+        status: "DRAFT_READY",
+        revenuePlayId: "play_1",
+        subjectLines: ["Build a calmer nighttime routine"],
+        previewText: "A review-first email brief for stocked sleep support products.",
+        bodyText: "Draft only.",
+        productTitles: ["Magnesium Glycinate"],
+        segmentIdea: "Customers interested in sleep support.",
+        shopifyEmailAdminPath: "/marketing",
+        createdAt: "2026-05-25T18:00:00.000Z",
+        updatedAt: "2026-05-25T18:00:00.000Z",
+      },
+    ],
     alerts: [],
     shopifyApiKey: "test-api-key",
     applyChangesEnabled: false,
+    aiProvider: "mock",
+    autonomyMode: "approval",
   });
 
-  for (const label of ["Store Health", "BI Analyst", "Inventory Ops", "Product Ops", "Campaign Planner", "Blog Publisher"]) {
+  for (const label of ["Today&#39;s cockpit", "Start here", "Today&#39;s Plan", "Revenue Moves", "Stock Watch", "Recent Activity"]) {
     assert.match(html, new RegExp(label));
   }
 
-  assert.match(html, /Agent command center/);
-  assert.match(html, /What this agent does/);
-  assert.match(html, /Run from here/);
-  assert.match(html, /Shopify handoff/);
-  assert.match(html, /Action Queue/);
-  assert.match(html, /Market Radar/);
-  assert.match(html, /Revenue Plays/);
+  assert.match(html, /Mock mode: review only/);
+  assert.match(html, /Needs approval/);
+  assert.match(html, /Promote next/);
+  assert.match(html, /Drafts ready/);
   assert.match(html, /Write a magnesium sleep guide/);
-  assert.match(html, /Review uncertain matches/);
-  assert.match(html, /68|172|84/);
-  assert.match(html, /Product Ops is selected/);
+  assert.match(html, /Sleep support email brief/);
+  assert.match(html, /Open Products/);
+  assert.match(html, /Open Marketing/);
+  assert.match(html, /Open Flow/);
+  assert.doesNotMatch(html, /Agent command center/);
+  assert.doesNotMatch(html, /What this agent does/);
+  assert.doesNotMatch(html, /Agent Logs/);
+  assert.doesNotMatch(html, /AI Provider/);
+  assert.doesNotMatch(html, /Autonomy Mode/);
 });
 
 test("admin UI renders blog, campaign, flow, and source workbench controls", () => {
@@ -432,7 +443,7 @@ test("supplier page explains how to use supplier coverage instead of only showin
   assert.match(html, /Start with dry-run sync/);
 });
 
-test("admin UI renders the Business Operating Agent command center", () => {
+test("admin UI renders the mock-mode cockpit without developer labels", () => {
   const html = renderAdminPage({
     activePath: "/command",
     suppliers: [],
@@ -500,19 +511,23 @@ test("admin UI renders the Business Operating Agent command center", () => {
   });
 
   for (const label of [
-    "Business OS",
-    "Daily Command Center",
+    "Today&#39;s cockpit",
+    "Mock mode: review only",
+    "Start here",
     "Pending Approvals",
-    "Agent Logs",
-    "Inventory Risks",
-    "Promo Recommendations",
-    "Draft Campaigns",
+    "Recent Activity",
+    "Stock Watch",
+    "Revenue Moves",
     "Shopify Action Queue",
-    "Build daily command report",
-    "AI Provider",
-    "Autonomy Mode",
+    "Refresh today&#39;s plan",
     "Draft a Shopify Email campaign",
   ]) {
     assert.match(html, new RegExp(label));
   }
+
+  assert.doesNotMatch(html, /AI Provider/);
+  assert.doesNotMatch(html, /Autonomy Mode/);
+  assert.doesNotMatch(html, /Chief of Staff/);
+  assert.doesNotMatch(html, /Agent Logs/);
+  assert.doesNotMatch(html, /tool calls/);
 });

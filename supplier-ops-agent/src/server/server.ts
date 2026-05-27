@@ -263,11 +263,11 @@ function wantsJson(request: IncomingMessage): boolean {
   return accept.includes("application/json") || requestedWith === "supplier-ops-fetch";
 }
 
-function parseActiveAgent(value: string | null): ActiveAgent {
+function parseActiveAgent(value: string | null): ActiveAgent | undefined {
   if (value === "bi" || value === "inventory" || value === "product_ops" || value === "campaign" || value === "blog" || value === "flow") {
     return value;
   }
-  return "product_ops";
+  return undefined;
 }
 
 async function readBody(request: IncomingMessage): Promise<Record<string, unknown>> {

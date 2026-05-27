@@ -34,8 +34,7 @@ export type AdminPageModel = {
 };
 
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/command", label: "Business OS" },
+  { href: "/", label: "Command Center" },
   { href: "/suppliers", label: "Suppliers" },
   { href: "/runs", label: "Runs" },
   { href: "/changes", label: "Change Ledger" },
@@ -45,6 +44,7 @@ const NAV_ITEMS = [
 ];
 
 export function renderAdminPage(model: AdminPageModel): string {
+  const showWorkbenchChrome = !isDailyCockpit(model);
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -78,8 +78,7 @@ export function renderAdminPage(model: AdminPageModel): string {
           <div id="sync-status" class="sync-status" role="status" aria-live="polite"></div>
         </header>
         <nav class="app-tabs" aria-label="Supplier Ops sections">${NAV_ITEMS.map((item) => navLink(item, model.activePath)).join("")}</nav>
-        ${renderCommandHub(model)}
-        ${renderShopifyShortcutPanel()}
+        ${showWorkbenchChrome ? `${renderCommandHub(model)}${renderShopifyShortcutPanel()}` : ""}
         ${renderContent(model)}
       </main>
     </div>
@@ -88,13 +87,17 @@ export function renderAdminPage(model: AdminPageModel): string {
 </html>`;
 }
 
+function isDailyCockpit(model: Pick<AdminPageModel, "activePath" | "activeAgent">): boolean {
+  return model.activePath.startsWith("/command") || (model.activePath === "/" && !model.activeAgent);
+}
+
 function navLink(item: { href: string; label: string }, activePath: string): string {
   const active = item.href === activePath || (item.href !== "/" && activePath.startsWith(item.href));
   return `<a class="${active ? "active" : ""}" href="${item.href}">${escapeHtml(item.label)}</a>`;
 }
 
 function renderContent(model: AdminPageModel): string {
-  if (model.activePath.startsWith("/command")) {
+  if (isDailyCockpit(model)) {
     return renderBusinessCommandCenter(model);
   }
   if (model.activePath.startsWith("/suppliers")) {
@@ -121,69 +124,226 @@ function renderContent(model: AdminPageModel): string {
 function renderBusinessCommandCenter(model: AdminPageModel): string {
   const reports = model.dailyCommandReports ?? [];
   const latestReport = reports[0];
+  const latestRun = model.runs[0];
+  const latestProductOps = model.productOpsOutputs[0];
+  const latestRadar = model.marketRadarOutputs[0];
   const logs = model.businessActionLogs ?? [];
-  const pendingApprovals = logs.filter((log) => log.approval_status === "suggested" || log.approval_status === "drafted");
-  const inventoryRisks = latestReport?.inventory_risks ?? [];
-  const promoRecommendations = latestReport?.products_to_promote ?? [];
-  const draftCampaigns = latestReport?.email_campaign_ideas ?? logs.map((log) => log.recommendation).filter((action) => action.type === "WRITE").slice(0, 8);
-  const queue = logs.slice(0, 12);
+  const pendingApprovalActions =
+    latestReport?.actions_requiring_owner_approval ??
+    logs
+      .filter((log) => log.approval_status === "suggested" || log.approval_status === "drafted")
+      .map((log) => log.recommendation);
+  const inventoryRisks = latestReport?.inventory_risks ?? productOpsInventoryItems(latestProductOps);
+  const promoRecommendations = latestReport?.products_to_promote ?? radarRevenueItems(latestRadar, model.revenuePlays);
+  const removeFromPromo = latestReport?.products_to_remove_from_promotion ?? [];
+  const draftCampaignActions = latestReport?.email_campaign_ideas ?? logs.map((log) => log.recommendation).filter((action) => action.type === "WRITE").slice(0, 5);
+  const campaignItems = model.campaignDrafts.slice(0, 4).map(campaignToCockpitItem);
+  const queue = logs.slice(0, 12).map((log) => log.recommendation);
+  const urgentIssues = latestReport?.urgent_issues ?? issueCockpitItems(model.issues, latestRun);
+  const planItems = [
+    ...urgentIssues,
+    ...pendingApprovalActions,
+    ...inventoryRisks,
+    ...promoRecommendations,
+    ...draftCampaignActions,
+  ].slice(0, 6);
+  const needsApprovalCount = pendingApprovalActions.length || latestProductOps?.summary.reviewRequired || 0;
+  const inventoryRiskCount =
+    inventoryRisks.length || (latestProductOps ? latestProductOps.summary.lowStock + latestProductOps.summary.outOfStock : 0);
+  const promoteCount = promoRecommendations.length || latestProductOps?.summary.promoteReady || latestRadar?.summary.highConfidencePlays || 0;
+  const latestIssueCount = latestRun?.issueCount ?? model.issues.length;
+  const draftsReadyCount = campaignItems.length + model.blogDrafts.length + draftCampaignActions.length;
+  const safetyMode = model.aiProvider === "openai" ? "AI-assisted: approval still required" : "Mock mode: review only";
 
   return `
-    <section class="business-hero">
+    <section class="cockpit-hero">
       <div>
-        <span class="eyebrow">Business OS</span>
-        <h2>Daily Command Center</h2>
-        <p>${escapeHtml(latestReport?.chief_of_staff.summary ?? "Build a daily command report to coordinate BI, inventory, merchandising, marketing, SEO, research, email, and operator work.")}</p>
+        <h2>Today&#39;s cockpit</h2>
+        <p>${escapeHtml(latestReport?.chief_of_staff.summary ?? "A simple daily plan for what to review, promote, draft, and fix. Nothing changes in Shopify from mock mode.")}</p>
+        <div class="cockpit-status-row">
+          <span>${escapeHtml(safetyMode)}</span>
+          <span>${model.applyChangesEnabled ? "Write requests still need approval" : "No Shopify writes from this view"}</span>
+        </div>
       </div>
       <form method="post" action="/api/command/daily-report" data-run-form data-running-label="Building command report...">
-        <button type="submit">Build daily command report</button>
+        <button type="submit">Refresh today&#39;s plan</button>
       </form>
     </section>
-    <section class="metrics health-metrics">
-      ${metric("Pending Approvals", pendingApprovals.length)}
-      ${metric("Inventory Risks", inventoryRisks.length)}
-      ${metric("Promo Recommendations", promoRecommendations.length)}
-      ${metric("Shopify Action Queue", queue.length)}
+    <section class="metrics cockpit-metrics">
+      ${metric("Needs approval", needsApprovalCount)}
+      ${metric("Stock watch", inventoryRiskCount)}
+      ${metric("Promote next", promoteCount)}
+      ${metric("Latest issues", latestIssueCount)}
     </section>
-    <section class="business-status-grid">
-      <article class="panel">
-        <h2>AI Provider</h2>
-        <p><strong>${escapeHtml(model.aiProvider ?? "mock")}</strong></p>
-        <p class="section-note">Mock mode returns structured decisions without paid API usage. OpenAI mode can be enabled later with an API key.</p>
-      </article>
-      <article class="panel">
-        <h2>Autonomy Mode</h2>
-        <p><strong>${escapeHtml(model.autonomyMode ?? "approval")}</strong></p>
-        <p class="section-note">Approval mode keeps price changes, emails, homepage changes, and Shopify updates in owner review.</p>
-      </article>
-      <article class="panel">
-        <h2>Urgent Issues</h2>
-        ${renderActionList(latestReport?.urgent_issues ?? [], "No urgent high-risk items in the latest report.")}
-      </article>
+    <section class="cockpit-grid">
+      <section class="panel cockpit-start">
+        <div class="panel-heading compact"><h2>Start here</h2><span>${planItems.length}</span></div>
+        <p class="section-note">Work top to bottom. Approve only what you trust; everything here is a draft or review item.</p>
+        ${renderCockpitItems(planItems.map(actionToCockpitItem), "Refresh today's plan to build the first review list.")}
+      </section>
+      <section class="panel cockpit-safe">
+        <h2>Safe mode</h2>
+        <p><strong>${escapeHtml(safetyMode)}</strong></p>
+        <p class="section-note">Use this page to decide. Product changes, price changes, customer emails, and homepage updates stay review-first.</p>
+        <div class="quick-counts">
+          <span><strong>${draftsReadyCount}</strong> Drafts ready</span>
+          <span><strong>${removeFromPromo.length}</strong> Pull back</span>
+          <span><strong>${queue.length}</strong> In queue</span>
+        </div>
+      </section>
     </section>
-    <div class="dashboard-grid">
-      <section class="panel">
-        <div class="panel-heading compact"><h2>Pending Approvals</h2><span>${pendingApprovals.length}</span></div>
-        ${renderActionLogList(pendingApprovals, "No approvals are waiting yet.")}
-      </section>
-      <section class="panel">
-        <div class="panel-heading compact"><h2>Agent Logs</h2><span>${logs.length}</span></div>
-        ${renderActionLogTable(logs)}
-      </section>
-    </div>
-    <section class="business-lanes">
-      ${businessLane("Inventory Risks", inventoryRisks, "Low-stock, out-of-stock, and unknown inventory items will appear here.")}
-      ${businessLane("Promo Recommendations", promoRecommendations, "Promotion candidates stay review-first until approved.")}
-      ${businessLane("Draft Campaigns", draftCampaigns, "Email and campaign ideas are drafts only; nothing sends automatically.")}
-      ${businessLane("Shopify Action Queue", queue.map((log) => log.recommendation), "The model recommends tool calls; the backend validates and executes only approved actions.")}
-    </section>`;
+    <section class="cockpit-lanes">
+      ${cockpitLane("Today's Plan", planItems.map(actionToCockpitItem), "Refresh today's plan to build the first review list.")}
+      ${cockpitLane("Revenue Moves", [...promoRecommendations.map(actionToCockpitItem), ...draftCampaignActions.map(actionToCockpitItem), ...campaignItems], "Promotion and campaign ideas will appear here after a report or radar refresh.")}
+      ${cockpitLane("Stock Watch", inventoryRisks.map(actionToCockpitItem), "No low-stock or out-of-stock focus items yet.")}
+      ${cockpitLane("Pending Approvals", pendingApprovalActions.map(actionToCockpitItem), "No approvals are waiting yet.")}
+      ${cockpitLane("Shopify Action Queue", queue.map(actionToCockpitItem), "Approved Shopify work will queue here before execution.")}
+      ${cockpitLane("Recent Activity", logs.map(logToCockpitItem), "No recent cockpit activity yet.")}
+    </section>
+    ${renderShopifyShortcutPanel()}`;
 }
 
-function businessLane(title: string, actions: BusinessRecommendedAction[], emptyText: string): string {
+type CockpitItem = {
+  title: string;
+  detail: string;
+  label: string;
+  status?: string;
+};
+
+function cockpitLane(title: string, items: CockpitItem[], emptyText: string): string {
   return `<section class="panel">
-    <div class="panel-heading compact"><h2>${escapeHtml(title)}</h2><span>${actions.length}</span></div>
-    ${renderActionList(actions, emptyText)}
+    <div class="panel-heading compact"><h2>${escapeHtml(title)}</h2><span>${items.length}</span></div>
+    ${renderCockpitItems(items, emptyText)}
   </section>`;
+}
+
+function renderCockpitItems(items: CockpitItem[], emptyText: string): string {
+  if (!items.length) {
+    return `<p class="empty">${escapeHtml(emptyText)}</p>`;
+  }
+
+  return `<div class="cockpit-list">${items
+    .map(
+      (item) => `<article class="cockpit-item">
+        <span>${escapeHtml(item.label)}${item.status ? ` / ${escapeHtml(item.status)}` : ""}</span>
+        <strong>${escapeHtml(item.title)}</strong>
+        <small>${escapeHtml(item.detail)}</small>
+      </article>`,
+    )
+    .join("")}</div>`;
+}
+
+function actionToCockpitItem(action: BusinessRecommendedAction): CockpitItem {
+  return {
+    title: action.title,
+    detail: action.reason,
+    label: friendlyArea(action.agent_name, action.type),
+    status: friendlyStatus(action.approval_status),
+  };
+}
+
+function campaignToCockpitItem(draft: CampaignDraftRecord): CockpitItem {
+  return {
+    title: draft.title,
+    detail: draft.previewText || draft.segmentIdea || "Draft campaign brief ready for review in Shopify Marketing.",
+    label: "Campaign",
+    status: friendlyStatus(draft.status.toLowerCase().replace(/_/g, "-")),
+  };
+}
+
+function logToCockpitItem(log: BusinessActionLogRecord): CockpitItem {
+  return {
+    ...actionToCockpitItem(log.recommendation),
+    detail: log.execution_result ?? log.recommendation.reason,
+  };
+}
+
+function friendlyArea(agentName: string, actionType: string): string {
+  if (/inventory/i.test(agentName)) return "Inventory";
+  if (/merchandising/i.test(agentName) || actionType === "PROMOTE") return "Promotion";
+  if (/marketing|email|customer/i.test(agentName)) return "Campaign";
+  if (/seo|cleanup/i.test(agentName)) return "Cleanup";
+  if (/research/i.test(agentName)) return "Market pulse";
+  if (/operator/i.test(agentName)) return "Operations";
+  return "Review";
+}
+
+function friendlyStatus(status: string): string {
+  return status.replace(/_/g, " ").replace(/-/g, " ");
+}
+
+function productOpsInventoryItems(output: ProductOpsOutputRecord | undefined): BusinessRecommendedAction[] {
+  if (!output) return [];
+  return [...output.reviewTasks, ...output.cleanupTasks]
+    .filter((task) => /stock|inventory|supplier/i.test(task.title + " " + task.detail))
+    .slice(0, 5)
+    .map((task, index) => taskToBusinessAction(task, "Inventory", index));
+}
+
+function radarRevenueItems(
+  radar: MarketRadarOutputRecord | undefined,
+  revenuePlays: RevenuePlayRecord[],
+): BusinessRecommendedAction[] {
+  return (radar?.revenuePlays ?? revenuePlays).slice(0, 5).map((play, index) => ({
+    id: play.id || `revenue_${index}`,
+    type: play.actionType === "EMAIL_CAMPAIGN" ? "WRITE" : play.actionType === "FLOW_IDEA" ? "AUTOMATE" : "PROMOTE",
+    title: play.title,
+    reason: play.explanation,
+    agent_name: "Marketing",
+    target: play.targetAgent,
+    approval_status: play.status === "APPROVED" ? "approved" : "suggested",
+    risk_level: play.confidence === "low" ? "medium" : "low",
+    requires_approval: true,
+    safe_to_auto_execute: false,
+    rollback_plan: "Dismiss the recommendation; no Shopify work is applied.",
+  }));
+}
+
+function issueCockpitItems(issues: BlockedIssueRecord[], run: SyncRun | undefined): BusinessRecommendedAction[] {
+  if (issues.length) {
+    return issues.slice(0, 5).map((issue, index) => ({
+      id: issue.id || `issue_${index}`,
+      type: "REVIEW",
+      title: `Review ${issue.kind.replace(/_/g, " ")}`,
+      reason: issue.reason,
+      agent_name: "Operations",
+      approval_status: "suggested",
+      risk_level: issue.kind === "price_guardrail" || issue.kind === "shopify_error" ? "high" : "medium",
+      requires_approval: true,
+      safe_to_auto_execute: false,
+      rollback_plan: "Resolve or dismiss the issue; no Shopify action was applied.",
+    }));
+  }
+  if (!run?.issueCount) return [];
+  return [
+    {
+      id: `run_issues_${run.id}`,
+      type: "REVIEW",
+      title: `Review ${run.issueCount} latest sync issues`,
+      reason: "The latest safe sync found issues that should be reviewed before enabling any write work.",
+      agent_name: "Operations",
+      approval_status: "suggested",
+      risk_level: "medium",
+      requires_approval: true,
+      safe_to_auto_execute: false,
+      rollback_plan: "Leave the issues unresolved; no Shopify changes were applied.",
+    },
+  ];
+}
+
+function taskToBusinessAction(task: ProductOpsTask, agentName: string, index: number): BusinessRecommendedAction {
+  return {
+    id: `task_${index}`,
+    type: task.actionType,
+    title: task.title,
+    reason: task.detail,
+    agent_name: agentName,
+    approval_status: task.promotionStatus === "PROMOTE_READY" ? "suggested" : "drafted",
+    risk_level: task.promotionStatus === "DO_NOT_PROMOTE" || task.promotionStatus === "REVIEW_REQUIRED" ? "medium" : "low",
+    requires_approval: true,
+    safe_to_auto_execute: false,
+    rollback_plan: "Dismiss the task; no Shopify product data was changed.",
+  };
 }
 
 function renderActionList(actions: BusinessRecommendedAction[], emptyText: string): string {
@@ -1124,25 +1284,25 @@ function formatDate(value: string): string {
 }
 
 function pageTitle(path: string): string {
-  if (path.startsWith("/command")) return "Business OS";
+  if (path === "/" || path.startsWith("/command")) return "LWT Command Center";
   if (path.startsWith("/suppliers")) return "Suppliers";
   if (path.startsWith("/runs")) return "Runs";
   if (path.startsWith("/changes")) return "Change Ledger";
   if (path.startsWith("/issues")) return "Match Issues";
   if (path.startsWith("/sources")) return "Sources";
   if (path.startsWith("/settings")) return "Settings";
-  return "Dashboard";
+  return "LWT Command Center";
 }
 
 function pageSubtitle(path: string): string {
-  if (path.startsWith("/command")) return "Daily command center, approvals, agent logs, and Shopify action queue.";
+  if (path === "/" || path.startsWith("/command")) return "A simple daily cockpit for review-first Shopify work.";
   if (path.startsWith("/suppliers")) return "Configured supplier adapters and coverage.";
   if (path.startsWith("/runs")) return "Weekly and manual sync history.";
   if (path.startsWith("/changes")) return "Dry-run planned changes and real Shopify writes.";
   if (path.startsWith("/issues")) return "Blocked changes that need attention before automation proceeds.";
   if (path.startsWith("/sources")) return "Safe Market Radar source connections and platform status.";
   if (path.startsWith("/settings")) return "Automation defaults and safety rules.";
-  return "Supplier availability and pricing automation for Shopify.";
+  return "A simple daily cockpit for review-first Shopify work.";
 }
 
 function escapeHtml(value: string): string {
@@ -1191,6 +1351,23 @@ function styles(): string {
     .sync-status { min-height: 22px; color: var(--muted); font-size: 13px; flex-basis: 100%; }
     .sync-status.error { color: var(--error); }
     .eyebrow { color: var(--accent-strong); font-size: 12px; font-weight: 820; letter-spacing: 0; text-transform: uppercase; }
+    .cockpit-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 22px; margin-bottom: 16px; border-radius: var(--radius); background: #0f1f1d; color: #f8fbfa; }
+    .cockpit-hero h2 { margin: 0 0 8px; font-size: 30px; line-height: 1.12; }
+    .cockpit-hero p { color: #d6e5e1; max-width: 880px; }
+    .cockpit-status-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .cockpit-status-row span { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; background: rgba(255, 255, 255, 0.09); color: #dff7ef; font-size: 12px; font-weight: 760; }
+    .cockpit-metrics .metric { min-height: 96px; }
+    .cockpit-grid { display: grid; grid-template-columns: minmax(420px, 1.25fr) minmax(260px, 0.75fr); gap: 16px; align-items: stretch; }
+    .cockpit-start .section-note, .cockpit-safe .section-note { margin-bottom: 12px; }
+    .quick-counts { display: grid; gap: 8px; margin-top: 14px; }
+    .quick-counts span { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 38px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: #fbfcfc; color: var(--muted); font-size: 13px; }
+    .quick-counts strong { color: var(--text); font-size: 18px; }
+    .cockpit-lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+    .cockpit-list { display: grid; gap: 10px; }
+    .cockpit-item { display: grid; gap: 5px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: #fbfcfc; }
+    .cockpit-item span { color: var(--accent-strong); font-size: 12px; font-weight: 780; text-transform: uppercase; letter-spacing: 0; }
+    .cockpit-item strong { color: var(--text); font-size: 14px; line-height: 1.3; }
+    .cockpit-item small { color: var(--muted); font-size: 12px; line-height: 1.42; }
     .business-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 22px; margin-bottom: 16px; border-radius: var(--radius); background: #0f1f1d; color: #f8fbfa; }
     .business-hero .eyebrow { color: #b9f0dd; }
     .business-hero h2 { margin: 4px 0 8px; font-size: 28px; line-height: 1.14; }
@@ -1319,7 +1496,7 @@ function styles(): string {
     .alert.warning { border-color: #fedf89; color: var(--warning); background: #fffbeb; }
     .alert.info { background: #f5fbff; }
     @media (max-width: 1100px) {
-      .dashboard-grid, .command-hub, .agent-command-center, .supplier-guide, .business-status-grid, .business-lanes { grid-template-columns: 1fr; }
+      .dashboard-grid, .command-hub, .agent-command-center, .supplier-guide, .business-status-grid, .business-lanes, .cockpit-grid, .cockpit-lanes { grid-template-columns: 1fr; }
     }
     @media (max-width: 860px) {
       .main { padding: 18px; }

@@ -233,6 +233,41 @@ test("server exposes safe Market Radar refresh and draft endpoints", async () =>
   }
 });
 
+test("server renders the daily cockpit on the root path unless an agent workbench is requested", async () => {
+  const server = startServer(
+    {
+      repository: new MemoryRepository(),
+      suppliers: [],
+      alerts: new AlertService(),
+      runNow: async () => {},
+      startRun: () => true,
+      shopifyApiKey: "test-key",
+      applyChangesEnabled: false,
+      aiProvider: "mock",
+      autonomyMode: "approval",
+    },
+    { port: 0, host: "127.0.0.1" },
+  );
+
+  await onceListening(server);
+  try {
+    const baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+    const homeResponse = await fetch(`${baseUrl}/`);
+    const homeHtml = await homeResponse.text();
+    assert.equal(homeResponse.status, 200);
+    assert.match(homeHtml, /Today&#39;s cockpit/);
+    assert.match(homeHtml, /Mock mode: review only/);
+    assert.doesNotMatch(homeHtml, /Agent command center/);
+
+    const workbenchResponse = await fetch(`${baseUrl}/?agent=blog`);
+    const workbenchHtml = await workbenchResponse.text();
+    assert.equal(workbenchResponse.status, 200);
+    assert.match(workbenchHtml, /Blog Template Builder/);
+  } finally {
+    server.close();
+  }
+});
+
 function onceListening(server: ReturnType<typeof startServer>): Promise<void> {
   if (server.listening) {
     return Promise.resolve();
