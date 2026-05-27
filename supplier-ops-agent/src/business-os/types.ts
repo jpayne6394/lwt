@@ -62,6 +62,34 @@ export type DailyCommandReport = {
   seo_product_cleanup_tasks: BusinessRecommendedAction[];
   urgent_issues: BusinessRecommendedAction[];
   actions_requiring_owner_approval: BusinessRecommendedAction[];
+  operating_cycle?: DailyOperatingCycle;
+};
+
+export type OperatingCycleLane = "do_today" | "review" | "draft" | "wait" | "ignore";
+
+export type BusinessHealthStatus = "healthy" | "watch" | "attention";
+
+export type DailyOperatingCycle = {
+  generated_at: string;
+  mode: AutonomyMode;
+  top_priority: BusinessRecommendedAction | null;
+  revenue_move_of_the_day: BusinessRecommendedAction | null;
+  business_health: {
+    status: BusinessHealthStatus;
+    summary: string;
+    revenue_status: string;
+    inventory_status: string;
+    approval_status: string;
+  };
+  lanes: Record<OperatingCycleLane, BusinessRecommendedAction[]>;
+  agent_handoffs: Array<{
+    agent_name: BusinessAgentName;
+    focus: string;
+    action_count: number;
+    next_step: string;
+    risk_level: RiskLevel;
+  }>;
+  do_not_promote: BusinessRecommendedAction[];
 };
 
 export type BusinessActionLogRecord = {

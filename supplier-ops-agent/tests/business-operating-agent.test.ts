@@ -32,6 +32,17 @@ const sampleVariant: ShopifyVariant = {
   publishedAt: "2026-01-01T00:00:00.000Z",
 };
 
+const lowStockVariant: ShopifyVariant = {
+  ...sampleVariant,
+  productId: "gid://shopify/Product/2",
+  variantId: "gid://shopify/ProductVariant/2",
+  inventoryItemId: "gid://shopify/InventoryItem/2",
+  handle: "vitamin-d-k2",
+  title: "Vitamin D3 + K2",
+  sku: "D3K2-60",
+  inventoryQuantity: 2,
+};
+
 test("mock LLM provider returns structured placeholder decisions without paid API usage", async () => {
   const client = createLlmClient({ provider: "mock", autonomyMode: "approval" });
 
@@ -51,7 +62,7 @@ test("mock LLM provider returns structured placeholder decisions without paid AP
 });
 
 test("Chief of Staff builds a daily command report from structured sub-agent outputs", async () => {
-  const repository = new MemoryRepository({ shopifyVariants: [sampleVariant] });
+  const repository = new MemoryRepository({ shopifyVariants: [sampleVariant, lowStockVariant] });
   const agent = createChiefOfStaffAgent({
     repository,
     llm: createLlmClient({ provider: "mock", autonomyMode: "approval" }),
@@ -86,6 +97,17 @@ test("Chief of Staff builds a daily command report from structured sub-agent out
   assert.ok(Array.isArray(report.urgent_issues));
   assert.ok(Array.isArray(report.actions_requiring_owner_approval));
   assert.ok(report.actions_requiring_owner_approval.length > 0);
+  assert.equal(report.operating_cycle.mode, "approval");
+  assert.match(report.operating_cycle.business_health.status, /healthy|watch|attention/);
+  assert.ok(report.operating_cycle.business_health.summary);
+  assert.ok(report.operating_cycle.top_priority);
+  assert.ok(report.operating_cycle.revenue_move_of_the_day);
+  assert.ok(report.operating_cycle.lanes.do_today.some((item) => item.title === report.operating_cycle.top_priority?.title));
+  assert.ok(report.operating_cycle.lanes.review.some((item) => item.type === "FIX" || item.risk_level === "high"));
+  assert.ok(report.operating_cycle.lanes.draft.some((item) => item.type === "WRITE"));
+  assert.ok(Array.isArray(report.operating_cycle.lanes.wait));
+  assert.ok(Array.isArray(report.operating_cycle.lanes.ignore));
+  assert.ok(report.operating_cycle.agent_handoffs.some((handoff) => handoff.agent_name === "Marketing Agent"));
 
   const logs = await repository.recentBusinessActionLogs?.(50);
   assert.ok(logs);

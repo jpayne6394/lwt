@@ -8,6 +8,7 @@ import { createOperatorAgent } from "./agents/operator-agent.ts";
 import { createResearchAgent } from "./agents/research-agent.ts";
 import { createSeoProductCleanupAgent } from "./agents/seo-product-cleanup-agent.ts";
 import { businessActionToQueueInput, createActionQueueService } from "../action-queue/action-queue-service.ts";
+import { buildDailyOperatingCycle } from "./operating-cycle.ts";
 import type { SubAgent } from "./agents/shared.ts";
 import type {
   AutonomyMode,
@@ -76,20 +77,39 @@ export function createChiefOfStaffAgent(options: {
         autonomyMode: options.autonomyMode,
       });
       const chiefOfStaff = await buildChiefResult(options.llm, allActions, chiefAction);
+      const inventoryRisks = actionsByAgents(allActions, ["Inventory Agent"]);
+      const productsToPromote = allActions.filter((action) => action.type === "PROMOTE");
+      const productsToRemoveFromPromotion = allActions.filter((action) => /remove|pull back|out of stock/i.test(action.title + " " + action.reason));
+      const homepageRecommendations = allActions.filter((action) => /homepage|hero/i.test(action.title + " " + action.reason + " " + (action.target ?? "")));
+      const emailCampaignIdeas = actionsByAgents(allActions, ["Marketing Agent", "Customer/Email Agent"]).filter((action) => action.type === "WRITE");
+      const seoProductCleanupTasks = actionsByAgents(allActions, ["SEO/Product Cleanup Agent"]);
+      const urgentIssues = allActions.filter((action) => action.risk_level === "high");
+      const operatingCycle = buildDailyOperatingCycle({
+        now,
+        autonomyMode: options.autonomyMode,
+        actions: [...chiefOfStaff.recommended_actions, ...allActions],
+        subAgents: subAgentMap,
+        inventoryRisks,
+        productsToPromote,
+        productsToRemoveFromPromotion,
+        urgentIssues,
+        emailCampaignIdeas,
+      });
 
       const report: DailyCommandReport = {
         id: `daily_command_${Date.now()}`,
         created_at: now,
         chief_of_staff: chiefOfStaff,
         sub_agents: subAgentMap,
-        inventory_risks: actionsByAgents(allActions, ["Inventory Agent"]),
-        products_to_promote: allActions.filter((action) => action.type === "PROMOTE"),
-        products_to_remove_from_promotion: allActions.filter((action) => /remove|pull back|out of stock/i.test(action.title + " " + action.reason)),
-        homepage_recommendations: allActions.filter((action) => /homepage|hero/i.test(action.title + " " + action.reason + " " + (action.target ?? ""))),
-        email_campaign_ideas: actionsByAgents(allActions, ["Marketing Agent", "Customer/Email Agent"]).filter((action) => action.type === "WRITE"),
-        seo_product_cleanup_tasks: actionsByAgents(allActions, ["SEO/Product Cleanup Agent"]),
-        urgent_issues: allActions.filter((action) => action.risk_level === "high"),
+        inventory_risks: inventoryRisks,
+        products_to_promote: productsToPromote,
+        products_to_remove_from_promotion: productsToRemoveFromPromotion,
+        homepage_recommendations: homepageRecommendations,
+        email_campaign_ideas: emailCampaignIdeas,
+        seo_product_cleanup_tasks: seoProductCleanupTasks,
+        urgent_issues: urgentIssues,
         actions_requiring_owner_approval: approvalActions,
+        operating_cycle: operatingCycle,
       };
 
       await options.repository.recordDailyCommandReport?.(report);

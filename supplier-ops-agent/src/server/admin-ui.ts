@@ -5,7 +5,7 @@ import { FLOW_EMAIL_TEMPLATES, templatePlainTextForFlow } from "../campaigns/flo
 import type { CampaignDraftRecord } from "../campaigns/types.ts";
 import { WELLNESS_BLOG_PROFILES } from "../content/blog-template-builder.ts";
 import type { BlogDraftRecord } from "../content/types.ts";
-import type { BusinessActionLogRecord, BusinessRecommendedAction, DailyCommandReport } from "../business-os/types.ts";
+import type { BusinessActionLogRecord, BusinessRecommendedAction, DailyCommandReport, DailyOperatingCycle } from "../business-os/types.ts";
 import type { MarketRadarOutputRecord, RevenuePlayRecord, SourceConnectionCard } from "../market-radar/types.ts";
 import type { ProductOpsOutputRecord, ProductOpsProductResult, ProductOpsTask } from "../product-ops/types.ts";
 import type { BlockedIssueRecord, AppliedChangeRecord, SyncRun } from "../storage/repository.ts";
@@ -128,6 +128,7 @@ function renderContent(model: AdminPageModel): string {
 function renderBusinessCommandCenter(model: AdminPageModel): string {
   const reports = model.dailyCommandReports ?? [];
   const latestReport = reports[0];
+  const operatingCycle = latestReport?.operating_cycle;
   const latestRun = model.runs[0];
   const latestProductOps = model.productOpsOutputs[0];
   const latestRadar = model.marketRadarOutputs[0];
@@ -150,7 +151,10 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
   const urgentIssues = latestReport?.urgent_issues ?? issueCockpitItems(model.issues, latestRun);
   const actionPlanItems = [...urgentIssues, ...pendingApprovalActions, ...inventoryRisks, ...promoRecommendations, ...draftCampaignActions].slice(0, 6);
   const queuePlanItems = [...pendingQueueItems, ...openQueueItems.filter((item) => !pendingQueueItems.includes(item))].slice(0, 6);
-  const planCockpitItems = uniqueCockpitItems([...queuePlanItems.map(queueItemToCockpitItem), ...actionPlanItems.map(actionToCockpitItem)]).slice(0, 6);
+  const cycleDoTodayItems = operatingCycle?.lanes.do_today.map(actionToCockpitItem) ?? [];
+  const planCockpitItems = cycleDoTodayItems.length
+    ? uniqueCockpitItems(cycleDoTodayItems).slice(0, 6)
+    : uniqueCockpitItems([...queuePlanItems.map(queueItemToCockpitItem), ...actionPlanItems.map(actionToCockpitItem)]).slice(0, 6);
   const revenueQueueItems = openQueueItems.filter((item) => item.action_type === "PROMOTE" || item.action_type === "WRITE" || /market|campaign|blog|promotion/i.test(item.area));
   const stockQueueItems = openQueueItems.filter((item) => /stock|inventory|supplier/i.test(item.area + " " + item.title + " " + item.description));
   const promotionSuggestionItems = uniqueCockpitItems([
@@ -169,9 +173,10 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
   const draftsReadyCount = campaignItems.length + model.blogDrafts.length + draftCampaignActions.length;
   const safetyMode = model.aiProvider === "openai" ? "AI-assisted: approval still required" : "Mock mode: review only";
   const recentActivityItems = actionQueueEvents.length > 0 ? actionQueueEvents.map(queueEventToCockpitItem) : logs.map(logToCockpitItem);
-  const decisionSummary = latestReport?.chief_of_staff.summary ?? "Review what to promote, fix, write, automate, or ignore before anything touches Shopify.";
+  const decisionSummary = operatingCycle?.business_health.summary ?? latestReport?.chief_of_staff.summary ?? "Review what to promote, fix, write, automate, or ignore before anything touches Shopify.";
   const riskLevel = latestReport?.chief_of_staff.risk_level ?? (inventoryRiskCount || needsApprovalCount || latestIssueCount ? "medium" : "low");
   const topOpportunity =
+    operatingCycle?.revenue_move_of_the_day?.title ??
     promotionSuggestionItems[0]?.title ??
     (latestRadar ? "Review BI revenue plays" : "Refresh BI Market Radar for revenue ideas");
 
@@ -204,6 +209,7 @@ function renderBusinessCommandCenter(model: AdminPageModel): string {
       <section class="executive-layout">
         <div class="executive-primary">
           ${cockpitLane("Today's Business Brief", planCockpitItems, "Refresh CEO brief to build the first review list.")}
+          ${operatingCycle ? renderOperatingCyclePanel(operatingCycle) : ""}
           ${cockpitLane("Inventory Risks", inventoryRiskItems, "No low-stock or out-of-stock focus items yet.")}
           ${cockpitLane("Promotion Suggestions", promotionSuggestionItems, "Promotion and campaign ideas will appear here after a report or radar refresh.")}
           ${renderExecutiveWorkrooms(latestRun, latestProductOps, latestRadar, model.revenuePlays, draftsReadyCount)}
@@ -303,6 +309,44 @@ function renderExecutiveWorkrooms(
         .join("")}
     </div>
   </section>`;
+}
+
+function renderOperatingCyclePanel(cycle: DailyOperatingCycle): string {
+  const laneSummaries = [
+    cycleLaneSummary("Do Today", cycle.lanes.do_today),
+    cycleLaneSummary("Review", cycle.lanes.review),
+    cycleLaneSummary("Draft", cycle.lanes.draft),
+    cycleLaneSummary("Wait", cycle.lanes.wait),
+    cycleLaneSummary("Ignore", cycle.lanes.ignore),
+  ].join("");
+  return `<section class="panel operating-cycle-panel">
+    <div class="panel-heading compact">
+      <div>
+        <h2>Daily Operating Cycle</h2>
+        <p>${escapeHtml(cycle.business_health.revenue_status)}. ${escapeHtml(cycle.business_health.inventory_status)}. ${escapeHtml(cycle.business_health.approval_status)}.</p>
+      </div>
+      <span>${escapeHtml(cycle.business_health.status)}</span>
+    </div>
+    <div class="cycle-highlight">
+      <article>
+        <span>Top priority</span>
+        <strong>${escapeHtml(cycle.top_priority?.title ?? "Refresh CEO brief")}</strong>
+      </article>
+      <article>
+        <span>Revenue move of the day</span>
+        <strong>${escapeHtml(cycle.revenue_move_of_the_day?.title ?? "No revenue move selected yet")}</strong>
+      </article>
+    </div>
+    <div class="cycle-lanes">${laneSummaries}</div>
+  </section>`;
+}
+
+function cycleLaneSummary(label: string, actions: BusinessRecommendedAction[]): string {
+  return `<article class="cycle-lane">
+    <span>${escapeHtml(label)}</span>
+    <strong>${actions.length}</strong>
+    <small>${escapeHtml(actions[0]?.title ?? "Nothing queued")}</small>
+  </article>`;
 }
 
 function renderAgentCompanion(): string {
@@ -1745,6 +1789,24 @@ function styles(): string {
     .workroom-card span { color: var(--accent-strong); font-size: 12px; font-weight: 820; text-transform: uppercase; }
     .workroom-card strong { color: #111817; font-size: 24px; line-height: 1; }
     .workroom-card small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .operating-cycle-panel { grid-column: 1 / -1; background: #fcfdfd; }
+    .operating-cycle-panel .panel-heading { align-items: flex-start; }
+    .operating-cycle-panel .panel-heading p { margin-top: 4px; font-size: 12px; line-height: 1.35; max-width: 82ch; }
+    .cycle-highlight { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+    .cycle-highlight article, .cycle-lane {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: white;
+    }
+    .cycle-highlight span, .cycle-lane span { color: var(--accent-strong); font-size: 11px; font-weight: 820; text-transform: uppercase; }
+    .cycle-highlight strong { color: var(--text); font-size: 14px; line-height: 1.3; }
+    .cycle-lanes { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+    .cycle-lane strong { color: #111817; font-size: 24px; line-height: 1; }
+    .cycle-lane small { color: var(--muted); font-size: 12px; line-height: 1.35; overflow-wrap: anywhere; }
     .executive-safe-mode { background: #fbfcfc; }
     .companion-mini {
       justify-self: start;
@@ -1989,6 +2051,7 @@ function styles(): string {
       .executive-hero { grid-template-columns: 1fr; }
       .executive-hero-actions { justify-content: flex-start; }
       .executive-brief-grid, .executive-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .cycle-highlight, .cycle-lanes { grid-template-columns: 1fr; }
       .workroom-grid { grid-auto-flow: column; grid-auto-columns: minmax(172px, 1fr); grid-template-columns: none; overflow-x: auto; padding-bottom: 4px; }
       .app-tabs { overflow-x: auto; flex-wrap: nowrap; }
     }
