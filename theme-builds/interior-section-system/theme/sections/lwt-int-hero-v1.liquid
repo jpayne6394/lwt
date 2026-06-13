@@ -1,0 +1,207 @@
+{% render 'lwt-int-v1-style-loader' %}
+
+<section
+  class="lwt-int lwt-int--dark lwt-int-hero lwt-int-flow--{{ section.settings.flow_position }}"
+  id="LWTIntHero-{{ section.id }}"
+>
+  {% render 'lwt-int-v1-bg', section: section %}
+
+  <div class="lwt-int__shell">
+    <div class="lwt-int-hero__grid">
+      <div class="lwt-int-hero__copy">
+        {% if section.settings.kicker != blank %}
+          <p class="lwt-int__kicker">{{ section.settings.kicker | escape }}</p>
+        {% endif %}
+
+        {% if section.settings.heading != blank %}
+          <h1 class="lwt-int__heading">{{ section.settings.heading | newline_to_br }}</h1>
+        {% endif %}
+
+        {% if section.settings.copy != blank %}
+          <div class="lwt-int__copy">{{ section.settings.copy }}</div>
+        {% endif %}
+
+        <div class="lwt-int__actions">
+          {% if section.settings.primary_label != blank and section.settings.primary_link != blank %}
+            <a class="lwt-int__button lwt-int__button--primary" href="{{ section.settings.primary_link }}">
+              {{ section.settings.primary_label | escape }}
+            </a>
+          {% endif %}
+
+          {% if section.settings.secondary_label != blank and section.settings.secondary_link != blank %}
+            <a class="lwt-int__button lwt-int__button--secondary" href="{{ section.settings.secondary_link }}">
+              {{ section.settings.secondary_label | escape }}
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if section.settings.visual_image != blank %}
+        <div class="lwt-int-hero__visual">
+          {{
+            section.settings.visual_image
+            | image_url: width: 1400
+            | image_tag:
+              loading: 'eager',
+              class: 'lwt-int-hero__image',
+              widths: '520, 720, 960, 1200, 1400',
+              sizes: '(min-width: 990px) 56vw, 100vw'
+          }}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if section.blocks.size > 0 %}
+      <div class="lwt-int-hero__proof" aria-label="Page highlights">
+        {% for block in section.blocks %}
+          <div class="lwt-int-hero__proof-item" {{ block.shopify_attributes }}>
+            <span class="lwt-int__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M12 3l2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.3 6.8 19l1-5.8-4.2-4.1 5.8-.8L12 3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span>{{ block.settings.text | escape }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "LWT Int Hero",
+  "settings": [
+    {
+      "type": "select",
+      "id": "flow_position",
+      "label": "Flow position",
+      "default": "top",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "middle", "label": "Middle" },
+        { "value": "bottom", "label": "Bottom" },
+        { "value": "continuous", "label": "Continuous" },
+        { "value": "none", "label": "None" }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "bg_image",
+      "label": "Background image"
+    },
+    {
+      "type": "text",
+      "id": "bg_asset",
+      "label": "Theme asset background",
+      "info": "Use a theme asset filename from the provided mockup crops."
+    },
+    {
+      "type": "text",
+      "id": "bg_position",
+      "label": "Background position",
+      "default": "center center"
+    },
+    {
+      "type": "select",
+      "id": "bg_size",
+      "label": "Background size",
+      "default": "cover",
+      "options": [
+        { "value": "cover", "label": "Cover" },
+        { "value": "contain", "label": "Contain" },
+        { "value": "100% auto", "label": "Full width" },
+        { "value": "auto 100%", "label": "Full height" }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "bg_opacity",
+      "label": "Background opacity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 100
+    },
+    {
+      "type": "text",
+      "id": "kicker",
+      "label": "Kicker",
+      "default": "Interior page"
+    },
+    {
+      "type": "textarea",
+      "id": "heading",
+      "label": "Heading",
+      "default": "Guided wellness.\nBuilt with purpose."
+    },
+    {
+      "type": "richtext",
+      "id": "copy",
+      "label": "Copy",
+      "default": "<p>Practitioner-led guidance, thoughtful technology, and curated products working together in one calm wellness experience.</p>"
+    },
+    {
+      "type": "text",
+      "id": "primary_label",
+      "label": "Primary label",
+      "default": "Start your wellness plan"
+    },
+    {
+      "type": "url",
+      "id": "primary_link",
+      "label": "Primary link"
+    },
+    {
+      "type": "text",
+      "id": "secondary_label",
+      "label": "Secondary label",
+      "default": "Learn more"
+    },
+    {
+      "type": "url",
+      "id": "secondary_link",
+      "label": "Secondary link"
+    },
+    {
+      "type": "image_picker",
+      "id": "visual_image",
+      "label": "Visual image"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "proof",
+      "name": "Proof item",
+      "settings": [
+        {
+          "type": "text",
+          "id": "text",
+          "label": "Text",
+          "default": "Practitioner-led guidance"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "LWT Int Hero",
+      "blocks": [
+        { "type": "proof" },
+        {
+          "type": "proof",
+          "settings": { "text": "Science-backed products" }
+        },
+        {
+          "type": "proof",
+          "settings": { "text": "Secure and private" }
+        },
+        {
+          "type": "proof",
+          "settings": { "text": "Ongoing support" }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

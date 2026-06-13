@@ -1,0 +1,109 @@
+{% render 'lwt-int-v1-style-loader' %}
+
+<section
+  class="lwt-int lwt-int--dark lwt-int-cta lwt-int-flow--{{ section.settings.flow_position }}"
+  id="LWTIntCTA-{{ section.id }}"
+>
+  {% render 'lwt-int-v1-bg', section: section %}
+
+  <div class="lwt-int__shell">
+    <div class="lwt-int-cta__box">
+      <div>
+        {% if section.settings.kicker != blank %}
+          <p class="lwt-int__kicker">{{ section.settings.kicker | escape }}</p>
+        {% endif %}
+        {% if section.settings.heading != blank %}
+          <h2 class="lwt-int__heading">{{ section.settings.heading | escape }}</h2>
+        {% endif %}
+        {% if section.settings.copy != blank %}
+          <div class="lwt-int__copy">{{ section.settings.copy }}</div>
+        {% endif %}
+      </div>
+
+      <div class="lwt-int__actions">
+        {% if section.settings.primary_label != blank and section.settings.primary_link != blank %}
+          <a class="lwt-int__button lwt-int__button--primary" href="{{ section.settings.primary_link }}">
+            {{ section.settings.primary_label | escape }}
+          </a>
+        {% endif %}
+
+        {% if section.settings.secondary_label != blank and section.settings.secondary_link != blank %}
+          <a class="lwt-int__button lwt-int__button--secondary" href="{{ section.settings.secondary_link }}">
+            {{ section.settings.secondary_label | escape }}
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "LWT Int CTA",
+  "settings": [
+    {
+      "type": "select",
+      "id": "flow_position",
+      "label": "Flow position",
+      "default": "bottom",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "middle", "label": "Middle" },
+        { "value": "bottom", "label": "Bottom" },
+        { "value": "continuous", "label": "Continuous" },
+        { "value": "none", "label": "None" }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "bg_image",
+      "label": "Background image"
+    },
+    {
+      "type": "text",
+      "id": "bg_asset",
+      "label": "Theme asset background",
+      "info": "Use a theme asset filename from the provided mockup crops."
+    },
+    {
+      "type": "text",
+      "id": "bg_position",
+      "label": "Background position",
+      "default": "center center"
+    },
+    {
+      "type": "select",
+      "id": "bg_size",
+      "label": "Background size",
+      "default": "cover",
+      "options": [
+        { "value": "cover", "label": "Cover" },
+        { "value": "contain", "label": "Contain" },
+        { "value": "100% auto", "label": "Full width" },
+        { "value": "auto 100%", "label": "Full height" }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "bg_opacity",
+      "label": "Background opacity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 100
+    },
+    { "type": "text", "id": "kicker", "label": "Kicker" },
+    { "type": "text", "id": "heading", "label": "Heading", "default": "Ready to take the next step?" },
+    { "type": "richtext", "id": "copy", "label": "Copy", "default": "<p>Start your personalized wellness plan with guidance built around your needs.</p>" },
+    { "type": "text", "id": "primary_label", "label": "Primary label", "default": "Start your wellness plan" },
+    { "type": "url", "id": "primary_link", "label": "Primary link" },
+    { "type": "text", "id": "secondary_label", "label": "Secondary label", "default": "Learn how it works" },
+    { "type": "url", "id": "secondary_link", "label": "Secondary link" }
+  ],
+  "presets": [
+    {
+      "name": "LWT Int CTA"
+    }
+  ]
+}
+{% endschema %}

@@ -11,6 +11,7 @@ Interior pages should feel like one continuous art piece. Individual sections ar
 Each `lwt-int-v1` section must expose:
 
 - `bg_image`: provided background artwork image
+- `bg_asset`: theme asset filename for mockup-derived background crops
 - `bg_position`: explicit focal position
 - `bg_size`: cover, contain, full width, or full height
 - `bg_opacity`: controlled opacity for readability
@@ -20,8 +21,7 @@ The shared background snippet owns the layer order:
 
 1. section shell and color zone
 2. provided background artwork
-3. optional faint fallback signal layer only when needed
-4. content shell above all background layers
+3. content shell above all background layers
 
 ## Rules
 
@@ -30,8 +30,8 @@ The shared background snippet owns the layer order:
 - Do not bake translatable or editable content into background images.
 - Background art must stay behind content and respect safe zones.
 - Background image dimensions, crop, position, and section padding must be coordinated so the art appears to flow across adjacent sections.
-- CSS-generated signal graphics are allowed only as a low-emphasis fallback or bridge, not as the primary art replacement.
+- CSS-generated signal graphics must not be used as the primary art replacement in this system.
 
 ## Asset Need
 
-The current reference folder contains full-page mockups. For production implementation, provide or create background-only artwork assets/crops per page zone, without baked UI text or cards, so Shopify can render content natively over them.
+The current reference folder contains full-page mockups. This branch includes carefully cropped background wrapper assets from those mockups, avoiding baked UI text/cards wherever possible so Shopify can render content natively over them.

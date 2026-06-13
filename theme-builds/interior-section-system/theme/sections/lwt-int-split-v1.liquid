@@ -1,0 +1,160 @@
+{% render 'lwt-int-v1-style-loader' %}
+
+<section
+  class="lwt-int lwt-int--{{ section.settings.tone }} lwt-int-band lwt-int-flow--{{ section.settings.flow_position }}"
+  id="LWTIntSplit-{{ section.id }}"
+>
+  {% render 'lwt-int-v1-bg', section: section %}
+
+  <div class="lwt-int__shell">
+    <div class="lwt-int-split {% if section.settings.reverse_layout %}lwt-int-split--reverse{% endif %} {% if section.settings.image == blank %}lwt-int-split--text-only{% endif %}">
+      <div class="lwt-int-split__panel lwt-int-split__content">
+        {% if section.settings.kicker != blank %}
+          <p class="lwt-int__kicker">{{ section.settings.kicker | escape }}</p>
+        {% endif %}
+        {% if section.settings.heading != blank %}
+          <h2 class="lwt-int__heading">{{ section.settings.heading | newline_to_br }}</h2>
+        {% endif %}
+        {% if section.settings.copy != blank %}
+          <div class="lwt-int__copy">{{ section.settings.copy }}</div>
+        {% endif %}
+
+        {% if section.blocks.size > 0 %}
+          <div class="lwt-int__copy">
+            <ul>
+              {% for block in section.blocks %}
+                <li {{ block.shopify_attributes }}>{{ block.settings.text | escape }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+
+        <div class="lwt-int__actions">
+          {% if section.settings.primary_label != blank and section.settings.primary_link != blank %}
+            <a class="lwt-int__button lwt-int__button--primary" href="{{ section.settings.primary_link }}">
+              {{ section.settings.primary_label | escape }}
+            </a>
+          {% endif %}
+          {% if section.settings.secondary_label != blank and section.settings.secondary_link != blank %}
+            <a class="lwt-int__button lwt-int__button--secondary" href="{{ section.settings.secondary_link }}">
+              {{ section.settings.secondary_label | escape }}
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if section.settings.image != blank %}
+        <div class="lwt-int-split__media">
+          {{
+            section.settings.image
+            | image_url: width: 1100
+            | image_tag:
+              loading: 'lazy',
+              class: 'lwt-int-split__image',
+              widths: '420, 640, 860, 1100',
+              sizes: '(min-width: 990px) 52vw, 100vw'
+          }}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% schema %}
+{
+  "name": "LWT Int Split",
+  "settings": [
+    {
+      "type": "select",
+      "id": "tone",
+      "label": "Tone",
+      "default": "cream",
+      "options": [
+        { "value": "cream", "label": "Cream" },
+        { "value": "dark", "label": "Dark" }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "flow_position",
+      "label": "Flow position",
+      "default": "middle",
+      "options": [
+        { "value": "top", "label": "Top" },
+        { "value": "middle", "label": "Middle" },
+        { "value": "bottom", "label": "Bottom" },
+        { "value": "continuous", "label": "Continuous" },
+        { "value": "none", "label": "None" }
+      ]
+    },
+    {
+      "type": "image_picker",
+      "id": "bg_image",
+      "label": "Background image"
+    },
+    {
+      "type": "text",
+      "id": "bg_asset",
+      "label": "Theme asset background",
+      "info": "Use a theme asset filename from the provided mockup crops."
+    },
+    {
+      "type": "text",
+      "id": "bg_position",
+      "label": "Background position",
+      "default": "center center"
+    },
+    {
+      "type": "select",
+      "id": "bg_size",
+      "label": "Background size",
+      "default": "cover",
+      "options": [
+        { "value": "cover", "label": "Cover" },
+        { "value": "contain", "label": "Contain" },
+        { "value": "100% auto", "label": "Full width" },
+        { "value": "auto 100%", "label": "Full height" }
+      ]
+    },
+    {
+      "type": "range",
+      "id": "bg_opacity",
+      "label": "Background opacity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 100
+    },
+    { "type": "checkbox", "id": "reverse_layout", "label": "Reverse layout", "default": false },
+    { "type": "text", "id": "kicker", "label": "Kicker", "default": "Our approach" },
+    { "type": "textarea", "id": "heading", "label": "Heading", "default": "Science-backed.\nPeople-first." },
+    { "type": "richtext", "id": "copy", "label": "Copy", "default": "<p>Use this compact split module for story, technology, product, and practitioner content with a controlled media area.</p>" },
+    { "type": "image_picker", "id": "image", "label": "Image" },
+    { "type": "text", "id": "primary_label", "label": "Primary label", "default": "Explore more" },
+    { "type": "url", "id": "primary_link", "label": "Primary link" },
+    { "type": "text", "id": "secondary_label", "label": "Secondary label" },
+    { "type": "url", "id": "secondary_link", "label": "Secondary link" }
+  ],
+  "blocks": [
+    {
+      "type": "bullet",
+      "name": "Bullet",
+      "settings": [
+        { "type": "text", "id": "text", "label": "Text", "default": "Personalized guidance around your goals" }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "LWT Int Split",
+      "blocks": [
+        { "type": "bullet" },
+        {
+          "type": "bullet",
+          "settings": { "text": "Curated products selected for quality" }
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}

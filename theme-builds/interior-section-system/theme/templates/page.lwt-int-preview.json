@@ -1,0 +1,239 @@
+/*
+ * ------------------------------------------------------------
+ * IMPORTANT: The contents of this file are auto-generated.
+ *
+ * This file may be updated by the Shopify admin theme editor
+ * or related systems. Please exercise caution as any changes
+ * made to this file may be overwritten.
+ * ------------------------------------------------------------
+ */
+{
+  "sections": {
+    "hero": {
+      "type": "lwt-int-hero-v1",
+      "blocks": {
+        "proof_1": {
+          "type": "proof",
+          "settings": {
+            "text": "Practitioner-led care"
+          }
+        },
+        "proof_2": {
+          "type": "proof",
+          "settings": {
+            "text": "Science-backed products"
+          }
+        },
+        "proof_3": {
+          "type": "proof",
+          "settings": {
+            "text": "Secure and private"
+          }
+        },
+        "proof_4": {
+          "type": "proof",
+          "settings": {
+            "text": "Ongoing support"
+          }
+        }
+      },
+      "block_order": ["proof_1", "proof_2", "proof_3", "proof_4"],
+      "settings": {
+        "flow_position": "top",
+        "bg_asset": "lwt-int-about-hero-plate.png",
+        "bg_position": "right center",
+        "bg_size": "auto 100%",
+        "bg_opacity": 100,
+        "kicker": "Interior system preview",
+        "heading": "Guided wellness.\nBuilt with purpose.",
+        "copy": "<p>A compact interior-page system where the provided mockup background artwork flows down the page while content stays readable, native, and editable.</p>",
+        "primary_label": "Start your wellness plan",
+        "primary_link": "/pages/services",
+        "secondary_label": "Explore products",
+        "secondary_link": "/collections/all"
+      }
+    },
+    "grid": {
+      "type": "lwt-int-card-grid-v1",
+      "blocks": {
+        "card_1": {
+          "type": "card",
+          "settings": {
+            "title": "Book a wellness consult",
+            "text": "<p>Get personalized guidance from experienced practitioners.</p>",
+            "link_label": "Book a consult",
+            "link": "/pages/services"
+          }
+        },
+        "card_2": {
+          "type": "card",
+          "settings": {
+            "title": "Product support",
+            "text": "<p>Help with orders, shipping, returns, and product questions.</p>",
+            "link_label": "Get support",
+            "link": "/pages/contact-us"
+          }
+        },
+        "card_3": {
+          "type": "card",
+          "settings": {
+            "title": "Shop by goal",
+            "text": "<p>Browse targeted support by wellness need.</p>",
+            "link_label": "Browse goals",
+            "link": "/collections/all"
+          }
+        }
+      },
+      "block_order": ["card_1", "card_2", "card_3"],
+      "settings": {
+        "tone": "cream",
+        "flow_position": "middle",
+        "bg_asset": "lwt-int-cream-right-flow.png",
+        "bg_position": "right center",
+        "bg_size": "auto 100%",
+        "bg_opacity": 100,
+        "kicker": "Compact pathways",
+        "heading": "How can we help today?",
+        "copy": "<p>Cards stay compact, editable, and clear while the background layer continues behind them.</p>",
+        "columns": 3
+      }
+    },
+    "proof": {
+      "type": "lwt-int-proof-strip-v1",
+      "blocks": {
+        "proof_1": {
+          "type": "proof",
+          "settings": {
+            "title": "Practitioner vetted",
+            "text": "Reviewed by experienced clinical teams."
+          }
+        },
+        "proof_2": {
+          "type": "proof",
+          "settings": {
+            "title": "Premium quality",
+            "text": "Products selected for purity and results."
+          }
+        },
+        "proof_3": {
+          "type": "proof",
+          "settings": {
+            "title": "Secure checkout",
+            "text": "Privacy-minded shopping and support."
+          }
+        },
+        "proof_4": {
+          "type": "proof",
+          "settings": {
+            "title": "Ongoing support",
+            "text": "Guidance that continues after purchase."
+          }
+        }
+      },
+      "block_order": ["proof_1", "proof_2", "proof_3", "proof_4"],
+      "settings": {
+        "tone": "dark",
+        "flow_position": "continuous",
+        "bg_asset": "lwt-int-dark-left-flow.png",
+        "bg_position": "left center",
+        "bg_size": "auto 100%",
+        "bg_opacity": 100,
+        "columns": 4
+      }
+    },
+    "split": {
+      "type": "lwt-int-split-v1",
+      "blocks": {
+        "bullet_1": {
+          "type": "bullet",
+          "settings": {
+            "text": "Provided background artwork stays behind content"
+          }
+        },
+        "bullet_2": {
+          "type": "bullet",
+          "settings": {
+            "text": "Content remains code-native for translation and editing"
+          }
+        }
+      },
+      "block_order": ["bullet_1", "bullet_2"],
+      "settings": {
+        "tone": "cream",
+        "flow_position": "bottom",
+        "bg_asset": "lwt-int-cream-left-flow.png",
+        "bg_position": "left center",
+        "bg_size": "auto 100%",
+        "bg_opacity": 100,
+        "kicker": "Background wrapper logic",
+        "heading": "One flowing art system.\nSeparate content zones.",
+        "copy": "<p>The individual sections are defined by dark and light areas, but the signal graphics continue across the page like one connected piece.</p>",
+        "primary_label": "View services",
+        "primary_link": "/pages/services"
+      }
+    },
+    "process": {
+      "type": "lwt-int-process-v1",
+      "blocks": {
+        "step_1": {
+          "type": "step",
+          "settings": {
+            "title": "Map",
+            "text": "Extract the layout and section role from the mockup."
+          }
+        },
+        "step_2": {
+          "type": "step",
+          "settings": {
+            "title": "Wrap",
+            "text": "Build the background layer and safe content zone."
+          }
+        },
+        "step_3": {
+          "type": "step",
+          "settings": {
+            "title": "Code",
+            "text": "Keep text, links, forms, and commerce behavior native."
+          }
+        },
+        "step_4": {
+          "type": "step",
+          "settings": {
+            "title": "Verify",
+            "text": "Check desktop, mobile, console, and Shopify schema limits."
+          }
+        }
+      },
+      "block_order": ["step_1", "step_2", "step_3", "step_4"],
+      "settings": {
+        "tone": "dark",
+        "flow_position": "continuous",
+        "bg_asset": "lwt-int-dark-right-flow.png",
+        "bg_position": "right center",
+        "bg_size": "auto 100%",
+        "bg_opacity": 100,
+        "kicker": "Build rhythm",
+        "heading": "How this system should ship",
+        "copy": "<p>Small reusable sections, clear safe zones, and browser verification before any theme push.</p>",
+        "columns": 4
+      }
+    },
+    "cta": {
+      "type": "lwt-int-cta-v1",
+      "settings": {
+        "flow_position": "bottom",
+        "bg_asset": "lwt-int-dark-right-flow.png",
+        "bg_position": "right center",
+        "bg_size": "auto 100%",
+        "bg_opacity": 100,
+        "heading": "Ready to take the next step?",
+        "copy": "<p>Use this compact CTA band across interior pages without turning each page into a huge stretched landing page.</p>",
+        "primary_label": "Start your wellness plan",
+        "primary_link": "/pages/services",
+        "secondary_label": "Shop products",
+        "secondary_link": "/collections/all"
+      }
+    }
+  },
+  "order": ["hero", "grid", "proof", "split", "process", "cta"]
+}

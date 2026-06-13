@@ -2,9 +2,9 @@
   "project": "Living Well Today interior section system",
   "branch": "codex/interior-section-system",
   "namespace": "lwt-int-v1",
-  "status": "waiting_for_mockups",
+  "status": "initial_preview_implemented",
   "principles": [
-    "Use mockups as inspiration and layout direction, not baked screenshots",
+    "Use supplied mockups as the source for background wrapper crops, not full baked screenshots",
     "Separate decorative background wrappers from code-native content areas",
     "Keep interior sections compact and controlled",
     "Avoid V5.3/V5.4 drift by using fresh section names",
@@ -17,24 +17,29 @@
       "role": "Compact interior intro with background wrapper"
     },
     {
-      "filename": "lwt-int-band-v1.liquid",
-      "schema_name": "LWT Int Band",
-      "role": "Compact content band with optional background image"
+      "filename": "lwt-int-card-grid-v1.liquid",
+      "schema_name": "LWT Int Cards",
+      "role": "Compact pathway/help card grid with supplied background wrapper"
     },
     {
-      "filename": "lwt-int-proof-v1.liquid",
+      "filename": "lwt-int-proof-strip-v1.liquid",
       "schema_name": "LWT Int Proof",
       "role": "Trust/proof row with compact cards or inline stats"
     },
     {
-      "filename": "lwt-int-cta-v1.liquid",
-      "schema_name": "LWT Int CTA",
-      "role": "Conversion CTA with controlled background art"
+      "filename": "lwt-int-split-v1.liquid",
+      "schema_name": "LWT Int Split",
+      "role": "Compact split/story section that collapses media if no image is selected"
     },
     {
-      "filename": "lwt-int-grid-v1.liquid",
-      "schema_name": "LWT Int Grid",
-      "role": "Reusable compact grid for pathways, benefits, or resources"
+      "filename": "lwt-int-process-v1.liquid",
+      "schema_name": "LWT Int Process",
+      "role": "Compact process steps over supplied dark background wrapper"
+    },
+    {
+      "filename": "lwt-int-cta-v1.liquid",
+      "schema_name": "LWT Int CTA",
+      "role": "Conversion CTA with controlled supplied background art"
     }
   ],
   "do_not_push_to_shopify_without_approval": [

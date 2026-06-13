@@ -1,0 +1,20 @@
+{%- liquid
+  assign bg_asset = section.settings.bg_asset | default: '' | strip
+  assign bg_position = section.settings.bg_position | default: 'center center'
+  assign bg_size = section.settings.bg_size | default: 'cover'
+  assign bg_opacity = section.settings.bg_opacity | default: 100 | times: 0.01
+-%}
+
+<div class="lwt-int__bg" aria-hidden="true">
+  {%- if section.settings.bg_image != blank -%}
+    <div
+      class="lwt-int__bg-image"
+      style="--lwt-bg-image: url('{{ section.settings.bg_image | image_url: width: 2400 }}'); --lwt-bg-position: {{ bg_position }}; --lwt-bg-size: {{ bg_size }}; --lwt-bg-opacity: {{ bg_opacity }};"
+    ></div>
+  {%- elsif bg_asset != blank -%}
+    <div
+      class="lwt-int__bg-image"
+      style="--lwt-bg-image: url('{{ bg_asset | asset_url }}'); --lwt-bg-position: {{ bg_position }}; --lwt-bg-size: {{ bg_size }}; --lwt-bg-opacity: {{ bg_opacity }};"
+    ></div>
+  {%- endif -%}
+</div>
