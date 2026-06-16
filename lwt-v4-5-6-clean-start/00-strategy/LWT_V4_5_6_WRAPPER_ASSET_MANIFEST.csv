@@ -1,0 +1,10 @@
+section_order,section_name,target_wrapper_name,approved_generated_asset,suggested_working_asset_name
+1,Hero,lwt-about__hero-wrapper.png,source-assets/lwt-about__hero-wrapper-v456-refresh.png,lwt-about__hero-wrapper-v456-refresh.png
+2,Story,lwt-about__story-wrapper.png,source-assets/lwt-about__story-wrapper-v456-refresh.png,lwt-about__story-wrapper-v456-refresh.png
+3,Trust Band,lwt-about__trust-band-wrapper.png,source-assets/lwt-about__trust-band-wrapper-v456-refresh.png,lwt-about__trust-band-wrapper-v456-refresh.png
+4,Practitioners,lwt-about__practitioners-wrapper.png,source-assets/lwt-about__practitioners-wrapper-v456-refresh.png,lwt-about__practitioners-wrapper-v456-refresh.png
+5,LWT Model,lwt-about__model-wrapper.png,source-assets/lwt-about__model-wrapper-v456-refresh.png,lwt-about__model-wrapper-v456-refresh.png
+6,Technology Teaser,lwt-about__technology-teaser-wrapper.png,source-assets/lwt-about__technology-teaser-wrapper-v456-refresh.png,lwt-about__technology-teaser-wrapper-v456-refresh.png
+7,Catalog Teaser,lwt-about__catalog-teaser-wrapper.png,source-assets/lwt-about__catalog-teaser-wrapper-v456-refresh.png,lwt-about__catalog-teaser-wrapper-v456-refresh.png
+8,Final CTA,lwt-about__cta-footer-wrapper.png,source-assets/lwt-about__cta-footer-wrapper-v456-refresh.png,lwt-about__cta-footer-wrapper-v456-refresh.png
+optional,Optional Alternate,,source-assets/optional-alt-light-section-v456.png,optional-alt-light-section-v456.png
