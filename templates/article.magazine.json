@@ -1,9 +1,0 @@
-{
-  "sections": {
-    "main": {
-      "type": "article-magazine-editorial",
-      "settings": {}
-    }
-  },
-  "order": ["main"]
-}
