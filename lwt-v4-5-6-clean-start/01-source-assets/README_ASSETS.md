@@ -1,6 +1,6 @@
 # V4.5.6 Source Assets
 
-The actual PNG files should live here before theme implementation begins.
+The actual PNG source wrapper files for the April V4.5.6 clean-start pass live here. They are planning/source assets only and have not been copied into active Shopify theme assets.
 
 Expected files:
 
@@ -14,6 +14,6 @@ Expected files:
 - lwt-about__cta-footer-wrapper-v456-refresh.png
 - optional-alt-light-section-v456.png
 
-The GitHub connector has created the text planning files. The PNG binaries should be committed from the desktop/Codex environment using the source assets package already provided.
+All nine expected PNG binaries have been copied from `LWT_V4_5_6_SOURCE_ASSETS_READY_FOR_CODEX.zip`.
 
 Do not copy these into active Shopify assets until section implementation is explicitly approved.
