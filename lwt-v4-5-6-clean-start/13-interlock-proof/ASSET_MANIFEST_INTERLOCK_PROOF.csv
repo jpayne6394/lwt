@@ -1,0 +1,5 @@
+file,purpose,source,width,height,target_theme_path
+lwt-v456-interlock-proof-master-canvas.png,Full master canvas reference,LWT_V4_5_6_INTERLOCK_PROOF_ASSETS.zip,1440,1500,assets/lwt-v456-interlock-proof-master-canvas.png
+lwt-v456-interlock-proof-hero-slice.png,Hero section slice,LWT_V4_5_6_INTERLOCK_PROOF_ASSETS.zip,1440,720,assets/lwt-v456-interlock-proof-hero-slice.png
+lwt-v456-interlock-proof-story-slice.png,Story section slice,LWT_V4_5_6_INTERLOCK_PROOF_ASSETS.zip,1440,780,assets/lwt-v456-interlock-proof-story-slice.png
+lwt-v456-interlock-proof-seam-guide.png,Reference with red cut line,LWT_V4_5_6_INTERLOCK_PROOF_ASSETS.zip,1440,1500,assets/lwt-v456-interlock-proof-seam-guide.png
