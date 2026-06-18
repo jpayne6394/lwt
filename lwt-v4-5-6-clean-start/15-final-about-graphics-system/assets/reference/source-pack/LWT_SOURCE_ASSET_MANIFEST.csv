@@ -1,0 +1,10 @@
+file,source_path,width,height,role,status,notes
+01_locked_mockup/full-page-layout-reference.png,/mnt/data/full page.png,941,1672,locked full-page layout reference,reference only,God mockup for page structure and section order. Do not bake content into backgrounds.
+02_section_cuts/hero-layout-reference.png,/mnt/data/hero .png,1042,356,layout reference,reference only,
+02_section_cuts/company-bio-layout-reference.png,/mnt/data/company bio.png,707,197,layout reference,reference only,
+02_section_cuts/trust-strip-layout-reference.png,/mnt/data/trust strip .png,711,96,layout reference,reference only,
+02_section_cuts/meet-practitioners-layout-reference.png,/mnt/data/meet the prctitioners .png,700,217,layout reference,reference only,
+02_section_cuts/lwt-trust-model-layout-reference.png,/mnt/data/lwt trust model .png,932,195,layout reference,reference only,
+02_section_cuts/three-way-funnel-layout-reference.png,/mnt/data/3 way funnel .png,782,222,layout reference,reference only,
+03_interlock_reference/interlocking-example-reference.png,/mnt/data/interlocking example .png,696,587,interlock behavior reference,reference only,"Shows the kind of shared seam/flow behavior desired, not a final LWT asset."
+04_approved_art/approved-practitioners-biotech-molecule-helix.png,/mnt/data/elegant_biotech_design_with_molecular_motifs.png,1896,829,approved art direction,approved for Meet the Practitioners motif/style,Use for practitioners section visual language: helix/molecule/health-science. No floral.
