@@ -1,0 +1,11 @@
+{
+  "sections": {
+    "main": {
+      "type": "lwt-v456-about-bg-test",
+      "settings": {}
+    }
+  },
+  "order": [
+    "main"
+  ]
+}
