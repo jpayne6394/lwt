@@ -1,91 +1,12 @@
 import type { MatchResult, ProductMapping, ShopifyVariant, SupplierProduct } from "./types.ts";
 
 const TITLE_CONFIDENCE_THRESHOLD = 0.78;
-const UNCERTAIN_CONFIDENCE_THRESHOLD = 0.45;
-
-const BASE_STOP_WORDS = new Set(["by", "the", "and", "for", "with", "a", "an", "of"]);
-const FORMAT_STOP_WORDS = new Set([
-  "bottle",
-  "caps",
-  "cap",
-  "capsule",
-  "capsules",
-  "count",
-  "ct",
-  "fl",
-  "floz",
-  "g",
-  "gel",
-  "grams",
-  "ml",
-  "oz",
-  "sachet",
-  "sachets",
-  "softgel",
-  "softgels",
-  "tab",
-  "tabs",
-  "tablet",
-  "tablets",
-  "vial",
-  "vials",
-]);
-const GENERIC_TITLE_STOP_WORDS = new Set([
-  "care",
-  "phase",
-  "product",
-  "products",
-  "relief",
-  "supplement",
-  "supplements",
-  "symptom",
-]);
-
-const BRAND_ALIASES = new Map([
-  ["research nutritional", "researched nutritionals"],
-  ["research nutritionals", "researched nutritionals"],
-  ["researched nutritional", "researched nutritionals"],
-  ["researched nutritionals", "researched nutritionals"],
-  ["physician standard", "physicians standard"],
-  ["physician s standard", "physicians standard"],
-  ["physicians standard", "physicians standard"],
-  ["physicians standards", "physicians standard"],
-  ["des bio", "desbio"],
-  ["deseret biologicals", "desbio"],
-  ["desbio", "desbio"],
-]);
+const UNCERTAIN_CONFIDENCE_THRESHOLD = 0.25;
 
 export function matchSupplierProduct(
   supplierProduct: SupplierProduct,
   shopifyVariants: ShopifyVariant[],
   mappings: ProductMapping[],
-): MatchResult {
-  return createProductMatcher(shopifyVariants, mappings).match(supplierProduct);
-}
-
-export type ProductMatcher = {
-  match(supplierProduct: SupplierProduct): MatchResult;
-};
-
-export function createProductMatcher(shopifyVariants: ShopifyVariant[], mappings: ProductMapping[]): ProductMatcher {
-  const skuIndex = groupVariantsByIdentifier(shopifyVariants, (variant) => variant.sku);
-  const upcIndex = groupVariantsByIdentifier(shopifyVariants, (variant) => variant.barcode);
-  const brandCandidateCache = new Map<string, ShopifyVariant[]>();
-
-  return {
-    match(supplierProduct: SupplierProduct): MatchResult {
-      return matchWithIndexes(supplierProduct, shopifyVariants, mappings, skuIndex, upcIndex, brandCandidateCache);
-    },
-  };
-}
-
-function matchWithIndexes(
-  supplierProduct: SupplierProduct,
-  shopifyVariants: ShopifyVariant[],
-  mappings: ProductMapping[],
-  skuIndex: Map<string, ShopifyVariant[]>,
-  upcIndex: Map<string, ShopifyVariant[]>,
-  brandCandidateCache: Map<string, ShopifyVariant[]>,
 ): MatchResult {
   const manual = findManualMapping(supplierProduct, shopifyVariants, mappings);
   if (manual) {
@@ -99,7 +20,7 @@ function matchWithIndexes(
 
   const sku = normalizeIdentifier(supplierProduct.sku);
   if (sku) {
-    const skuMatches = skuIndex.get(sku) ?? [];
+    const skuMatches = shopifyVariants.filter((variant) => normalizeIdentifier(variant.sku) === sku);
     if (skuMatches.length > 1) {
       return {
         status: "blocked",
@@ -118,7 +39,7 @@ function matchWithIndexes(
 
   const upc = normalizeIdentifier(supplierProduct.upc);
   if (upc) {
-    const upcMatches = upcIndex.get(upc) ?? [];
+    const upcMatches = shopifyVariants.filter((variant) => normalizeIdentifier(variant.barcode) === upc);
     if (upcMatches.length > 1) {
       return {
         status: "blocked",
@@ -135,45 +56,7 @@ function matchWithIndexes(
     }
   }
 
-  return findTitleVendorMatch(supplierProduct, titleCandidatesFor(supplierProduct, shopifyVariants, brandCandidateCache));
-}
-
-function groupVariantsByIdentifier(
-  shopifyVariants: ShopifyVariant[],
-  getValue: (variant: ShopifyVariant) => string | undefined,
-): Map<string, ShopifyVariant[]> {
-  const index = new Map<string, ShopifyVariant[]>();
-  for (const variant of shopifyVariants) {
-    const key = normalizeIdentifier(getValue(variant));
-    if (!key) {
-      continue;
-    }
-    const matches = index.get(key) ?? [];
-    matches.push(variant);
-    index.set(key, matches);
-  }
-  return index;
-}
-
-function titleCandidatesFor(
-  supplierProduct: SupplierProduct,
-  shopifyVariants: ShopifyVariant[],
-  brandCandidateCache: Map<string, ShopifyVariant[]>,
-): ShopifyVariant[] {
-  const supplierBrand = canonicalBrand(supplierProduct.brand ?? supplierProduct.supplierName);
-  if (!supplierBrand) {
-    return shopifyVariants;
-  }
-
-  const cached = brandCandidateCache.get(supplierBrand);
-  if (cached) {
-    return cached;
-  }
-
-  const candidates = shopifyVariants.filter((variant) => brandMatches(supplierBrand, variant));
-  const scoped = candidates.length ? candidates : shopifyVariants;
-  brandCandidateCache.set(supplierBrand, scoped);
-  return scoped;
+  return findTitleVendorMatch(supplierProduct, shopifyVariants);
 }
 
 function findManualMapping(
@@ -205,22 +88,13 @@ function findManualMapping(
 }
 
 function findTitleVendorMatch(supplierProduct: SupplierProduct, shopifyVariants: ShopifyVariant[]): MatchResult {
-  const supplierBrand = canonicalBrand(supplierProduct.brand ?? supplierProduct.supplierName);
-  const requiresDesbioPhaseFamily =
-    supplierProduct.supplierId === "desbio" && isDesbioPhaseSymptomRelief(supplierProduct.title);
-  const candidateVariants = supplierBrand
-    ? shopifyVariants.filter((variant) => brandMatches(supplierBrand, variant))
-    : shopifyVariants;
-  const scored = candidateVariants
+  const supplierTokens = tokenizeProductTitle(supplierProduct.title);
+  const supplierBrand = normalizeText(supplierProduct.brand ?? supplierProduct.supplierName);
+  const scored = shopifyVariants
     .map((variant) => {
-      const titleStopWords = titleStopWordsForBrands(supplierBrand, variant.vendor);
-      const supplierTokens = tokenizeProductTitle(supplierProduct.title, titleStopWords);
-      const vendorMatches = brandMatches(supplierBrand, variant);
-      if (requiresDesbioPhaseFamily && !isDesbioPhaseSymptomRelief(variant.title)) {
-        return { variant, score: 0, vendorMatches };
-      }
-
-      const titleScore = tokenOverlapScore(supplierTokens, tokenizeProductTitle(variant.title, titleStopWords));
+      const titleScore = tokenOverlapScore(supplierTokens, tokenizeProductTitle(variant.title));
+      const vendorText = normalizeText(`${variant.vendor} ${variant.title}`);
+      const vendorMatches = supplierBrand.length > 0 && vendorText.includes(supplierBrand);
       const score = vendorMatches ? titleScore : titleScore * 0.65;
       return { variant, score, vendorMatches };
     })
@@ -254,10 +128,6 @@ function findTitleVendorMatch(supplierProduct: SupplierProduct, shopifyVariants:
   return {
     status: "blocked",
     reason: "Supplier product resembles an existing Shopify product but not confidently enough to automate",
-    candidate: {
-      variant: best.variant,
-      confidence: roundConfidence(best.score),
-    },
   };
 }
 
@@ -275,18 +145,11 @@ function normalizeText(value: string): string {
     .replace(/\s+/g, " ");
 }
 
-function tokenizeProductTitle(value: string, additionalStopWords: Set<string> = new Set()): string[] {
+function tokenizeProductTitle(value: string): string[] {
+  const stopWords = new Set(["by", "the", "and", "for", "with", "a", "an", "of"]);
   return normalizeText(value)
     .split(" ")
-    .filter(
-      (token) =>
-        token.length > 1 &&
-        !BASE_STOP_WORDS.has(token) &&
-        !FORMAT_STOP_WORDS.has(token) &&
-        !GENERIC_TITLE_STOP_WORDS.has(token) &&
-        !additionalStopWords.has(token) &&
-        !isQuantityFormatToken(token),
-    );
+    .filter((token) => token.length > 1 && !stopWords.has(token));
 }
 
 function tokenOverlapScore(leftTokens: string[], rightTokens: string[]): number {
@@ -296,61 +159,10 @@ function tokenOverlapScore(leftTokens: string[], rightTokens: string[]): number 
 
   const right = new Set(rightTokens);
   const matches = leftTokens.filter((token) => right.has(token)).length;
-  if (matches === 0) {
-    return 0;
-  }
-
-  const coverage = matches / Math.min(leftTokens.length, rightTokens.length);
-  const balance = matches / Math.max(leftTokens.length, rightTokens.length);
-  return (coverage + balance) / 2;
+  return matches / Math.max(leftTokens.length, rightTokens.length);
 }
 
 function roundConfidence(value: number): number {
   return Math.round(value * 100) / 100;
-}
-
-function titleStopWordsForBrands(supplierBrand: string, shopifyVendor: string): Set<string> {
-  return new Set([...brandTokens(supplierBrand), ...brandTokens(canonicalBrand(shopifyVendor))]);
-}
-
-function brandTokens(value: string): string[] {
-  return normalizeText(value)
-    .split(" ")
-    .filter((token) => token.length > 1);
-}
-
-function canonicalBrand(value: string): string {
-  const normalized = normalizeText(value);
-  return BRAND_ALIASES.get(normalized) ?? normalized;
-}
-
-function brandMatches(supplierBrand: string, variant: ShopifyVariant): boolean {
-  if (supplierBrand.length === 0) {
-    return false;
-  }
-
-  const variantVendor = canonicalBrand(variant.vendor);
-  return variantVendor === supplierBrand || canonicalizeBrandAliases(variant.title).includes(supplierBrand);
-}
-
-function canonicalizeBrandAliases(value: string): string {
-  let normalized = normalizeText(value);
-  for (const [alias, canonical] of BRAND_ALIASES) {
-    normalized = normalized.replace(new RegExp(`\\b${escapeRegExp(alias)}\\b`, "g"), canonical);
-  }
-  return normalized;
-}
-
-function isQuantityFormatToken(token: string): boolean {
-  return /^\d+$/.test(token) || /^\d+(caps?|capsules?|tabs?|tablets?|ct|count|ml|oz|floz|fl|g|grams?|vcaps?|vegcaps?|softgels?|vials?)$/.test(token);
-}
-
-function isDesbioPhaseSymptomRelief(value: string): boolean {
-  const normalized = normalizeText(value);
-  return /\bphase\b/.test(normalized) && /\bsymptom\b/.test(normalized) && /\brelief\b/.test(normalized);
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 

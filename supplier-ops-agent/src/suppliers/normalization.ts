@@ -39,29 +39,7 @@ function first(record: Record<string, unknown>, keys: string[]): unknown {
 }
 
 function cleanString(value: unknown): string {
-  return decodeHtmlEntities(String(value ?? "")).trim();
-}
-
-function decodeHtmlEntities(value: string): string {
-  return value.replace(/&(#x[0-9a-f]+|#\d+|amp|lt|gt|quot|apos);/gi, (entity, code: string) => {
-    const normalized = code.toLowerCase();
-    if (normalized.startsWith("#x")) {
-      return String.fromCodePoint(Number.parseInt(normalized.slice(2), 16));
-    }
-    if (normalized.startsWith("#")) {
-      return String.fromCodePoint(Number.parseInt(normalized.slice(1), 10));
-    }
-
-    return (
-      {
-        amp: "&",
-        lt: "<",
-        gt: ">",
-        quot: '"',
-        apos: "'",
-      }[normalized] ?? entity
-    );
-  });
+  return String(value ?? "").trim();
 }
 
 function parseQuantity(value: unknown): number | undefined {
@@ -90,20 +68,14 @@ function parseImages(value: unknown): string[] {
 }
 
 function parseStockStatus(record: Record<string, unknown>): StockStatus {
-  const raw = cleanString(
-    first(record, ["stockStatus", "stock_status", "availability", "available", "in_stock", "is_in_stock", "status"]),
-  );
+  const raw = cleanString(first(record, ["stockStatus", "stock_status", "availability", "available", "in_stock", "status"]));
   const normalized = raw.toLowerCase();
 
-  if (["true", "yes", "y", "available", "in stock", "in_stock", "instock", "1"].includes(normalized)) {
+  if (["true", "yes", "y", "available", "in stock", "instock", "1"].includes(normalized)) {
     return "in_stock";
   }
 
-  if (
-    ["false", "no", "n", "unavailable", "out of stock", "out_of_stock", "outofstock", "0", "backordered"].includes(
-      normalized,
-    )
-  ) {
+  if (["false", "no", "n", "unavailable", "out of stock", "outofstock", "0", "backordered"].includes(normalized)) {
     return "out_of_stock";
   }
 

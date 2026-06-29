@@ -32,7 +32,7 @@ APP_URL=https://supplier-ops.yourdomain.com
 DATABASE_URL=postgres://...
 SHOPIFY_API_KEY=...
 SHOPIFY_API_SECRET=...
-SHOPIFY_SCOPES=read_products,write_products,read_inventory,write_inventory,read_orders,read_content,write_content
+SHOPIFY_SCOPES=read_products,write_products,read_inventory,write_inventory
 SHOPIFY_SHOP=lwtinternational-com.myshopify.com
 SHOPIFY_API_VERSION=2026-01
 EMAIL_WEBHOOK_URL=...
@@ -55,9 +55,6 @@ In Shopify Partner Dashboard or Dev Dashboard:
    - `write_products`
    - `read_inventory`
    - `write_inventory`
-   - `read_orders`
-   - `read_content`
-   - `write_content`
 6. Save the generated API key/client ID and API secret into the deployed app environment.
 
 ## 4. Install and verify
@@ -67,9 +64,8 @@ In Shopify Partner Dashboard or Dev Dashboard:
 3. In Shopify admin, go to **Apps** and open **Supplier Ops Agent**.
 4. Confirm the embedded app loads inside Shopify admin.
 5. Run a dry-run supplier sync first.
-6. Run **Refresh radar** in BI Analyst to generate the first revenue-play queue.
-7. Configure supplier feeds, Market Radar source URLs, or portal credentials one supplier/source at a time.
-8. Enable write-mode automation after each supplier passes a dry-run.
+6. Configure supplier feeds or portal credentials one supplier at a time.
+7. Enable write-mode automation after each supplier passes a dry-run.
 
 ## 5. Operational defaults
 
@@ -78,7 +74,4 @@ In Shopify Partner Dashboard or Dev Dashboard:
 - Existing products can update stock, cost, price, and compare-at price.
 - New supplier items are created as drafts only.
 - Price changes over 25%, uncertain matches, login/2FA, and parser failures are blocked and alerted.
-- Blog articles are created as Shopify drafts only after approval.
-- Campaigns are generated as Shopify Email handoff briefs; the app does not send email.
-- Flow Launchpad links to Shopify Flow and tracks setup ideas; it does not auto-edit Flow workflows.
 

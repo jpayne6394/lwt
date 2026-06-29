@@ -15,3 +15,146 @@ services:
         value: 11a896486e45ed90e06e632a3e0bacec
       - key: WEEKLY_SYNC_INTERVAL_MS
         value: "604800000"
+      - key: MEMORY_PROVIDER
+        value: postgres
+      - key: DATABASE_URL
+        sync: false
+      - key: MEMORY_VECTOR_ENABLED
+        value: "true"
+      - key: EMBEDDING_PROVIDER
+        value: local
+      - key: LOCAL_EMBEDDING_MODEL
+        value: auto
+      - key: LOCAL_LLM_TIMEOUT_MS
+        value: "15000"
+      - key: MEMORY_MAX_CONTEXT_CHARS
+        value: "24000"
+      - key: CONTENT_TOPICS_PATH
+        value: config/content_topics.json
+      - key: SHOPPER_BEHAVIOR_IMPORT_DIR
+        value: imports/shopper-behavior
+      - key: INTERNAL_DASHBOARD_PASSWORD
+        sync: false
+      - key: INTERNAL_DASHBOARD_AUTH_REQUIRED
+        value: "true"
+      - key: GA4_PROPERTY_ID
+        sync: false
+      - key: GA4_CREDENTIALS_JSON
+        sync: false
+      - key: SEARCH_CONSOLE_SITE_URL
+        sync: false
+      - key: SEARCH_CONSOLE_CREDENTIALS_JSON
+        sync: false
+      - key: SHOPIFY_STORE_DOMAIN
+        sync: false
+      - key: SHOPIFY_ADMIN_ACCESS_TOKEN
+        sync: false
+      - key: X_BEARER_TOKEN
+        sync: false
+      - key: REDDIT_CLIENT_ID
+        sync: false
+      - key: REDDIT_CLIENT_SECRET
+        sync: false
+      - key: REDDIT_USER_AGENT
+        value: lwt-intelligence-center/1.0
+      - key: GOOGLE_TRENDS_PROVIDER_KEY
+        sync: false
+      - key: SEARCH_PROVIDER_KEY
+        sync: false
+  - type: cron
+    name: lwt-intelligence-inventory
+    runtime: node
+    schedule: "0 11 * * *"
+    buildCommand: npm install
+    startCommand: npm run intelligence:inventory
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.0
+      - key: SHOPIFY_API_VERSION
+        value: 2026-01
+      - key: CONTENT_TOPICS_PATH
+        value: config/content_topics.json
+      - key: DATABASE_URL
+        sync: false
+      - key: SHOPIFY_STORE_DOMAIN
+        sync: false
+      - key: SHOPIFY_ADMIN_ACCESS_TOKEN
+        sync: false
+  - type: cron
+    name: lwt-intelligence-daily-bi
+    runtime: node
+    schedule: "20 11 * * *"
+    buildCommand: npm install
+    startCommand: npm run intelligence:daily-bi
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.0
+      - key: CONTENT_TOPICS_PATH
+        value: config/content_topics.json
+      - key: DATABASE_URL
+        sync: false
+  - type: cron
+    name: lwt-intelligence-content-radar
+    runtime: node
+    schedule: "0 12 * * 1"
+    buildCommand: npm install
+    startCommand: npm run intelligence:content-radar
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.0
+      - key: CONTENT_TOPICS_PATH
+        value: config/content_topics.json
+      - key: DATABASE_URL
+        sync: false
+      - key: X_BEARER_TOKEN
+        sync: false
+      - key: REDDIT_CLIENT_ID
+        sync: false
+      - key: REDDIT_CLIENT_SECRET
+        sync: false
+      - key: REDDIT_USER_AGENT
+        value: lwt-intelligence-center/1.0
+      - key: GOOGLE_TRENDS_PROVIDER_KEY
+        sync: false
+      - key: SEARCH_PROVIDER_KEY
+        sync: false
+  - type: cron
+    name: lwt-intelligence-product-strategy
+    runtime: node
+    schedule: "30 12 * * 1"
+    buildCommand: npm install
+    startCommand: npm run intelligence:product-strategy
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.0
+      - key: CONTENT_TOPICS_PATH
+        value: config/content_topics.json
+      - key: DATABASE_URL
+        sync: false
+  - type: cron
+    name: lwt-intelligence-shopper-behavior
+    runtime: node
+    schedule: "45 12 * * 1"
+    buildCommand: npm install
+    startCommand: npm run intelligence:shopper-behavior
+    envVars:
+      - key: NODE_VERSION
+        value: 24.14.0
+      - key: CONTENT_TOPICS_PATH
+        value: config/content_topics.json
+      - key: SHOPPER_BEHAVIOR_IMPORT_DIR
+        value: imports/shopper-behavior
+      - key: DATABASE_URL
+        sync: false
+      - key: SHOPIFY_STORE_DOMAIN
+        sync: false
+      - key: SHOPIFY_ADMIN_ACCESS_TOKEN
+        sync: false
+      - key: GA4_PROPERTY_ID
+        sync: false
+      - key: GA4_CREDENTIALS_JSON
+        sync: false
+      - key: SEARCH_CONSOLE_SITE_URL
+        sync: false
+      - key: SEARCH_CONSOLE_CREDENTIALS_JSON
+        sync: false

@@ -1,10 +1,33 @@
 import type { BlockedIssue, PlannedChange, ProductMapping, ShopifyVariant, SupplierProduct } from "../domain/types.ts";
-import type { CampaignDraftRecord } from "../campaigns/types.ts";
-import type { BlogDraftRecord } from "../content/types.ts";
-import type { MarketRadarOutputRecord, MarketRadarRunOutput, RevenuePlayRecord } from "../market-radar/types.ts";
-import type { ProductOpsOutputRecord, ProductOpsRunOutput } from "../product-ops/types.ts";
-import type { BusinessActionLogRecord, DailyCommandReport } from "../business-os/types.ts";
-import type { ActionQueueEvent, ActionQueueItem } from "../action-queue/types.ts";
+import type {
+  ActionItem,
+  ActionItemPriority,
+  ActionItemSource,
+  ActionItemStatus,
+  ActionNote,
+  BehaviorImportMappingRecord,
+  ContentIdea,
+  ContentIdeaStatus,
+  IntelligenceRunRecord,
+  IntelligenceRunStatus,
+  IntelligenceRunType,
+  ProductSignal,
+  ShopperBehaviorImportRecord,
+  ShopperProductSignal,
+  ShopperRecommendation,
+  ShopperRecommendationStatus,
+  ShopperSearchTerm,
+  SourceItem,
+  WeeklyBriefRecord,
+} from "../agents/intelligenceTypes.ts";
+import type {
+  AgentMemoryDocument,
+  MemoryRetrievalLogInput,
+  MemorySearchInput,
+  MemorySearchResult,
+  MemoryStatus,
+  SaveMemoryDocumentInput,
+} from "../memory/types.ts";
 
 export type SyncRunStatus = "running" | "completed" | "completed_with_issues" | "failed";
 
@@ -52,36 +75,61 @@ export type SupplierOpsRepository = {
   createSyncRun(input: CreateSyncRunInput): Promise<SyncRun>;
   completeSyncRun(runId: string, input: CompleteSyncRunInput): Promise<SyncRun>;
   listShopifyVariants(): Promise<ShopifyVariant[]>;
-  saveShopifyVariants?(variants: ShopifyVariant[]): Promise<void>;
   listMappings(): Promise<ProductMapping[]>;
   saveSupplierSnapshot(snapshot: SupplierSnapshot): Promise<void>;
   recordAppliedChanges(runId: string, changes: PlannedChange[]): Promise<void>;
   recordBlockedIssues(runId: string, issues: BlockedIssue[]): Promise<void>;
-  recordProductOpsOutput?(runId: string, output: ProductOpsRunOutput): Promise<void>;
-  recordMarketRadarOutput?(output: MarketRadarRunOutput): Promise<void>;
-  recentMarketRadarOutputs?(limit?: number): Promise<MarketRadarOutputRecord[]>;
-  recordRevenuePlays?(plays: RevenuePlayRecord[]): Promise<void>;
-  updateRevenuePlayStatus?(id: string, status: RevenuePlayRecord["status"]): Promise<RevenuePlayRecord | null>;
-  recentRevenuePlays?(limit?: number): Promise<RevenuePlayRecord[]>;
-  recordBlogDraft?(draft: BlogDraftRecord): Promise<void>;
-  updateBlogDraftShopifyArticle?(id: string, article: { id: string; handle: string }): Promise<BlogDraftRecord | null>;
-  recentBlogDrafts?(limit?: number): Promise<BlogDraftRecord[]>;
-  recordCampaignDraft?(draft: CampaignDraftRecord): Promise<void>;
-  recentCampaignDrafts?(limit?: number): Promise<CampaignDraftRecord[]>;
-  recordBusinessActionLog?(record: BusinessActionLogRecord): Promise<void>;
-  recentBusinessActionLogs?(limit?: number): Promise<BusinessActionLogRecord[]>;
-  recordDailyCommandReport?(report: DailyCommandReport): Promise<void>;
-  recentDailyCommandReports?(limit?: number): Promise<DailyCommandReport[]>;
-  upsertActionQueueItem?(item: ActionQueueItem): Promise<ActionQueueItem>;
-  findActionQueueItemByDedupeKey?(dedupeKey: string): Promise<ActionQueueItem | null>;
-  findActionQueueItemById?(id: string): Promise<ActionQueueItem | null>;
-  listActionQueueItems?(limit?: number): Promise<ActionQueueItem[]>;
-  listCompletedActionQueueItems?(limit?: number): Promise<ActionQueueItem[]>;
-  recordActionQueueEvent?(event: ActionQueueEvent): Promise<void>;
-  recentActionQueueEvents?(limit?: number): Promise<ActionQueueEvent[]>;
   recentRuns(limit?: number): Promise<SyncRun[]>;
   recentChanges(limit?: number): Promise<AppliedChangeRecord[]>;
   recentIssues(limit?: number): Promise<BlockedIssueRecord[]>;
-  recentProductOpsOutputs?(limit?: number): Promise<ProductOpsOutputRecord[]>;
+  saveMemoryDocument(input: SaveMemoryDocumentInput): Promise<AgentMemoryDocument>;
+  searchMemory(input: MemorySearchInput): Promise<MemorySearchResult[]>;
+  recordMemoryRetrieval(input: MemoryRetrievalLogInput): Promise<void>;
+  memoryStatus(): Promise<MemoryStatus>;
+  createIntelligenceRun(input: { type: IntelligenceRunType }): Promise<IntelligenceRunRecord>;
+  completeIntelligenceRun(
+    runId: string,
+    input: { status: IntelligenceRunStatus; error?: string | null; summaryJson?: Record<string, unknown> },
+  ): Promise<IntelligenceRunRecord>;
+  recentIntelligenceRuns(input?: { type?: IntelligenceRunType; limit?: number }): Promise<IntelligenceRunRecord[]>;
+  saveSourceItems(items: Omit<SourceItem, "id">[] | SourceItem[]): Promise<SourceItem[]>;
+  recentSourceItems(input?: { source?: SourceItem["source"]; limit?: number }): Promise<SourceItem[]>;
+  saveProductSignals(signals: Omit<ProductSignal, "id" | "createdAt">[] | ProductSignal[]): Promise<ProductSignal[]>;
+  recentProductSignals(input?: { signalType?: string; limit?: number }): Promise<ProductSignal[]>;
+  saveContentIdeas(ideas: Omit<ContentIdea, "id" | "createdAt">[] | ContentIdea[]): Promise<ContentIdea[]>;
+  getContentIdea(id: string): Promise<ContentIdea | null>;
+  updateContentIdeaStatus(id: string, status: ContentIdeaStatus): Promise<ContentIdea>;
+  recentContentIdeas(input?: { status?: ContentIdea["status"]; limit?: number }): Promise<ContentIdea[]>;
+  createShopperBehaviorImport(
+    input: Omit<ShopperBehaviorImportRecord, "id" | "startedAt" | "finishedAt" | "status" | "error" | "rowCount">,
+  ): Promise<ShopperBehaviorImportRecord>;
+  completeShopperBehaviorImport(
+    importId: string,
+    input: { status: ShopperBehaviorImportRecord["status"]; error?: string | null; rowCount?: number; metadataJson?: Record<string, unknown> },
+  ): Promise<ShopperBehaviorImportRecord>;
+  recentShopperBehaviorImports(input?: { source?: ShopperBehaviorImportRecord["source"]; limit?: number }): Promise<ShopperBehaviorImportRecord[]>;
+  saveBehaviorImportMapping(input: Omit<BehaviorImportMappingRecord, "id" | "createdAt">): Promise<BehaviorImportMappingRecord>;
+  recentBehaviorImportMappings(input?: { reportType?: BehaviorImportMappingRecord["reportType"]; limit?: number }): Promise<BehaviorImportMappingRecord[]>;
+  saveShopperSearchTerms(terms: Omit<ShopperSearchTerm, "id" | "createdAt">[] | ShopperSearchTerm[]): Promise<ShopperSearchTerm[]>;
+  recentShopperSearchTerms(input?: { source?: ShopperSearchTerm["source"]; limit?: number }): Promise<ShopperSearchTerm[]>;
+  saveShopperProductSignals(
+    signals: Omit<ShopperProductSignal, "id" | "createdAt">[] | ShopperProductSignal[],
+  ): Promise<ShopperProductSignal[]>;
+  recentShopperProductSignals(input?: { signalType?: string; limit?: number }): Promise<ShopperProductSignal[]>;
+  saveShopperRecommendations(
+    recommendations: Omit<ShopperRecommendation, "id" | "createdAt" | "status">[] | ShopperRecommendation[],
+  ): Promise<ShopperRecommendation[]>;
+  recentShopperRecommendations(input?: { status?: ShopperRecommendationStatus; limit?: number }): Promise<ShopperRecommendation[]>;
+  createActionItem(input: Omit<ActionItem, "id" | "createdAt" | "updatedAt" | "completedAt" | "status"> & { status?: ActionItemStatus }): Promise<ActionItem>;
+  updateActionItem(
+    id: string,
+    input: Partial<
+      Pick<ActionItem, "title" | "priority" | "status" | "owner" | "explanation" | "suggestedAction" | "relatedProductId" | "relatedProductTitle" | "relatedTopic">
+    >,
+  ): Promise<ActionItem>;
+  recentActionItems(input?: { source?: ActionItemSource; priority?: ActionItemPriority; status?: ActionItemStatus; limit?: number }): Promise<ActionItem[]>;
+  createActionNote(input: Omit<ActionNote, "id" | "createdAt">): Promise<ActionNote>;
+  recentActionNotes(input?: { actionId?: string; limit?: number }): Promise<ActionNote[]>;
+  saveWeeklyBrief(input: Omit<WeeklyBriefRecord, "id" | "generatedAt">): Promise<WeeklyBriefRecord>;
+  recentWeeklyBriefs(input?: { limit?: number }): Promise<WeeklyBriefRecord[]>;
 };
-

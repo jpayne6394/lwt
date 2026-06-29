@@ -9,8 +9,12 @@
     "start": "node --experimental-strip-types src/index.ts",
     "dev": "node --experimental-strip-types src/index.ts",
     "worker": "node --experimental-strip-types src/worker.ts",
-    "capture:emerson": "node --experimental-strip-types scripts/capture-emerson-cookie.ts",
-    "local-llm-relay": "node --experimental-strip-types scripts/local-llm-relay.ts",
+    "intelligence": "node --experimental-strip-types src/intelligence-worker.ts",
+    "intelligence:inventory": "node --experimental-strip-types src/intelligence-worker.ts inventory",
+    "intelligence:daily-bi": "node --experimental-strip-types src/intelligence-worker.ts daily-bi",
+    "intelligence:content-radar": "node --experimental-strip-types src/intelligence-worker.ts content-radar",
+    "intelligence:product-strategy": "node --experimental-strip-types src/intelligence-worker.ts product-strategy",
+    "intelligence:shopper-behavior": "node --experimental-strip-types src/intelligence-worker.ts shopper-behavior",
     "check": "node --test --experimental-strip-types \"tests/**/*.test.ts\""
   },
   "dependencies": {

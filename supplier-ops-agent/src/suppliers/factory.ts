@@ -1,63 +1,23 @@
-import { EmersonCatalogSupplierAdapter } from "./emerson-catalog-adapter.ts";
 import { JsonFeedSupplierAdapter } from "./json-feed-adapter.ts";
 import type { SupplierAdapter, SupplierConfig } from "./types.ts";
 import { WebsiteSupplierAdapter, type WebsiteAdapterConfig } from "./website-adapter.ts";
 
 export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.ProcessEnv = process.env): SupplierAdapter[] {
-  return suppliers.flatMap((supplier) => {
+  return suppliers.map((supplier) => {
     const suffix = toEnvSuffix(supplier.id);
-    const feedUrl =
-      env[`SUPPLIER_FEED_URL_${suffix}`] ??
-      (supplier.sourceEnvVar ? env[supplier.sourceEnvVar] : undefined) ??
-      defaultFeedUrlForSupplier(supplier.id);
+    const feedUrl = env[`SUPPLIER_FEED_URL_${suffix}`] ?? (supplier.sourceEnvVar ? env[supplier.sourceEnvVar] : undefined);
 
     if (feedUrl) {
-      return [new JsonFeedSupplierAdapter(supplier, feedUrl)];
-    }
-
-    if (supplier.id === "emerson-ecologics") {
-      return [
-        new EmersonCatalogSupplierAdapter(supplier, {
-          catalogUrls: parseList(env[`SUPPLIER_CATALOG_URLS_${suffix}`]),
-          cookieHeader: env[`SUPPLIER_COOKIE_HEADER_${suffix}`] ?? env[`SUPPLIER_COOKIE_${suffix}`],
-        }),
-      ];
+      return new JsonFeedSupplierAdapter(supplier, feedUrl);
     }
 
     const websiteConfig = parseWebsiteConfig(env[`SUPPLIER_WEBSITE_CONFIG_${suffix}`]);
-    if (!websiteConfig.loginUrl || !websiteConfig.productsUrl || !websiteConfig.selectors) {
-      return [];
-    }
-
     return new WebsiteSupplierAdapter(supplier, {
       ...websiteConfig,
       username: env[`SUPPLIER_USERNAME_${suffix}`] ?? websiteConfig.username,
       password: env[`SUPPLIER_PASSWORD_${suffix}`] ?? websiteConfig.password,
-    }) as SupplierAdapter;
+    });
   });
-}
-
-export function defaultFeedUrlForSupplier(supplierId: string): string | undefined {
-  return DEFAULT_FEED_URLS[supplierId];
-}
-
-const DEFAULT_FEED_URLS: Record<string, string> = {
-  "physicians-standard": "https://www.physiciansstandard.com/products.json?limit=250",
-  desbio: "https://desbio.com/wp-json/wc/store/v1/products?per_page=100",
-  "research-nutritionals": "https://www.researchednutritionals.com/wp-json/wc/store/v1/products?per_page=100",
-};
-
-function parseList(value: string | undefined): string[] | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  const items = value
-    .split(/[\n,]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
-  return items.length > 0 ? items : undefined;
 }
 
 function parseWebsiteConfig(value: string | undefined): WebsiteAdapterConfig {

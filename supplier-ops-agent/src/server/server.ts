@@ -1,16 +1,13 @@
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { URL } from "node:url";
 
-import { createActionQueueService } from "../action-queue/action-queue-service.ts";
 import type { AlertService } from "../alerts/alert-service.ts";
-import type { BuildCampaignDraftInput, CampaignDraftRecord } from "../campaigns/types.ts";
-import type { BuildBlogDraftInput, BlogDraftRecord } from "../content/types.ts";
-import type { DailyCommandReport } from "../business-os/types.ts";
-import type { IntelligenceMetadata } from "../intelligence/types.ts";
-import type { MarketRadarRunOutput, SourceConnectionCard } from "../market-radar/types.ts";
+import { buildIntelligenceExport, type IntelligenceExportFormat, type IntelligenceExportKind } from "../agents/intelligenceExportService.ts";
+import type { IntelligenceService } from "../agents/intelligenceService.ts";
+import type { IntelligenceRunType } from "../agents/intelligenceTypes.ts";
+import type { AgentMemoryService } from "../memory/memory-service.ts";
 import type { SupplierOpsRepository } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
-import type { ActiveAgent } from "./admin-ui.ts";
 import { renderAdminPage } from "./admin-ui.ts";
 
 export type ServerContext = {
@@ -18,18 +15,11 @@ export type ServerContext = {
   suppliers: SupplierConfig[];
   alerts: AlertService;
   runNow: (dryRun: boolean) => Promise<void>;
-  startRun: (dryRun: boolean) => boolean;
-  sourceConnections?: SourceConnectionCard[];
-  refreshMarketRadar?: () => Promise<MarketRadarRunOutput>;
-  createBlogDraft?: (input: BuildBlogDraftInput) => Promise<BlogDraftRecord>;
-  createCampaignDraft?: (input: BuildCampaignDraftInput) => Promise<CampaignDraftRecord>;
-  createShopifyDraftArticle?: (draftId: string) => Promise<{ id: string; handle: string; title: string }>;
-  buildDailyCommandReport?: () => Promise<DailyCommandReport>;
   shopifyApiKey?: string;
-  applyChangesEnabled: boolean;
-  aiProvider?: string;
-  autonomyMode?: string;
-  getAiStatus?: () => IntelligenceMetadata;
+  memoryService?: AgentMemoryService;
+  intelligenceService?: IntelligenceService;
+  internalDashboardPassword?: string;
+  internalDashboardAuthRequired?: boolean;
 };
 
 export type StartServerOptions = {
@@ -48,227 +38,63 @@ export function startServer(context: ServerContext, options: StartServerOptions)
 
 async function handleRequest(context: ServerContext, request: IncomingMessage, response: ServerResponse): Promise<void> {
   const url = new URL(request.url ?? "/", "http://localhost");
+  if (url.pathname === "/intelligence" || url.pathname.startsWith("/api/intelligence")) {
+    const authStatus = intelligenceAuthStatus(request, context);
+    if (authStatus === "setup_required") {
+      sendText(response, 503, "INTERNAL_DASHBOARD_PASSWORD is required before the Intelligence Center can be used in this environment.");
+      return;
+    }
+    if (authStatus === "unauthorized") {
+      response.writeHead(401, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "WWW-Authenticate": 'Basic realm="LWT Intelligence"',
+      });
+      response.end("Authentication required");
+      return;
+    }
+  }
 
   if (request.method === "GET" && url.pathname === "/healthz") {
     sendJson(response, 200, { ok: true });
     return;
   }
 
-  if (request.method === "POST" && url.pathname === "/api/market-radar") {
-    if (!context.refreshMarketRadar) {
-      sendJson(response, 501, { ok: false, error: "Market Radar is not configured" });
-      return;
-    }
-
-    try {
-      const output = await context.refreshMarketRadar();
-      sendJson(response, 202, { ok: true, output, redirect: "/?agent=bi" });
-    } catch (error) {
-      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Market Radar failed" });
-    }
-    return;
-  }
-
-  if (request.method === "POST" && url.pathname === "/api/command/daily-report") {
-    if (!context.buildDailyCommandReport) {
-      sendJson(response, 501, { ok: false, error: "Business Operating Agent is not configured" });
-      return;
-    }
-
-    try {
-      const report = await context.buildDailyCommandReport();
-      if (wantsJson(request)) {
-        sendJson(response, 201, { ok: true, report, redirect: "/command" });
-      } else {
-        response.writeHead(303, { Location: "/command" });
-        response.end();
-      }
-    } catch (error) {
-      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Command report failed" });
-    }
+  if (url.pathname.startsWith("/api/intelligence")) {
+    await handleIntelligenceApi(context, request, response, url);
     return;
   }
 
   if (request.method === "POST" && url.pathname === "/api/runs") {
-    const requestedDryRun = url.searchParams.get("dryRun") === "true";
-    const dryRun = requestedDryRun || !context.applyChangesEnabled;
-    const started = context.startRun(dryRun);
-
-    if (wantsJson(request)) {
-      sendJson(response, started ? 202 : 200, {
-        ok: true,
-        dryRun,
-        applyChangesEnabled: context.applyChangesEnabled,
-        started,
-        alreadyRunning: !started,
-        redirect: "/runs",
-      });
-      return;
-    }
-
+    const dryRun = url.searchParams.get("dryRun") === "true";
+    await context.runNow(dryRun);
     response.writeHead(303, { Location: "/runs" });
     response.end();
     return;
   }
 
-  if (request.method === "POST" && url.pathname === "/api/blog-drafts") {
-    if (!context.createBlogDraft) {
-      sendJson(response, 501, { ok: false, error: "Blog drafting is not configured" });
+  if (request.method === "GET" && url.pathname === "/api/memory/search") {
+    if (!context.memoryService) {
+      sendJson(response, 503, { error: "Agent memory service is unavailable" });
       return;
     }
-
-    try {
-      const body = await readBody(request);
-      const draft = await context.createBlogDraft({
-        profileId: String(body.profileId ?? "educational-guide"),
-        title: String(body.title ?? "Untitled wellness draft"),
-        roughThoughts: String(body.roughThoughts ?? ""),
-        authorName: String(body.authorName ?? "Living Well Today"),
-      });
-      if (wantsJson(request)) {
-        sendJson(response, 201, { ok: true, draft, redirect: "/?agent=blog" });
-      } else {
-        response.writeHead(303, { Location: "/?agent=blog" });
-        response.end();
-      }
-    } catch (error) {
-      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Blog draft failed" });
-    }
+    const query = url.searchParams.get("q") ?? "";
+    const limit = Number(url.searchParams.get("limit") ?? 5);
+    const result = await context.memoryService.searchMemory({ query, limit, agentName: "api" });
+    sendJson(response, 200, result);
     return;
   }
 
-  if (request.method === "POST" && url.pathname === "/api/blog-drafts/shopify") {
-    if (!context.createShopifyDraftArticle) {
-      sendJson(response, 501, { ok: false, error: "Shopify draft article creation is not configured" });
+  if (request.method === "POST" && url.pathname === "/api/memory/documents") {
+    if (!context.memoryService) {
+      sendJson(response, 503, { error: "Agent memory service is unavailable" });
       return;
     }
-
     try {
-      const body = await readBody(request);
-      const article = await context.createShopifyDraftArticle(String(body.draftId ?? ""));
-      sendJson(response, 201, { ok: true, article, redirect: "/?agent=blog" });
+      const input = await readJsonBody(request, 512_000);
+      const document = await context.memoryService.saveDocument(input as Parameters<AgentMemoryService["saveDocument"]>[0]);
+      sendJson(response, 201, { document });
     } catch (error) {
-      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Shopify draft article failed" });
-    }
-    return;
-  }
-
-  if (request.method === "POST" && url.pathname === "/api/campaign-drafts") {
-    if (!context.createCampaignDraft) {
-      sendJson(response, 501, { ok: false, error: "Campaign drafting is not configured" });
-      return;
-    }
-
-    try {
-      const body = await readBody(request);
-      const draft = await context.createCampaignDraft({
-        title: body.title ? String(body.title) : undefined,
-      });
-      if (wantsJson(request)) {
-        sendJson(response, 201, { ok: true, draft, redirect: "/?agent=campaign" });
-      } else {
-        response.writeHead(303, { Location: "/?agent=campaign" });
-        response.end();
-      }
-    } catch (error) {
-      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Campaign draft failed" });
-    }
-    return;
-  }
-
-  if (request.method === "POST" && url.pathname === "/api/revenue-plays/status") {
-    const body = await readBody(request);
-    const id = String(body.id ?? "");
-    const status = String(body.status ?? "");
-    if (!id || !["SUGGESTED", "DRAFT_READY", "APPROVED", "CREATED_IN_SHOPIFY", "DISMISSED"].includes(status)) {
-      sendJson(response, 400, { ok: false, error: "Invalid revenue play status update" });
-      return;
-    }
-    const play = await context.repository.updateRevenuePlayStatus?.(id, status as any);
-    sendJson(response, play ? 200 : 404, { ok: Boolean(play), play });
-    return;
-  }
-
-  if (request.method === "POST" && url.pathname === "/api/action-queue") {
-    const queue = createActionQueueService(context.repository);
-    const body = await readBody(request);
-    const title = String(body.title ?? "").trim();
-    if (!title) {
-      sendJson(response, 400, { ok: false, error: "Action title is required" });
-      return;
-    }
-
-    try {
-      const item = await queue.enqueue({
-        source_workflow: String(body.source_workflow ?? "manual"),
-        source_agent: String(body.source_agent ?? "Operator"),
-        action_type: (body.action_type as any) ?? "REVIEW",
-        priority: (body.priority as any) ?? "Medium",
-        area: String(body.area ?? "Operations"),
-        title,
-        description: String(body.description ?? body.reason ?? "Manual action created in the command center."),
-        reason: String(body.reason ?? body.description ?? "Manual action created in the command center."),
-        related_product_handle: body.related_product_handle ? String(body.related_product_handle) : null,
-        related_product_title: body.related_product_title ? String(body.related_product_title) : null,
-        related_vendor: body.related_vendor ? String(body.related_vendor) : null,
-        related_collection: body.related_collection ? String(body.related_collection) : null,
-        related_campaign: body.related_campaign ? String(body.related_campaign) : null,
-        risk_level: (body.risk_level as any) ?? "Low",
-        owner: body.owner ? String(body.owner) : "LWT",
-        due_date: body.due_date ? String(body.due_date) : null,
-        confidence_score: body.confidence_score ? Number(body.confidence_score) : null,
-        source_payload: { manual: true },
-        source_reference: body.source_reference ? String(body.source_reference) : null,
-      });
-      sendJson(response, 201, { ok: true, item });
-    } catch (error) {
-      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Action queue create failed" });
-    }
-    return;
-  }
-
-  if (request.method === "POST" && url.pathname.startsWith("/api/action-queue/")) {
-    const queue = createActionQueueService(context.repository);
-    const body = await readBody(request);
-    const id = String(body.id ?? "");
-    const actor = String(body.actor ?? "LWT");
-    const note = String(body.note ?? "");
-    if (!id) {
-      sendJson(response, 400, { ok: false, error: "Action id is required" });
-      return;
-    }
-
-    try {
-      const actionPath = url.pathname.replace("/api/action-queue/", "");
-      const item =
-        actionPath === "approve"
-          ? await queue.approve(id, { actor, note })
-          : actionPath === "reject"
-            ? await queue.reject(id, { actor, note })
-            : actionPath === "complete"
-              ? await queue.complete(id, { actor, note })
-              : actionPath === "edit"
-                ? await queue.edit(id, {
-                    actor,
-                    note,
-                    updates: {
-                      title: body.title ? String(body.title) : undefined,
-                      description: body.description ? String(body.description) : undefined,
-                      reason: body.reason ? String(body.reason) : undefined,
-                      priority: body.priority as any,
-                      area: body.area ? String(body.area) : undefined,
-                      owner: body.owner ? String(body.owner) : undefined,
-                      due_date: body.due_date ? String(body.due_date) : null,
-                    },
-                  })
-                : null;
-      if (!item) {
-        sendJson(response, 404, { ok: false, error: "Unknown action queue operation" });
-        return;
-      }
-      sendJson(response, 200, { ok: true, item });
-    } catch (error) {
-      sendJson(response, 404, { ok: false, error: error instanceof Error ? error.message : "Action queue update failed" });
+      sendJson(response, 400, { error: error instanceof Error ? error.message : "Invalid memory document" });
     }
     return;
   }
@@ -278,82 +104,310 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     return;
   }
 
-  if (url.pathname === "/api/action-queue/export") {
-    const queue = createActionQueueService(context.repository);
-    const format = url.searchParams.get("format") ?? "json";
-    if (format === "csv") {
-      response.writeHead(200, {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": "attachment; filename=\"lwt-action-queue.csv\"",
-      });
-      response.end(await queue.exportCsv());
-      return;
-    }
-    sendJson(response, 200, JSON.parse(await queue.exportJson()));
-    return;
-  }
-
-  const allowedPaths = new Set(["/", "/command", "/suppliers", "/runs", "/changes", "/issues", "/sources", "/settings"]);
+  const allowedPaths = new Set(["/", "/suppliers", "/runs", "/changes", "/issues", "/intelligence", "/memory", "/settings"]);
   if (!allowedPaths.has(url.pathname)) {
     sendText(response, 404, "Not found");
     return;
   }
 
-  const [
-    runs,
-    changes,
-    issues,
-    productOpsOutputs,
-    marketRadarOutputs,
-    revenuePlays,
-    blogDrafts,
-    campaignDrafts,
-    dailyCommandReports,
-    businessActionLogs,
-    actionQueueItems,
-    actionQueueEvents,
-  ] = await Promise.all([
+  const [runs, changes, issues, memoryStatus, intelligence] = await Promise.all([
     context.repository.recentRuns(30),
     context.repository.recentChanges(100),
     context.repository.recentIssues(100),
-    context.repository.recentProductOpsOutputs?.(10) ?? Promise.resolve([]),
-    context.repository.recentMarketRadarOutputs?.(10) ?? Promise.resolve([]),
-    context.repository.recentRevenuePlays?.(100) ?? Promise.resolve([]),
-    context.repository.recentBlogDrafts?.(50) ?? Promise.resolve([]),
-    context.repository.recentCampaignDrafts?.(50) ?? Promise.resolve([]),
-    context.repository.recentDailyCommandReports?.(10) ?? Promise.resolve([]),
-    context.repository.recentBusinessActionLogs?.(100) ?? Promise.resolve([]),
-    context.repository.listActionQueueItems?.(100) ?? Promise.resolve([]),
-    context.repository.recentActionQueueEvents?.(100) ?? Promise.resolve([]),
+    context.repository.memoryStatus(),
+    url.pathname === "/intelligence" && context.intelligenceService ? context.intelligenceService.getDashboard() : Promise.resolve(undefined),
   ]);
 
   const html = renderAdminPage({
     activePath: url.pathname,
-    activeAgent: parseActiveAgent(url.searchParams.get("agent")),
     suppliers: context.suppliers,
     runs,
     changes,
     issues,
-    productOpsOutputs,
-    marketRadarOutputs,
-    revenuePlays,
-    sourceConnections: context.sourceConnections ?? marketRadarOutputs[0]?.sourceConnections ?? [],
-    blogDrafts,
-    campaignDrafts,
     alerts: context.alerts.list(),
     shopifyApiKey: context.shopifyApiKey,
-    applyChangesEnabled: context.applyChangesEnabled,
-    aiProvider: context.aiProvider,
-    autonomyMode: context.autonomyMode,
-    aiStatus: context.getAiStatus?.(),
-    dailyCommandReports,
-    businessActionLogs,
-    actionQueueItems,
-    actionQueueEvents,
+    memoryStatus,
+    intelligence,
+    intelligenceAuthWarning: url.pathname === "/intelligence" && !context.internalDashboardPassword
+      ? "Internal dashboard auth is not configured. Set INTERNAL_DASHBOARD_PASSWORD before production."
+      : undefined,
   });
 
   response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
   response.end(html);
+}
+
+async function handleIntelligenceApi(
+  context: ServerContext,
+  request: IncomingMessage,
+  response: ServerResponse,
+  url: URL,
+): Promise<void> {
+  if (!context.intelligenceService) {
+    sendJson(response, 503, { error: "LWT Intelligence Center is unavailable" });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/intelligence/summary") {
+    sendJson(response, 200, await context.intelligenceService.getSummary());
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/intelligence/inventory") {
+    sendJson(response, 200, await context.intelligenceService.getInventory());
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/intelligence/product-strategy") {
+    sendJson(response, 200, await context.intelligenceService.getProductStrategy());
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/intelligence/content-radar") {
+    sendJson(response, 200, await context.intelligenceService.getContentRadar());
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/intelligence/shopper-behavior") {
+    sendJson(response, 200, await context.intelligenceService.getShopperBehavior());
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/intelligence/shopper-behavior/sources") {
+    sendJson(response, 200, await context.intelligenceService.getShopperBehaviorSources());
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/intelligence/shopper-behavior/recommendations") {
+    sendJson(response, 200, await context.intelligenceService.getShopperBehaviorRecommendations());
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/intelligence/shopper-behavior/import") {
+    try {
+      sendJson(response, 200, { imports: await context.intelligenceService.importShopperBehaviorReports() });
+    } catch (error) {
+      sendJson(response, 400, { error: error instanceof Error ? error.message : "Shopper behavior import failed" });
+    }
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/intelligence/shopper-behavior/import/preview") {
+    try {
+      const input = await readJsonBody(request, 2_000_000);
+      sendJson(response, 200, await context.intelligenceService.previewShopperBehaviorImport(input as Parameters<typeof context.intelligenceService.previewShopperBehaviorImport>[0]));
+    } catch (error) {
+      sendJson(response, 400, { error: error instanceof Error ? error.message : "Shopper behavior import preview failed" });
+    }
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/intelligence/shopper-behavior/import/confirm") {
+    try {
+      const input = await readJsonBody(request, 2_000_000);
+      sendJson(response, 200, await context.intelligenceService.confirmShopperBehaviorImport(input as Parameters<typeof context.intelligenceService.confirmShopperBehaviorImport>[0]));
+    } catch (error) {
+      sendJson(response, 400, { error: error instanceof Error ? error.message : "Shopper behavior import confirm failed" });
+    }
+    return;
+  }
+  const exportRoute = parseExportRoute(url);
+  if (request.method === "GET" && exportRoute) {
+    try {
+      if (exportRoute.kind === "weekly-briefs") {
+        await context.intelligenceService.getWeeklyBrief();
+      }
+      const result = await buildIntelligenceExport(context.repository, exportRoute.kind, exportRoute.format);
+      sendDownload(response, 200, result.body, result.contentType, result.filename);
+    } catch (error) {
+      sendJson(response, 400, { error: error instanceof Error ? error.message : "Export failed" });
+    }
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/intelligence/actions") {
+    sendJson(response, 200, await context.intelligenceService.listActionItems({
+      source: url.searchParams.get("source") as Parameters<typeof context.intelligenceService.listActionItems>[0]["source"] | undefined,
+      priority: url.searchParams.get("priority") as Parameters<typeof context.intelligenceService.listActionItems>[0]["priority"] | undefined,
+      status: url.searchParams.get("status") as Parameters<typeof context.intelligenceService.listActionItems>[0]["status"] | undefined,
+    }));
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/intelligence/actions") {
+    try {
+      const input = await readJsonBody(request, 256_000);
+      sendJson(response, 201, { action: await context.intelligenceService.createActionItem(input as Parameters<typeof context.intelligenceService.createActionItem>[0]) });
+    } catch (error) {
+      sendJson(response, 400, { error: error instanceof Error ? error.message : "Action item create failed" });
+    }
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/intelligence/actions/from-recommendation") {
+    try {
+      const input = await readJsonBody(request, 256_000);
+      sendJson(response, 201, { action: await context.intelligenceService.createActionFromRecommendation(input as Parameters<typeof context.intelligenceService.createActionFromRecommendation>[0]) });
+    } catch (error) {
+      sendJson(response, 400, { error: error instanceof Error ? error.message : "Action item create failed" });
+    }
+    return;
+  }
+  const actionRoute = parseActionRoute(url.pathname);
+  if (actionRoute) {
+    if (request.method === "PATCH") {
+      try {
+        const input = await readJsonBody(request, 128_000);
+        sendJson(response, 200, { action: await context.intelligenceService.updateActionItem(actionRoute.id, input as Parameters<typeof context.intelligenceService.updateActionItem>[1]) });
+      } catch (error) {
+        sendJson(response, 400, { error: error instanceof Error ? error.message : "Action item update failed" });
+      }
+      return;
+    }
+    if (request.method === "POST" && actionRoute.action === "notes") {
+      try {
+        const input = await readJsonBody(request, 128_000) as { body?: string };
+        sendJson(response, 201, { note: await context.intelligenceService.addActionNote(actionRoute.id, input.body ?? "") });
+      } catch (error) {
+        sendJson(response, 400, { error: error instanceof Error ? error.message : "Action note create failed" });
+      }
+      return;
+    }
+    sendJson(response, 405, { error: "Method not allowed" });
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/intelligence/weekly-brief") {
+    sendJson(response, 200, await context.intelligenceService.getWeeklyBrief());
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/intelligence/weekly-brief/generate") {
+    sendJson(response, 200, await context.intelligenceService.generateWeeklyBrief());
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/intelligence/sources") {
+    sendJson(response, 200, await context.intelligenceService.getSources());
+    return;
+  }
+  if (request.method === "GET" && url.pathname === "/api/intelligence/source-settings") {
+    const dashboard = await context.intelligenceService.getDashboard();
+    sendJson(response, 200, dashboard.sourceSettings);
+    return;
+  }
+
+  const ideaRoute = parseContentIdeaRoute(url.pathname);
+  if (ideaRoute) {
+    if (request.method === "GET" && !ideaRoute.action) {
+      const idea = await context.intelligenceService.getContentIdea(ideaRoute.id);
+      if (!idea) {
+        sendJson(response, 404, { error: "Content idea not found" });
+        return;
+      }
+      sendJson(response, 200, { idea });
+      return;
+    }
+
+    if (request.method === "POST" && ideaRoute.action === "approve") {
+      try {
+        const idea = await context.intelligenceService.updateContentIdeaStatus(ideaRoute.id, "approved");
+        sendJson(response, 200, { idea });
+      } catch (error) {
+        sendJson(response, 404, { error: error instanceof Error ? error.message : "Content idea not found" });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && ideaRoute.action === "reject") {
+      try {
+        const idea = await context.intelligenceService.updateContentIdeaStatus(ideaRoute.id, "rejected");
+        sendJson(response, 200, { idea });
+      } catch (error) {
+        sendJson(response, 404, { error: error instanceof Error ? error.message : "Content idea not found" });
+      }
+      return;
+    }
+
+    if (request.method === "POST" && ideaRoute.action === "blog-brief") {
+      try {
+        sendJson(response, 200, await context.intelligenceService.generateBlogBrief(ideaRoute.id));
+      } catch (error) {
+        sendJson(response, 404, { error: error instanceof Error ? error.message : "Content idea not found" });
+      }
+      return;
+    }
+
+    sendJson(response, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname.startsWith("/api/intelligence/run/")) {
+    const runType = parseRunType(url.pathname.replace("/api/intelligence/run/", ""));
+    if (!runType) {
+      sendJson(response, 404, { error: "Unknown intelligence run type" });
+      return;
+    }
+    try {
+      const result = await context.intelligenceService.run(runType);
+      sendJson(response, 200, { ok: true, result });
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Run failed" });
+    }
+    return;
+  }
+
+  sendJson(response, 404, { error: "Not found" });
+}
+
+function parseContentIdeaRoute(pathname: string): { id: string; action?: string } | null {
+  const match = /^\/api\/intelligence\/content-ideas\/([^/]+)(?:\/([^/]+))?$/.exec(pathname);
+  if (!match) {
+    return null;
+  }
+  return {
+    id: decodeURIComponent(match[1]),
+    action: match[2] ? decodeURIComponent(match[2]) : undefined,
+  };
+}
+
+function parseActionRoute(pathname: string): { id: string; action?: string } | null {
+  const match = /^\/api\/intelligence\/actions\/([^/]+)(?:\/([^/]+))?$/.exec(pathname);
+  if (!match) {
+    return null;
+  }
+  return {
+    id: decodeURIComponent(match[1]),
+    action: match[2] ? decodeURIComponent(match[2]) : undefined,
+  };
+}
+
+function parseExportRoute(url: URL): { kind: IntelligenceExportKind; format: IntelligenceExportFormat } | null {
+  const match = /^\/api\/intelligence\/exports\/([^/]+)$/.exec(url.pathname);
+  if (!match) {
+    return null;
+  }
+  const kind = decodeURIComponent(match[1]);
+  if (kind !== "actions" && kind !== "weekly-briefs" && kind !== "shopper-recommendations") {
+    return null;
+  }
+  const requestedFormat = url.searchParams.get("format") ?? (kind === "weekly-briefs" ? "markdown" : "json");
+  const allowed = kind === "weekly-briefs" ? ["json", "markdown"] : ["json", "csv"];
+  const format = allowed.includes(requestedFormat) ? requestedFormat as IntelligenceExportFormat : allowed[0] as IntelligenceExportFormat;
+  return { kind, format };
+}
+
+function parseRunType(value: string): IntelligenceRunType | null {
+  if (value === "inventory") return "inventory";
+  if (value === "content-radar") return "content_radar";
+  if (value === "daily-bi") return "daily_bi";
+  if (value === "product-strategy") return "product_strategy";
+  if (value === "shopper-behavior") return "shopper_behavior";
+  return null;
+}
+
+function intelligenceAuthStatus(request: IncomingMessage, context: ServerContext): "authorized" | "unauthorized" | "setup_required" {
+  const password = context.internalDashboardPassword;
+  if (!password) {
+    return context.internalDashboardAuthRequired ? "setup_required" : "authorized";
+  }
+  return isAuthorized(request, password) ? "authorized" : "unauthorized";
+}
+
+function isAuthorized(request: IncomingMessage, password: string): boolean {
+  const header = request.headers.authorization;
+  if (!header?.startsWith("Basic ")) {
+    return false;
+  }
+  const decoded = Buffer.from(header.slice("Basic ".length), "base64").toString("utf8");
+  const separator = decoded.indexOf(":");
+  const suppliedPassword = separator >= 0 ? decoded.slice(separator + 1) : decoded;
+  return suppliedPassword === password;
 }
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
@@ -366,40 +420,30 @@ function sendText(response: ServerResponse, status: number, body: string): void 
   response.end(body);
 }
 
-function wantsJson(request: IncomingMessage): boolean {
-  const accept = String(request.headers.accept ?? "");
-  const requestedWith = String(request.headers["x-requested-with"] ?? "");
-  return accept.includes("application/json") || requestedWith === "supplier-ops-fetch";
+function sendDownload(response: ServerResponse, status: number, body: string, contentType: string, filename: string): void {
+  response.writeHead(status, {
+    "Content-Type": contentType,
+    "Content-Disposition": `attachment; filename="${filename}"`,
+  });
+  response.end(body);
 }
 
-function parseActiveAgent(value: string | null): ActiveAgent | undefined {
-  if (
-    value === "bi" ||
-    value === "inventory" ||
-    value === "product_ops" ||
-    value === "campaign" ||
-    value === "blog" ||
-    value === "flow" ||
-    value === "customer_email"
-  ) {
-    return value;
-  }
-  return undefined;
-}
-
-async function readBody(request: IncomingMessage): Promise<Record<string, unknown>> {
+async function readJsonBody(request: IncomingMessage, maxBytes: number): Promise<unknown> {
   const chunks: Buffer[] = [];
+  let totalBytes = 0;
+
   for await (const chunk of request) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    totalBytes += buffer.length;
+    if (totalBytes > maxBytes) {
+      throw new Error("Request body is too large");
+    }
+    chunks.push(buffer);
   }
-  const raw = Buffer.concat(chunks).toString("utf8");
-  if (!raw) {
-    return {};
+
+  if (!chunks.length) {
+    throw new Error("Request body is required");
   }
-  const contentType = String(request.headers["content-type"] ?? "");
-  if (contentType.includes("application/json")) {
-    return JSON.parse(raw) as Record<string, unknown>;
-  }
-  const params = new URLSearchParams(raw);
-  return Object.fromEntries(params.entries());
+
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }

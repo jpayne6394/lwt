@@ -25,19 +25,14 @@ export type ShopifyVariant = {
   handle: string;
   title: string;
   vendor: string;
+  category?: string;
   sku?: string;
   barcode?: string;
   price: number;
   compareAtPrice: number | null;
   cost: number | null;
   status: string;
-  productType?: string;
-  productForm?: string;
-  tags?: string[];
-  imageUrls?: string[];
-  descriptionHtml?: string;
-  inventoryQuantity?: number | null;
-  publishedAt?: string | null;
+  inventoryQuantity?: number;
 };
 
 export type ProductMapping = {
@@ -60,10 +55,6 @@ export type MatchResult =
   | {
       status: "blocked";
       reason: string;
-      candidate?: {
-        variant: ShopifyVariant;
-        confidence: number;
-      };
     }
   | {
       status: "unmatched";
@@ -117,4 +108,3 @@ export type SyncPlan = {
   changes: PlannedChange[];
   issues: BlockedIssue[];
 };
-

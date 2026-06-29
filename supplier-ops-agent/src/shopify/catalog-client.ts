@@ -26,19 +26,14 @@ export class ShopifyCatalogClient {
             handle: product.handle,
             title: product.title,
             vendor: product.vendor,
+            category: product.productType || undefined,
             sku: variant.sku ?? "",
             barcode: variant.barcode ?? "",
             price: Number(variant.price),
             compareAtPrice: variant.compareAtPrice == null ? null : Number(variant.compareAtPrice),
             cost: variant.inventoryItem.unitCost?.amount == null ? null : Number(variant.inventoryItem.unitCost.amount),
             status: product.status.toLowerCase(),
-            productType: product.productType,
-            productForm: product.productForm?.value ?? undefined,
-            tags: product.tags,
-            imageUrls: product.featuredMedia?.preview?.image?.url ? [product.featuredMedia.preview.image.url] : [],
-            descriptionHtml: product.descriptionHtml,
-            inventoryQuantity: variant.inventoryQuantity,
-            publishedAt: product.publishedAt,
+            inventoryQuantity: level?.quantities.find((quantity) => quantity.name === "available")?.quantity,
           });
         }
       }
@@ -58,19 +53,8 @@ type ShopifyCatalogResponse = {
         handle: string;
         title: string;
         vendor: string;
-        status: string;
         productType: string;
-        tags: string[];
-        descriptionHtml: string;
-        publishedAt: string | null;
-        productForm: { value: string } | null;
-        featuredMedia: {
-          preview: {
-            image: {
-              url: string;
-            } | null;
-          };
-        } | null;
+        status: string;
         variants: {
           nodes: Array<{
             id: string;
@@ -78,15 +62,15 @@ type ShopifyCatalogResponse = {
             barcode: string | null;
             price: string;
             compareAtPrice: string | null;
-            inventoryQuantity: number | null;
             inventoryItem: {
               id: string;
               unitCost: { amount: string } | null;
               inventoryLevels: {
                 nodes: Array<{
-                  location: { id: string };
-                }>;
-              };
+                location: { id: string };
+                quantities: Array<{ name: string; quantity: number }>;
+              }>;
+            };
             };
           }>;
         };
@@ -107,21 +91,8 @@ query SupplierOpsProducts($after: String) {
       handle
       title
       vendor
-      status
       productType
-      tags
-      descriptionHtml
-      publishedAt
-      productForm: metafield(namespace: "custom", key: "product_form") {
-        value
-      }
-      featuredMedia {
-        preview {
-          image {
-            url
-          }
-        }
-      }
+      status
       variants(first: 100) {
         nodes {
           id
@@ -129,7 +100,6 @@ query SupplierOpsProducts($after: String) {
           barcode
           price
           compareAtPrice
-          inventoryQuantity
           inventoryItem {
             id
             unitCost {
@@ -140,6 +110,10 @@ query SupplierOpsProducts($after: String) {
                 location {
                   id
                 }
+                quantities(names: ["available"]) {
+                  name
+                  quantity
+                }
               }
             }
           }
@@ -148,4 +122,3 @@ query SupplierOpsProducts($after: String) {
     }
   }
 }`;
-

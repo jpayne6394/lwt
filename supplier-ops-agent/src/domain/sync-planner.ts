@@ -1,6 +1,6 @@
 import { resolveInventoryQuantity } from "./inventory-policy.ts";
 import { moneyEqual, roundMoney } from "./money.ts";
-import { createProductMatcher, type ProductMatcher } from "./product-matcher.ts";
+import { matchSupplierProduct } from "./product-matcher.ts";
 import { planPriceUpdate, resolveRegularPrice } from "./pricing-policy.ts";
 import type {
   BlockedIssue,
@@ -20,101 +20,37 @@ export type SupplierSyncInput = {
 export function planSupplierSync(input: SupplierSyncInput): SyncPlan {
   const changes: PlannedChange[] = [];
   const issues: BlockedIssue[] = [];
-  const matcher = createProductMatcher(input.shopifyVariants, input.mappings);
 
   for (const supplierProduct of input.supplierProducts) {
-    planSupplierProduct(matcher, changes, issues, supplierProduct);
-  }
+    const match = matchSupplierProduct(supplierProduct, input.shopifyVariants, input.mappings);
 
-  return { changes, issues };
-}
-
-export async function planSupplierSyncAsync(input: SupplierSyncInput, yieldEvery = 10): Promise<SyncPlan> {
-  const changes: PlannedChange[] = [];
-  const issues: BlockedIssue[] = [];
-  const matcher = createProductMatcher(input.shopifyVariants, input.mappings);
-
-  for (const [index, supplierProduct] of input.supplierProducts.entries()) {
-    planSupplierProduct(matcher, changes, issues, supplierProduct);
-    if ((index + 1) % yieldEvery === 0) {
-      await yieldToEventLoop();
+    if (match.status === "blocked") {
+      issues.push({
+        kind: "match_uncertain",
+        supplierProduct,
+        reason: match.reason,
+      });
+      continue;
     }
+
+    if (match.status === "unmatched") {
+      const regularPrice = resolveRegularPrice({
+        supplierCost: supplierProduct.cost,
+        supplierMsrp: supplierProduct.msrp,
+      });
+      changes.push({
+        type: "draft_product",
+        supplierProduct,
+        draftPrice: regularPrice.price,
+        reason: match.reason,
+      });
+      continue;
+    }
+
+    appendMatchedProductChanges(changes, issues, supplierProduct, match.variant);
   }
 
   return { changes, issues };
-}
-
-function planSupplierProduct(
-  matcher: ProductMatcher,
-  changes: PlannedChange[],
-  issues: BlockedIssue[],
-  supplierProduct: SupplierProduct,
-): void {
-  const match = matcher.match(supplierProduct);
-
-  if (match.status === "blocked") {
-    issues.push({
-      kind: "match_uncertain",
-      supplierProduct,
-      shopifyVariant: match.candidate?.variant,
-      reason: match.reason,
-      data: {
-        supplier: supplierProductSummary(supplierProduct),
-        candidate: match.candidate ? shopifyVariantSummary(match.candidate.variant) : undefined,
-        matchConfidence: match.candidate?.confidence,
-      },
-    });
-    return;
-  }
-
-  if (match.status === "unmatched") {
-    const regularPrice = resolveRegularPrice({
-      supplierCost: supplierProduct.cost,
-      supplierMsrp: supplierProduct.msrp,
-    });
-    changes.push({
-      type: "draft_product",
-      supplierProduct,
-      draftPrice: regularPrice.price,
-      reason: match.reason,
-    });
-    return;
-  }
-
-  appendMatchedProductChanges(changes, issues, supplierProduct, match.variant);
-}
-
-function supplierProductSummary(product: SupplierProduct): Record<string, unknown> {
-  return {
-    supplierId: product.supplierId,
-    supplierName: product.supplierName,
-    brand: product.brand,
-    sku: product.sku,
-    upc: product.upc,
-    title: product.title,
-    stockStatus: product.stockStatus,
-    quantity: product.quantity,
-    cost: product.cost,
-    msrp: product.msrp,
-    salePrice: product.salePrice,
-    productUrl: product.productUrl,
-  };
-}
-
-function shopifyVariantSummary(variant: ShopifyVariant): Record<string, unknown> {
-  return {
-    productId: variant.productId,
-    variantId: variant.variantId,
-    handle: variant.handle,
-    title: variant.title,
-    vendor: variant.vendor,
-    sku: variant.sku,
-    barcode: variant.barcode,
-    price: variant.price,
-    compareAtPrice: variant.compareAtPrice,
-    cost: variant.cost,
-    status: variant.status,
-  };
 }
 
 function appendMatchedProductChanges(
@@ -194,11 +130,5 @@ function appendMatchedProductChanges(
       reason: price.reason,
     });
   }
-}
-
-function yieldToEventLoop(): Promise<void> {
-  return new Promise((resolve) => {
-    setImmediate(resolve);
-  });
 }
 

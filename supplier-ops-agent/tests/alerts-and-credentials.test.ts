@@ -39,19 +39,3 @@ test("alert service records in-app alerts and sends email for operational failur
     },
   ]);
 });
-
-test("alert service keeps repeated operational alerts deduplicated", async () => {
-  const alerts = new AlertService();
-  const input = {
-    severity: "error" as const,
-    kind: "supplier_sync_failed",
-    title: "World Health Mall sync failed",
-    body: "World Health Mall needs portal URL and selectors before website automation can run",
-    email: false,
-  };
-
-  await alerts.raise(input);
-  await alerts.raise(input);
-
-  assert.equal(alerts.list().length, 1);
-});

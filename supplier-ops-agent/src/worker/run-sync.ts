@@ -1,9 +1,6 @@
 import { AlertService } from "../alerts/alert-service.ts";
-import { createActionQueueService, productOpsTaskToQueueInput } from "../action-queue/action-queue-service.ts";
-import { planSupplierSyncAsync } from "../domain/sync-planner.ts";
-import type { BlockedIssue, PlannedChange, ShopifyVariant, SupplierProduct, SyncPlan } from "../domain/types.ts";
-import { buildProductOpsRunOutputAsync } from "../product-ops/product-ops-agent.ts";
-import type { ProductOpsRunOutput } from "../product-ops/types.ts";
+import { planSupplierSync } from "../domain/sync-planner.ts";
+import type { BlockedIssue, PlannedChange, SupplierProduct, SyncPlan } from "../domain/types.ts";
 import type { ShopifySyncClient } from "../shopify/shopify-sync-client.ts";
 import type { SupplierOpsRepository, SyncRun } from "../storage/repository.ts";
 import type { SupplierAdapter } from "../suppliers/types.ts";
@@ -11,15 +8,10 @@ import { SupplierAdapterError } from "../suppliers/types.ts";
 
 export type SyncWritableShopifyClient = Pick<ShopifySyncClient, "applyChanges">;
 
-export type SyncReadableShopifyCatalogClient = {
-  listVariants(): Promise<ShopifyVariant[]>;
-};
-
 export type RunSupplierSyncInput = {
   adapters: SupplierAdapter[];
   repository: SupplierOpsRepository;
   alerts: AlertService;
-  shopifyCatalogClient?: SyncReadableShopifyCatalogClient;
   shopifyClient: SyncWritableShopifyClient;
   dryRun: boolean;
 };
@@ -27,7 +19,6 @@ export type RunSupplierSyncInput = {
 export type RunSupplierSyncResult = {
   run: SyncRun;
   plan: SyncPlan;
-  productOpsOutput: ProductOpsRunOutput;
 };
 
 export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunSupplierSyncResult> {
@@ -60,36 +51,9 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
     }
   }
 
-  const shopifyVariants = await loadShopifyVariants(input, run.id, issues);
+  const shopifyVariants = await input.repository.listShopifyVariants();
   const mappings = await input.repository.listMappings();
-  if (input.shopifyCatalogClient && shopifyVariants.length === 0) {
-    const allIssues = [...issues, ...shopifyCatalogUnavailableIssue()];
-    await input.repository.recordBlockedIssues(run.id, allIssues);
-    const completed = await input.repository.completeSyncRun(run.id, {
-      status: "completed_with_issues",
-      changeCount: 0,
-      issueCount: allIssues.length,
-    });
-    const productOpsOutput = await recordProductOpsOutput({
-      input,
-      run: completed,
-      supplierProducts,
-      shopifyVariants,
-      mappings,
-      changes: [],
-      issues: allIssues,
-    });
-    return {
-      run: completed,
-      plan: {
-        changes: [],
-        issues: allIssues,
-      },
-      productOpsOutput,
-    };
-  }
-
-  const plan = await planSupplierSyncAsync({
+  const plan = planSupplierSync({
     supplierProducts,
     shopifyVariants,
     mappings,
@@ -108,15 +72,7 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
     changeCount: plan.changes.length,
     issueCount: allIssues.length,
   });
-  const productOpsOutput = await recordProductOpsOutput({
-    input,
-    run: completed,
-    supplierProducts,
-    shopifyVariants,
-    mappings,
-    changes: plan.changes,
-    issues: allIssues,
-  });
+  await indexSupplierSyncMemory(input.repository, completed, supplierProducts, plan.changes, allIssues);
 
   return {
     run: completed,
@@ -124,78 +80,7 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
       changes: plan.changes,
       issues: allIssues,
     },
-    productOpsOutput,
   };
-}
-
-async function recordProductOpsOutput(input: {
-  input: RunSupplierSyncInput;
-  run: SyncRun;
-  supplierProducts: SupplierProduct[];
-  shopifyVariants: ShopifyVariant[];
-  mappings: Awaited<ReturnType<SupplierOpsRepository["listMappings"]>>;
-  changes: PlannedChange[];
-  issues: BlockedIssue[];
-}): Promise<ProductOpsRunOutput> {
-  const output = await buildProductOpsRunOutputAsync({
-    runId: input.run.id,
-    runType: "full_product_ops_check",
-    dryRun: input.input.dryRun,
-    startedAt: input.run.startedAt,
-    finishedAt: input.run.completedAt ?? new Date().toISOString(),
-    supplierProducts: input.supplierProducts,
-    shopifyVariants: input.shopifyVariants,
-    mappings: input.mappings,
-    changes: input.changes,
-    issues: input.issues,
-    supplierCount: input.input.adapters.length,
-  });
-
-  await input.input.repository.recordProductOpsOutput?.(input.run.id, output);
-  const actionQueue = createActionQueueService(input.input.repository);
-  for (const task of [...output.promotionTasks, ...output.cleanupTasks, ...output.reviewTasks]) {
-    await actionQueue.enqueue(productOpsTaskToQueueInput(task, output), output.finishedAt);
-  }
-  return output;
-}
-
-async function loadShopifyVariants(
-  input: RunSupplierSyncInput,
-  runId: string,
-  issues: BlockedIssue[],
-): Promise<ShopifyVariant[]> {
-  if (!input.shopifyCatalogClient) {
-    return input.repository.listShopifyVariants();
-  }
-
-  try {
-    const variants = await input.shopifyCatalogClient.listVariants();
-    await input.repository.saveShopifyVariants?.(variants);
-    return variants;
-  } catch (error) {
-    const issue: BlockedIssue = {
-      kind: "shopify_error",
-      reason: `Shopify catalog refresh failed: ${error instanceof Error ? error.message : String(error)}`,
-    };
-    issues.push(issue);
-    await input.alerts.raise({
-      severity: "error",
-      kind: "shopify_catalog_refresh_failed",
-      title: "Shopify catalog refresh failed",
-      body: issue.reason,
-      email: true,
-    });
-    return input.repository.listShopifyVariants();
-  }
-}
-
-function shopifyCatalogUnavailableIssue(): BlockedIssue[] {
-  return [
-    {
-      kind: "shopify_error",
-      reason: "Shopify catalog refresh returned no variants, so supplier planning was blocked to prevent draft-only writes.",
-    },
-  ];
 }
 
 async function applyShopifyChanges(
@@ -258,3 +143,63 @@ function issueKindToAlertKind(issue: BlockedIssue): string {
   return "supplier_sync_failed";
 }
 
+async function indexSupplierSyncMemory(
+  repository: SupplierOpsRepository,
+  completed: SyncRun,
+  supplierProducts: SupplierProduct[],
+  changes: PlannedChange[],
+  issues: BlockedIssue[],
+): Promise<void> {
+  try {
+    await repository.saveMemoryDocument({
+      id: `supplier-sync-${completed.id}`,
+      sourceType: "inventory_output",
+      title: `Supplier sync ${completed.id}`,
+      summary: `${supplierProducts.length} supplier products checked; ${changes.length} changes planned; ${issues.length} issues blocked.`,
+      content: buildSupplierSyncMemoryContent(supplierProducts, changes, issues),
+      relatedProducts: supplierProducts.map((product) => product.title).filter(Boolean).slice(0, 50),
+      sensitivity: "internal",
+      metadata: {
+        runId: completed.id,
+        status: completed.status,
+        dryRun: completed.dryRun,
+        supplierCount: completed.supplierCount,
+        changeCount: completed.changeCount,
+        issueCount: completed.issueCount,
+      },
+    });
+  } catch {
+    // Memory is advisory. Supplier sync should stay operational if memory schema/setup lags behind deployment.
+  }
+}
+
+function buildSupplierSyncMemoryContent(
+  supplierProducts: SupplierProduct[],
+  changes: PlannedChange[],
+  issues: BlockedIssue[],
+): string {
+  const suppliers = [...new Set(supplierProducts.map((product) => product.supplierName))].join(", ") || "No suppliers";
+  const products = supplierProducts
+    .slice(0, 20)
+    .map((product) => `${product.supplierName}: ${product.title}${product.sku ? ` (${product.sku})` : ""} - ${product.stockStatus}`)
+    .join("\n");
+  const changeSummary = summarizeCounts(changes.map((change) => change.type));
+  const issueSummary = summarizeCounts(issues.map((issue) => issue.kind));
+
+  return [
+    `Suppliers checked: ${suppliers}`,
+    `Change types: ${changeSummary || "none"}`,
+    `Issue types: ${issueSummary || "none"}`,
+    products ? `Sample products:\n${products}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function summarizeCounts(values: string[]): string {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([value, count]) => `${value}: ${count}`).join(", ");
+}

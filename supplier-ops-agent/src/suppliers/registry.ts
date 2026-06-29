@@ -50,14 +50,6 @@ export function createSupplierRegistry(): SupplierConfig[] {
       credentialEnvVar: "SUPPLIER_CREDENTIAL_DESBIO",
       notes: "Direct supplier portal for DesBio products.",
     },
-    {
-      id: "physicians-standard",
-      name: "Physicians' Standard",
-      mode: "website",
-      brands: ["Physicians' Standard"],
-      credentialEnvVar: "SUPPLIER_CREDENTIAL_PHYSICIANS_STANDARD",
-      notes: "Direct supplier portal for Physicians' Standard products.",
-    },
   ];
 }
 

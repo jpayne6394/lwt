@@ -1,0 +1,43 @@
+{
+  "topicClusters": [
+    "magnesium",
+    "sleep support",
+    "stress support",
+    "gut health",
+    "immune support",
+    "practitioner-guided supplement selection"
+  ],
+  "keywords": [
+    "glycinate",
+    "supplement forms",
+    "sleep routine",
+    "stress support",
+    "probiotic",
+    "vitamin D",
+    "quality testing"
+  ],
+  "excludedTerms": [
+    "cure",
+    "miracle",
+    "guaranteed",
+    "medical advice"
+  ],
+  "subreddits": [
+    "Supplements",
+    "Biohackers",
+    "Nutrition"
+  ],
+  "xQueries": [
+    "magnesium sleep",
+    "supplement quality",
+    "gut health probiotic",
+    "stress support wellness"
+  ],
+  "searchQueries": [
+    "different forms of magnesium",
+    "sleep support supplement guide",
+    "supplement quality third party testing",
+    "probiotic strains educational guide"
+  ],
+  "scanFrequencyNotes": "Manual fallback is available anytime. Run Content Radar weekly until official X, Reddit, and search connectors are configured."
+}
