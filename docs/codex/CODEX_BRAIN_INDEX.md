@@ -12,12 +12,17 @@ Codex must use these files as the working memory for this repo.
 
 For any Living Well Today Hydrogen homepage work, read all of these before editing code:
 
-1. `/docs/hv1.2/HV1_2_HOME_SOURCE_OF_TRUTH.md`
-2. `/docs/hv1.2/HV1_2_SECTION_MAP.md`
-3. `/docs/hv1.2/HV1_2_VISUAL_RULES.md`
-4. `/docs/hv1.2/HV1_2_ASSET_MANIFEST.md`
-5. `/docs/hv1.2/CODEX_PROMPTS.md`
-6. `/docs/hv1.2/source/README.md`
+1. `/docs/hv1.2/HV1_2_RESEARCH_SOURCE_INDEX.md`
+2. `/docs/hv1.2/HV1_2_HOME_SOURCE_OF_TRUTH.md`
+3. `/docs/hv1.2/HV1_2_SECTION_MAP.md`
+4. `/docs/hv1.2/HV1_2_VISUAL_RULES.md`
+5. `/docs/hv1.2/HV1_2_GRAPHICS_PRODUCTION_PIPELINE.md`
+6. `/docs/hv1.2/HV1_2_HYDROGEN_IMPLEMENTATION_LOCK.md`
+7. `/docs/hv1.2/HV1_2_SAFE_ZONES_AND_ASSET_CONTRACT.md`
+8. `/docs/hv1.2/HV1_2_ASSET_MANIFEST.md`
+9. `/docs/hv1.2/HV1_2_VALIDATION_GATES.md`
+10. `/docs/hv1.2/CODEX_PROMPTS.md`
+11. `/docs/hv1.2/source/README.md`
 
 ## Debugging Work
 
