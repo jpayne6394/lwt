@@ -16,15 +16,18 @@ For any Living Well Today Hydrogen homepage work, read all of these before editi
 2. `/docs/hv1.2/HV1_2_HOME_SOURCE_OF_TRUTH.md`
 3. `/docs/hv1.2/HV1_2_SECTION_MAP.md`
 4. `/docs/hv1.2/HV1_2_VISUAL_RULES.md`
-5. `/docs/hv1.2/HV1_2_NO_FIGMA_WORKFLOW.md`
-6. `/docs/hv1.2/HV1_2_FIGMA_CODEX_PLUGIN_WORKFLOW.md`
-7. `/docs/hv1.2/HV1_2_GRAPHICS_PRODUCTION_PIPELINE.md`
-8. `/docs/hv1.2/HV1_2_HYDROGEN_IMPLEMENTATION_LOCK.md`
-9. `/docs/hv1.2/HV1_2_SAFE_ZONES_AND_ASSET_CONTRACT.md`
-10. `/docs/hv1.2/HV1_2_ASSET_MANIFEST.md`
-11. `/docs/hv1.2/HV1_2_VALIDATION_GATES.md`
-12. `/docs/hv1.2/CODEX_PROMPTS.md`
-13. `/docs/hv1.2/source/README.md`
+5. `/docs/hv1.2/HV1_2_ANTI_DRIFT_GUARDRAILS.md`
+6. `/docs/hv1.2/HV1_2_CODEX_PROMPT_LIBRARY.md`
+7. `/docs/hv1.2/HV1_2_PR_GATE_CHECKLIST.md`
+8. `/docs/hv1.2/HV1_2_NO_FIGMA_WORKFLOW.md`
+9. `/docs/hv1.2/HV1_2_FIGMA_CODEX_PLUGIN_WORKFLOW.md`
+10. `/docs/hv1.2/HV1_2_GRAPHICS_PRODUCTION_PIPELINE.md`
+11. `/docs/hv1.2/HV1_2_HYDROGEN_IMPLEMENTATION_LOCK.md`
+12. `/docs/hv1.2/HV1_2_SAFE_ZONES_AND_ASSET_CONTRACT.md`
+13. `/docs/hv1.2/HV1_2_ASSET_MANIFEST.md`
+14. `/docs/hv1.2/HV1_2_VALIDATION_GATES.md`
+15. `/docs/hv1.2/CODEX_PROMPTS.md`
+16. `/docs/hv1.2/source/README.md`
 
 ## Debugging Work
 
@@ -46,4 +49,4 @@ Then report:
 
 ## Rule of Thumb
 
-If the repo and the docs disagree, stop and report the conflict instead of guessing.
+If the repo and the docs disagree, pause and report the conflict before changing files.
