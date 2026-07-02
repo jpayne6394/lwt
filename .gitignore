@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Build output
+build/
+dist/
+.cache/
+.output/
+.vercel/
+.netlify/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local installers and binaries
+*.exe
+FigmaSetup.exe
+
+# Large/local design source files - use explicit approved source process or Git LFS if needed
+*.psd
+*.psb
+*.fig
+*.ai
+*.sketch
