@@ -23,7 +23,20 @@ docs/codex/CODEX_BRAIN_INDEX.md
 docs/hv1.2/HV1_2_ANTI_DRIFT_GUARDRAILS.md
 docs/hv1.2/HV1_2_CODEX_PROMPT_LIBRARY.md
 docs/hv1.2/HV1_2_PR_GATE_CHECKLIST.md
+docs/hv1.2/HV1_2_REPO_INTERFERENCE_AUDIT.md
 ```
+
+## HV1.2 Ignore / Caution Areas
+
+For HV1.2 homepage work, do not use these as source of truth unless the assigned issue explicitly says so:
+
+```txt
+lwt-v4-5-6-clean-start/
+supplier-ops-agent/
+render.yaml
+```
+
+These are legacy or separate operational materials and may confuse Codex during Hydrogen homepage work.
 
 ## Non-Negotiable Rules
 
