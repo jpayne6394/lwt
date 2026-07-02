@@ -14,6 +14,17 @@ Primary active track: **HV1.2 Shopify Hydrogen/Oxygen homepage**.
 
 HV1.2 means a fresh, clean homepage graphics and implementation handoff for the Living Well Today Hydrogen proof-of-concept storefront.
 
+## Required HV1.2 Guardrail Files
+
+For HV1.2 work, Codex must use:
+
+```txt
+docs/codex/CODEX_BRAIN_INDEX.md
+docs/hv1.2/HV1_2_ANTI_DRIFT_GUARDRAILS.md
+docs/hv1.2/HV1_2_CODEX_PROMPT_LIBRARY.md
+docs/hv1.2/HV1_2_PR_GATE_CHECKLIST.md
+```
+
 ## Non-Negotiable Rules
 
 1. Read the relevant `/docs` brain files before changing code.
