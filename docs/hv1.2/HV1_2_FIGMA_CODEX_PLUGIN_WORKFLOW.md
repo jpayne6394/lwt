@@ -1,0 +1,89 @@
+# HV1.2 Figma + Codex Plugin Workflow
+
+This file explains how Codex should use the Figma plugin for the HV1.2 homepage.
+
+## Figma File
+
+Figma handoff file:
+
+```txt
+https://www.figma.com/design/rMyO7aTz65TweOKflzmgZf
+```
+
+File name:
+
+```txt
+LWT HV1.2 Homepage Handoff
+```
+
+## What Figma Is For
+
+Figma is the design handoff surface. It is not the production website and not the source of Shopify data.
+
+Use Figma for:
+
+- approved visual reference
+- desktop safe zones
+- mobile safe zones
+- graphic no-go zones
+- section/export slice names
+- visual QA reference
+- design-to-code inspection
+
+## What GitHub Is For
+
+GitHub remains the source of truth for implementation rules, Codex guardrails, asset paths, Hydrogen code, and final exported runtime assets.
+
+Codex must read GitHub docs before reading Figma.
+
+## Codex Order of Operations
+
+1. Read `/AGENTS.md`.
+2. Read `/docs/codex/CODEX_BRAIN_INDEX.md`.
+3. Read all listed HV1.2 docs.
+4. Open/inspect the Figma handoff file with the Figma plugin.
+5. Identify pages, node IDs, frames, safe zones, no-go zones, and export slice names.
+6. Do not implement yet.
+7. Return an audit report with missing assets and implementation plan.
+
+## Figma Plugin Is Not Permission To Drift
+
+Even with the Figma plugin, Codex must not:
+
+- redesign the page
+- invent final art
+- use the reference bitmap as the live site
+- guess hidden mobile crops
+- ignore safe-zone boundaries
+- ignore no-go zones
+- fake product data
+- overwrite Shopify/Hydrogen behavior unrelated to the homepage
+
+## Figma Plugin Audit Prompt
+
+Use this prompt in Codex:
+
+```txt
+Read AGENTS.md, docs/codex/CODEX_BRAIN_INDEX.md, and all HV1.2 docs listed there.
+
+Then inspect this Figma file with the Figma plugin:
+https://www.figma.com/design/rMyO7aTz65TweOKflzmgZf
+
+Do not edit code yet.
+
+Return:
+1. Figma pages and node IDs found
+2. approved reference status
+3. desktop safe zones found
+4. mobile safe zones found
+5. no-go zones found
+6. export slice names found
+7. missing Figma handoff pieces
+8. current Hydrogen homepage route/component/data structure
+9. implementation plan by pass
+10. verification commands from package.json
+```
+
+## Implementation Rule
+
+Codex may use Figma measurements and screenshots to guide implementation, but final code must use live Hydrogen/React components, Shopify data, and approved exported runtime assets from the repo.
