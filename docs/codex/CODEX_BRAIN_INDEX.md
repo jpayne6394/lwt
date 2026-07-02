@@ -14,7 +14,7 @@ For any Living Well Today Hydrogen homepage work, read all of these before editi
 
 1. `/docs/hv1.2/HV1_2_HOME_SOURCE_OF_TRUTH.md`
 2. `/docs/hv1.2/HV1_2_SECTION_MAP.md`
-3. `/docs/hv1.2/HV1_2_VISUAL_GUARDRAILS.md`
+3. `/docs/hv1.2/HV1_2_VISUAL_RULES.md`
 4. `/docs/hv1.2/HV1_2_ASSET_MANIFEST.md`
 5. `/docs/hv1.2/CODEX_PROMPTS.md`
 6. `/docs/hv1.2/source/README.md`
