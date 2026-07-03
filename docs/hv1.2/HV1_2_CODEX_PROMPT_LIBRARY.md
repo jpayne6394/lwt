@@ -2,6 +2,20 @@
 
 Use these prompts instead of vague instructions like `make the homepage match the image`.
 
+## Active Figma Handoff File
+
+Use this active Figma file:
+
+```txt
+https://www.figma.com/design/6MHyPTYEcPuhjRUbszNcnT/Living-Well-Today-HV1.2-Homepage-Production-Handoff
+```
+
+Do not use the older empty file unless it is explicitly repaired:
+
+```txt
+https://www.figma.com/design/rMyO7aTz65TweOKflzmgZf
+```
+
 ## Prompt 1 — Full Audit Only
 
 ```txt
@@ -9,8 +23,8 @@ Read AGENTS.md, docs/codex/CODEX_BRAIN_INDEX.md, and all HV1.2 docs listed there
 
 Read issue #43 for execution order.
 
-Inspect the current repo and the Figma handoff file:
-https://www.figma.com/design/rMyO7aTz65TweOKflzmgZf
+Inspect the current repo and the active Figma handoff file:
+https://www.figma.com/design/6MHyPTYEcPuhjRUbszNcnT/Living-Well-Today-HV1.2-Homepage-Production-Handoff
 
 Do not edit files.
 Do not implement.
@@ -41,8 +55,8 @@ Do not claim final runtime art.
 
 Report:
 - Figma placement status
-- GitHub source path status
-- whether homepage-target.png exists
+- repo source path status
+- whether docs/hv1.2/source/homepage-target.png exists
 - remaining source-lock blockers
 ```
 
@@ -51,17 +65,21 @@ Report:
 ```txt
 Complete issue #33 only.
 
-Read the Figma handoff and create/update these files:
+Read the active Figma handoff and local JSON contracts if present:
+- app/lib/homepage/safe-zones.json
+- app/lib/homepage/figma-handoff-contract.json
+
+Create/update these files:
 - docs/hv1.2/source/safe-zones-desktop.md
 - docs/hv1.2/source/safe-zones-mobile.md
 - docs/hv1.2/source/graphic-restricted-zones.md
 - docs/hv1.2/source/export-map.md
 
-Do not edit code.
+Do not edit implementation code.
 Do not invent measurements.
 If a coordinate or node is missing, mark it BLOCKED and explain what is missing.
 
-Return a section-by-section readiness table for all 12 homepage sections.
+Return a section-by-section readiness table for all 12 homepage sections, including announcement/header support even if local JSON contracts only list 11 sections.
 ```
 
 ## Prompt 4 — Asset Gap Only
@@ -73,11 +91,16 @@ Audit approved runtime assets and update:
 - docs/hv1.2/HV1_2_ASSET_MANIFEST.md
 - docs/hv1.2/source/asset-gap-report.md
 
+Check local runtime manifests if present:
+- app/lib/homepage/homepage-art-manifest.json
+- app/lib/homepage/runtime-asset-map.json
+- public/hv1/home/
+
 Do not create fake assets.
 Do not place experiments in public/hv1.2/home.
 Do not edit implementation code.
 
-Every required asset must have status: exists, missing, blocked, or not needed.
+Every required asset must have status: exists, missing, blocked, not needed, or exists-but-not-wired.
 ```
 
 ## Prompt 5 — Hydrogen Repo Audit Only
@@ -211,7 +234,7 @@ Run available build/lint/type/test commands.
 Provide a pass/fail table.
 Do not hide failures.
 Do not publish production.
-Do not claim exact match if assets, safe zones, or issue #44 are incomplete.
+Do not claim exact match if assets, safe zones, source lock, or issue #44 are incomplete.
 ```
 
 ## Prompt 14 — Debugging Only
@@ -244,4 +267,21 @@ Return:
 5. source docs read
 6. unresolved blockers
 7. whether the PR is audit-only, structure-only, preview-ready, or blocked
+```
+
+## Prompt 16 — Local Source Sync Only
+
+```txt
+Copy/sync the HV1.2 source docs into the active Hydrogen repo if they are missing locally.
+
+Required local paths:
+- AGENTS.md
+- docs/codex/CODEX_BRAIN_INDEX.md
+- docs/hv1.2/HV1_2_CODEX_PROMPT_LIBRARY.md
+- docs/hv1.2/HV1_2_FIGMA_CODEX_PLUGIN_WORKFLOW.md
+- docs/hv1.2/HV1_2_ANTI_DRIFT_GUARDRAILS.md
+
+Do not implement homepage code.
+Do not alter app/components or app/routes.
+Report exactly which docs were copied and which were already present.
 ```
