@@ -58,6 +58,8 @@ test("runSupplierSync records snapshots, changes, issues, and applies writes out
   assert.deepEqual(repository.listAppliedChanges().map((change) => change.type), ["inventory", "cost", "price"]);
   assert.equal(repository.listBlockedIssues().length, 0);
   assert.equal(applied.length, 3);
+  assert.equal((await repository.memoryStatus()).documentCount, 1);
+  assert.match((await repository.searchMemory({ query: "DesBio inventory supplier sync", limit: 1 }))[0].document.summary, /1 supplier products/);
 });
 
 test("runSupplierSync alerts and records failed supplier adapters", async () => {

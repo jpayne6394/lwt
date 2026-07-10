@@ -1,0 +1,99 @@
+{
+  "version": "2026-07-10",
+  "project": "lwt-intelligence-staging",
+  "policy": {
+    "summary": "Retrieval memory only. Store sanitized summaries, structured facts, and attributed market signals for the LWT super agent. Do not store raw customer PII, raw private messages, scraped platform dumps, or unapproved protected content.",
+    "allowedSources": [
+      "Internal LWT operating docs",
+      "Aggregate Shopify/Search/GA4/Search Console exports",
+      "Official API results with attribution",
+      "Manual social listening summaries",
+      "Approved product/catalog/SEO reports"
+    ],
+    "blockedSources": [
+      "Raw social feed dumps",
+      "Private customer messages",
+      "User-level shopper tracking",
+      "Scraped platform content",
+      "Unrestricted emails",
+      "Secrets or tokens"
+    ]
+  },
+  "documents": [
+    {
+      "id": "memory_lwt_super_agent_source_policy_20260710",
+      "sourceType": "business_note",
+      "title": "LWT Super Agent Source And Memory Policy",
+      "summary": "Defines what the LWT super agent can store and retrieve: internal docs, aggregate reports, official-source market signals, and curated social summaries only.",
+      "content": "The LWT super agent uses retrieval memory, not fine-tuning. Store sanitized internal operating knowledge, aggregate behavior reports, content strategy notes, approved catalog/SEO/product reports, and curated market or social listening summaries with provenance. Do not store raw customer PII, raw private messages, unrestricted email threads, scraped platform dumps, secrets, tokens, user-level shopper tracking, or unapproved protected content. Social information should be summarized and attributed to an approved source path such as official API, exported report, or manual operator note. Recommendations are advisory only and must not publish, email, change prices, create purchase orders, or modify storefront/theme assets without human approval.",
+      "metadata": {
+        "sourceBatch": "2026-07-10",
+        "authority": "lead_engineer_policy",
+        "retrievalUse": "global_guardrails"
+      },
+      "relatedCollections": [
+        "Super Agent",
+        "Source Policy",
+        "Compliance"
+      ],
+      "evidenceLinks": [
+        "docs/superpowers/specs/2026-07-10-super-agent-memory-source-seeding-design.md",
+        "README.md"
+      ],
+      "sensitivity": "internal"
+    },
+    {
+      "id": "memory_lwt_market_signal_magnesium_sleep_20260710",
+      "sourceType": "market_signal",
+      "title": "Market Signal Watchlist: Magnesium, Sleep, Stress, Gut Health",
+      "summary": "Curated social and search listening topics for LWT: magnesium forms, sleep support without grogginess, stress support, gut health, and supplement quality.",
+      "content": "Initial market/social listening should monitor education-safe topics that match existing LWT content radar clusters and aggregate search demand. Priority topics: magnesium glycinate, magnesium threonate, vitamin D3 K2, sleep support without grogginess, histamine support questions, electrolytes powder, stress support, gut health, probiotic strain education, supplement quality, and practitioner-guided supplement selection. Treat these as listening prompts until validated by official APIs, manual social summaries, or exported analytics reports. Use them to generate educational angles, search-synonym checks, collection coverage reviews, and product-page audit prompts. Avoid disease-treatment claims and keep sensitive health topics framed around practitioner guidance.",
+      "metadata": {
+        "sourceBatch": "2026-07-10",
+        "sourcePath": "manual_market_signal_seed",
+        "requiresValidation": true,
+        "aggregateOnly": true
+      },
+      "relatedProducts": [
+        "Magnesium Glycinate",
+        "Sleep Support Formula"
+      ],
+      "relatedCollections": [
+        "Magnesium",
+        "Sleep Support",
+        "Gut Health",
+        "Immune Support"
+      ],
+      "evidenceLinks": [
+        "config/content-radar-sources.json",
+        "imports/shopper-behavior/sample-shopify-search-terms.csv",
+        "imports/shopper-behavior/sample-no-result-searches.csv"
+      ],
+      "sensitivity": "internal"
+    },
+    {
+      "id": "memory_lwt_social_access_plan_20260710",
+      "sourceType": "business_note",
+      "title": "Approved Access Pattern For Social And Internal Sources",
+      "summary": "Use official APIs, manual exports, or curated summaries for social signals; use internal docs and reports as authoritative memory.",
+      "content": "Access pattern for source growth: first seed internal LWT docs and aggregate reports. Second, add manual social listening summaries using a consistent market_signal memory document format with source URL, platform, topic, date range, and operator notes. Third, when credentials exist, use official APIs such as Reddit OAuth or X API and store only summarized public signal records with links and metrics. Do not scrape platform pages or store raw comment dumps. Internal sources should be preferred over social signals when deciding product operations, compliance posture, pricing, inventory, or publishing readiness. Social signals are inputs for research and prioritization, not automatic actions.",
+      "metadata": {
+        "sourceBatch": "2026-07-10",
+        "authority": "lead_engineer_policy",
+        "retrievalUse": "source_ingestion_workflow"
+      },
+      "relatedCollections": [
+        "Social Listening",
+        "Internal Sources",
+        "Super Agent"
+      ],
+      "evidenceLinks": [
+        "src/agents/contentRadarAgent.ts",
+        "src/agents/shopperBehaviorAgent.ts",
+        "docs/LWT_INTELLIGENCE_CENTER_V1_4_HARDENING.md"
+      ],
+      "sensitivity": "internal"
+    }
+  ]
+}
+

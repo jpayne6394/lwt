@@ -26,12 +26,14 @@ export class ShopifyCatalogClient {
             handle: product.handle,
             title: product.title,
             vendor: product.vendor,
+            category: product.productType || undefined,
             sku: variant.sku ?? "",
             barcode: variant.barcode ?? "",
             price: Number(variant.price),
             compareAtPrice: variant.compareAtPrice == null ? null : Number(variant.compareAtPrice),
             cost: variant.inventoryItem.unitCost?.amount == null ? null : Number(variant.inventoryItem.unitCost.amount),
             status: product.status.toLowerCase(),
+            inventoryQuantity: level?.quantities.find((quantity) => quantity.name === "available")?.quantity,
           });
         }
       }
@@ -51,6 +53,7 @@ type ShopifyCatalogResponse = {
         handle: string;
         title: string;
         vendor: string;
+        productType: string;
         status: string;
         variants: {
           nodes: Array<{
@@ -64,9 +67,10 @@ type ShopifyCatalogResponse = {
               unitCost: { amount: string } | null;
               inventoryLevels: {
                 nodes: Array<{
-                  location: { id: string };
-                }>;
-              };
+                location: { id: string };
+                quantities: Array<{ name: string; quantity: number }>;
+              }>;
+            };
             };
           }>;
         };
@@ -87,6 +91,7 @@ query SupplierOpsProducts($after: String) {
       handle
       title
       vendor
+      productType
       status
       variants(first: 100) {
         nodes {
@@ -105,6 +110,10 @@ query SupplierOpsProducts($after: String) {
                 location {
                   id
                 }
+                quantities(names: ["available"]) {
+                  name
+                  quantity
+                }
               }
             }
           }
@@ -113,4 +122,3 @@ query SupplierOpsProducts($after: String) {
     }
   }
 }`;
-

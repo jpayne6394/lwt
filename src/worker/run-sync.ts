@@ -72,6 +72,7 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
     changeCount: plan.changes.length,
     issueCount: allIssues.length,
   });
+  await indexSupplierSyncMemory(input.repository, completed, supplierProducts, plan.changes, allIssues);
 
   return {
     run: completed,
@@ -142,3 +143,63 @@ function issueKindToAlertKind(issue: BlockedIssue): string {
   return "supplier_sync_failed";
 }
 
+async function indexSupplierSyncMemory(
+  repository: SupplierOpsRepository,
+  completed: SyncRun,
+  supplierProducts: SupplierProduct[],
+  changes: PlannedChange[],
+  issues: BlockedIssue[],
+): Promise<void> {
+  try {
+    await repository.saveMemoryDocument({
+      id: `supplier-sync-${completed.id}`,
+      sourceType: "inventory_output",
+      title: `Supplier sync ${completed.id}`,
+      summary: `${supplierProducts.length} supplier products checked; ${changes.length} changes planned; ${issues.length} issues blocked.`,
+      content: buildSupplierSyncMemoryContent(supplierProducts, changes, issues),
+      relatedProducts: supplierProducts.map((product) => product.title).filter(Boolean).slice(0, 50),
+      sensitivity: "internal",
+      metadata: {
+        runId: completed.id,
+        status: completed.status,
+        dryRun: completed.dryRun,
+        supplierCount: completed.supplierCount,
+        changeCount: completed.changeCount,
+        issueCount: completed.issueCount,
+      },
+    });
+  } catch {
+    // Memory is advisory. Supplier sync should stay operational if memory schema/setup lags behind deployment.
+  }
+}
+
+function buildSupplierSyncMemoryContent(
+  supplierProducts: SupplierProduct[],
+  changes: PlannedChange[],
+  issues: BlockedIssue[],
+): string {
+  const suppliers = [...new Set(supplierProducts.map((product) => product.supplierName))].join(", ") || "No suppliers";
+  const products = supplierProducts
+    .slice(0, 20)
+    .map((product) => `${product.supplierName}: ${product.title}${product.sku ? ` (${product.sku})` : ""} - ${product.stockStatus}`)
+    .join("\n");
+  const changeSummary = summarizeCounts(changes.map((change) => change.type));
+  const issueSummary = summarizeCounts(issues.map((issue) => issue.kind));
+
+  return [
+    `Suppliers checked: ${suppliers}`,
+    `Change types: ${changeSummary || "none"}`,
+    `Issue types: ${issueSummary || "none"}`,
+    products ? `Sample products:\n${products}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function summarizeCounts(values: string[]): string {
+  const counts = new Map<string, number>();
+  for (const value of values) {
+    counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  return [...counts.entries()].map(([value, count]) => `${value}: ${count}`).join(", ");
+}

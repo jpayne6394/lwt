@@ -1,0 +1,378 @@
+{
+  "topicClusters": [
+    "magnesium",
+    "sleep support",
+    "stress support",
+    "gut health",
+    "immune support",
+    "practitioner-guided supplement selection"
+  ],
+  "keywords": [
+    "glycinate",
+    "supplement forms",
+    "sleep routine",
+    "stress support",
+    "probiotic",
+    "vitamin D",
+    "quality testing"
+  ],
+  "excludedTerms": [
+    "cure",
+    "miracle",
+    "guaranteed",
+    "medical advice"
+  ],
+  "subreddits": [
+    "Supplements",
+    "Biohackers",
+    "Nutrition"
+  ],
+  "xQueries": [
+    "magnesium sleep",
+    "supplement quality",
+    "gut health probiotic",
+    "stress support wellness"
+  ],
+  "searchQueries": [
+    "different forms of magnesium",
+    "sleep support supplement guide",
+    "supplement quality third party testing",
+    "probiotic strains educational guide"
+  ],
+  "scanFrequencyNotes": "Manual fallback is available anytime. Run Content Radar weekly until official X, Reddit, and search connectors are configured.",
+  "listeningSeeds": [
+    {
+      "topic": "magnesium",
+      "priority": "high",
+      "audienceQuestion": "Which magnesium form should I take if I want sleep support but do not want to feel groggy?",
+      "reactionThemes": [
+        "People compare magnesium forms by sleep routine fit, stomach comfort, and how they feel the next morning.",
+        "Questions often start from confusion over glycinate, citrate, threonate, and oxide."
+      ],
+      "objectionThemes": [
+        "Worried about choosing the wrong form.",
+        "Concerned magnesium may upset the stomach or feel too sedating."
+      ],
+      "personalExperienceAngles": [
+        "Tried citrate first, then looked for a gentler evening option.",
+        "Changed timing from morning to evening and noticed the routine felt easier to follow."
+      ],
+      "popularStructurePatterns": [
+        "Question hook -> form comparison -> when each form is commonly used -> checklist -> practitioner CTA",
+        "Myth vs reality -> quick table -> product-quality notes -> ask-your-practitioner CTA"
+      ],
+      "safeBlogAngles": [
+        "Magnesium forms explained through real routine questions",
+        "How to choose a magnesium form for your wellness routine"
+      ],
+      "relatedProducts": [
+        "Magnesium Glycinate"
+      ],
+      "relatedCollections": [
+        "Magnesium",
+        "Sleep Support"
+      ],
+      "sourceNote": "manual curated public social listening summary"
+    },
+    {
+      "topic": "sleep support without melatonin",
+      "priority": "high",
+      "audienceQuestion": "What can I use for sleep support if melatonin leaves me groggy or gives me vivid dreams?",
+      "reactionThemes": [
+        "People want calm evening support without feeling knocked out.",
+        "Personal routines often combine magnesium, glycine, tea, light exposure, and screen boundaries."
+      ],
+      "objectionThemes": [
+        "Does not want dependence language or heavy sedative positioning.",
+        "Concerned about morning fog."
+      ],
+      "personalExperienceAngles": [
+        "Stopped melatonin because the next morning felt off.",
+        "Built a repeatable evening routine instead of adding more products."
+      ],
+      "popularStructurePatterns": [
+        "Relatable problem -> why melatonin is not for everyone -> routine stack -> gentle product tie-in",
+        "Do-this-not-that list -> timing tips -> safety note -> practitioner CTA"
+      ],
+      "safeBlogAngles": [
+        "Sleep support without melatonin: building a calmer evening routine",
+        "Why your evening routine matters as much as your supplement choice"
+      ],
+      "relatedProducts": [
+        "Sleep Support Formula",
+        "Magnesium Glycinate"
+      ],
+      "relatedCollections": [
+        "Sleep Support",
+        "Stress Support"
+      ],
+      "sourceNote": "manual curated public social listening summary"
+    },
+    {
+      "topic": "gut health and probiotics",
+      "priority": "high",
+      "audienceQuestion": "How do I pick a probiotic when CFU counts, strains, and bloating stories all conflict?",
+      "reactionThemes": [
+        "People distrust one-size-fits-all probiotic advice.",
+        "Questions cluster around strain specificity, bloating, prebiotics, and whether to start slowly."
+      ],
+      "objectionThemes": [
+        "Concerned a probiotic may make bloating worse.",
+        "Confused by higher CFU counts and marketing claims."
+      ],
+      "personalExperienceAngles": [
+        "Started with a high-CFU probiotic and felt uncomfortable.",
+        "Learned to compare strain, dose, and tolerance instead of only CFU count."
+      ],
+      "popularStructurePatterns": [
+        "Confusion hook -> strain vs CFU explainer -> start-low checklist -> practitioner CTA",
+        "Common mistakes list -> label-reading guide -> gentle next steps"
+      ],
+      "safeBlogAngles": [
+        "How to think about probiotic strains, CFUs, and tolerance",
+        "Probiotic label questions shoppers ask before buying"
+      ],
+      "relatedProducts": [
+        "Probiotic Support"
+      ],
+      "relatedCollections": [
+        "Gut Health"
+      ],
+      "sourceNote": "manual curated public social listening summary"
+    },
+    {
+      "topic": "vitamin D3 K2",
+      "priority": "medium",
+      "audienceQuestion": "Do I need K2 with vitamin D3, and how should I think about dosage?",
+      "reactionThemes": [
+        "People want a simple explanation of why D3 and K2 are paired.",
+        "Dosage questions usually need practitioner-guided framing."
+      ],
+      "objectionThemes": [
+        "Concerned about taking too much vitamin D.",
+        "Unsure whether K2 is appropriate with medications or health conditions."
+      ],
+      "personalExperienceAngles": [
+        "Saw D3/K2 recommended but did not understand the pairing.",
+        "Wanted lab-guided supplement decisions instead of guessing."
+      ],
+      "popularStructurePatterns": [
+        "Basic question -> what D3 does -> why K2 is paired -> dosage caution -> lab/practitioner CTA",
+        "FAQ format -> safety notes -> product-quality checklist"
+      ],
+      "safeBlogAngles": [
+        "Vitamin D3 and K2: common questions before choosing a supplement",
+        "Why vitamin D decisions should be guided by context"
+      ],
+      "relatedProducts": [
+        "Vitamin D3 K2"
+      ],
+      "relatedCollections": [
+        "Immune Support"
+      ],
+      "sourceNote": "manual curated public social listening summary"
+    },
+    {
+      "topic": "electrolytes",
+      "priority": "medium",
+      "audienceQuestion": "Do I need electrolytes every day, or only when I sweat, use a sauna, or work out?",
+      "reactionThemes": [
+        "People compare sugar-free electrolyte powders by taste, sodium level, and stomach comfort.",
+        "Hydration conversations often include sauna, workouts, headaches, travel, and summer heat."
+      ],
+      "objectionThemes": [
+        "Worried about too much sodium.",
+        "Does not want sugary sports drinks."
+      ],
+      "personalExperienceAngles": [
+        "Felt better keeping electrolytes available for sauna or outdoor days.",
+        "Switched from sugary drinks to mineral-focused hydration support."
+      ],
+      "popularStructurePatterns": [
+        "When-do-I-need-it hook -> scenarios list -> label checklist -> product-quality CTA",
+        "Hydration mistakes -> mineral roles -> routine examples"
+      ],
+      "safeBlogAngles": [
+        "Electrolytes for everyday wellness: when they may fit your routine",
+        "What to look for in a sugar-free electrolyte supplement"
+      ],
+      "relatedProducts": [
+        "Electrolyte Powder"
+      ],
+      "relatedCollections": [
+        "Hydration",
+        "Fitness Support"
+      ],
+      "sourceNote": "manual curated public social listening summary"
+    },
+    {
+      "topic": "stress support and nervous system",
+      "priority": "high",
+      "audienceQuestion": "What supports calm focus without making me sleepy?",
+      "reactionThemes": [
+        "People want support for feeling steady during busy days, not a sedative.",
+        "Common ingredient conversations include magnesium, L-theanine, B vitamins, and adaptogens."
+      ],
+      "objectionThemes": [
+        "Does not want to feel dull or drowsy.",
+        "Concerned about stimulant-like reactions."
+      ],
+      "personalExperienceAngles": [
+        "Tried a calming supplement at night but wanted daytime support.",
+        "Uses breathwork, movement, and supplement routines together."
+      ],
+      "popularStructurePatterns": [
+        "Felt-wired hook -> calm-focus ingredient map -> timing guidance -> practitioner CTA",
+        "Routine builder -> morning vs evening support -> safety notes"
+      ],
+      "safeBlogAngles": [
+        "Calm focus support: nutrients and routines people ask about",
+        "Stress support without sleepy language"
+      ],
+      "relatedProducts": [
+        "L-Theanine",
+        "Magnesium Glycinate",
+        "B Complex"
+      ],
+      "relatedCollections": [
+        "Stress Support",
+        "Nervous System Support"
+      ],
+      "sourceNote": "manual curated public social listening summary"
+    },
+    {
+      "topic": "supplement quality and label reading",
+      "priority": "high",
+      "audienceQuestion": "How do I know if a supplement brand is trustworthy?",
+      "reactionThemes": [
+        "People look for third-party testing, practitioner-grade sourcing, transparent labels, and fewer hype claims.",
+        "Trust questions often mention marketplace counterfeits and unclear testing language."
+      ],
+      "objectionThemes": [
+        "Skeptical of vague claims like independently tested.",
+        "Concerned about buying supplements from unverified marketplaces."
+      ],
+      "personalExperienceAngles": [
+        "Bought a cheaper bottle online and later questioned authenticity.",
+        "Started checking lot numbers, testing claims, and practitioner guidance."
+      ],
+      "popularStructurePatterns": [
+        "Trust problem hook -> label checklist -> red flags -> where to buy safely CTA",
+        "Before-you-buy guide -> third-party testing explainer -> product page CTA"
+      ],
+      "safeBlogAngles": [
+        "How to read a supplement label before you buy",
+        "Third-party testing and supplement quality: what shoppers ask"
+      ],
+      "relatedProducts": [],
+      "relatedCollections": [
+        "Supplement Quality",
+        "Practitioner Guided Supplements"
+      ],
+      "sourceNote": "manual curated public social listening summary"
+    },
+    {
+      "topic": "methylated B vitamins",
+      "priority": "medium",
+      "audienceQuestion": "Should I use methylated B vitamins, and why do some B complexes make me feel wired?",
+      "reactionThemes": [
+        "People ask about methylfolate, methylcobalamin, MTHFR, and feeling overstimulated.",
+        "Questions often need careful practitioner-guided framing."
+      ],
+      "objectionThemes": [
+        "Worried about feeling wired or uncomfortable.",
+        "Confused by folate vs folic acid."
+      ],
+      "personalExperienceAngles": [
+        "Took a B complex and felt too energized.",
+        "Wanted a gentler way to compare forms and timing."
+      ],
+      "popularStructurePatterns": [
+        "Why-am-I-wired hook -> forms explained -> timing/dose caution -> practitioner CTA",
+        "FAQ format -> methylated vs non-methylated -> label-reading checklist"
+      ],
+      "safeBlogAngles": [
+        "Methylated B vitamins: common questions and cautious next steps",
+        "Folate, folic acid, and B12 forms explained"
+      ],
+      "relatedProducts": [
+        "B Complex",
+        "Methyl B12"
+      ],
+      "relatedCollections": [
+        "Energy Support",
+        "Methylation Support"
+      ],
+      "sourceNote": "manual curated public social listening summary"
+    },
+    {
+      "topic": "creatine and longevity",
+      "priority": "medium",
+      "audienceQuestion": "Is creatine only for bodybuilders, or does it fit everyday wellness routines?",
+      "reactionThemes": [
+        "Women and older adults ask about strength, recovery, and daily performance framing.",
+        "People want simple dosing and water-retention explanations."
+      ],
+      "objectionThemes": [
+        "Concerned creatine is only for gym culture.",
+        "Worried about bloating or water weight."
+      ],
+      "personalExperienceAngles": [
+        "Started creatine for workouts and kept using it for routine consistency.",
+        "Wanted a plain-language explanation before trying it."
+      ],
+      "popularStructurePatterns": [
+        "Myth hook -> who uses creatine now -> routine checklist -> safety/practitioner CTA",
+        "Beginner guide -> common concerns -> quality checklist"
+      ],
+      "safeBlogAngles": [
+        "Creatine beyond gym culture: common wellness questions",
+        "What beginners ask before adding creatine"
+      ],
+      "relatedProducts": [
+        "Creatine Monohydrate"
+      ],
+      "relatedCollections": [
+        "Fitness Support",
+        "Healthy Aging"
+      ],
+      "sourceNote": "manual curated public social listening summary"
+    },
+    {
+      "topic": "GLP-1 adjacent wellness support",
+      "priority": "low",
+      "audienceQuestion": "What wellness basics should people ask about when appetite, protein, hydration, or digestion changes?",
+      "reactionThemes": [
+        "People discuss protein, fiber, electrolytes, muscle maintenance, and digestion support around appetite changes.",
+        "This topic needs careful language and should not imply supplement alternatives to medication."
+      ],
+      "objectionThemes": [
+        "Avoids natural GLP-1 or medication-comparison claims.",
+        "Requires practitioner guidance and conservative wording."
+      ],
+      "personalExperienceAngles": [
+        "Focused on hydration, protein, and digestion basics while appetite changed.",
+        "Wanted a checklist to discuss with a practitioner."
+      ],
+      "popularStructurePatterns": [
+        "Safety-first hook -> basics checklist -> what to discuss with practitioner -> no medication-comparison disclaimer",
+        "Do-not-say list -> supportive routine guide -> practitioner CTA"
+      ],
+      "safeBlogAngles": [
+        "Wellness basics to discuss when appetite or digestion routines change",
+        "Protein, hydration, fiber, and practitioner-guided supplement questions"
+      ],
+      "relatedProducts": [
+        "Protein Powder",
+        "Electrolyte Powder",
+        "Fiber Support"
+      ],
+      "relatedCollections": [
+        "Digestive Wellness",
+        "Hydration",
+        "Healthy Aging"
+      ],
+      "sourceNote": "manual curated public social listening summary"
+    }
+  ]
+}

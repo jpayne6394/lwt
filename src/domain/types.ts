@@ -25,12 +25,14 @@ export type ShopifyVariant = {
   handle: string;
   title: string;
   vendor: string;
+  category?: string;
   sku?: string;
   barcode?: string;
   price: number;
   compareAtPrice: number | null;
   cost: number | null;
   status: string;
+  inventoryQuantity?: number;
 };
 
 export type ProductMapping = {
@@ -106,4 +108,3 @@ export type SyncPlan = {
   changes: PlannedChange[];
   issues: BlockedIssue[];
 };
-

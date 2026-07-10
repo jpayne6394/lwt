@@ -1,6 +1,9 @@
 import type { AlertMessage } from "../alerts/alert-service.ts";
+import type { IntelligenceDashboard } from "../agents/intelligenceTypes.ts";
 import type { BlockedIssueRecord, AppliedChangeRecord, SyncRun } from "../storage/repository.ts";
+import type { AgentMemoryDocument, MemoryStatus } from "../memory/types.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
+import { renderIntelligencePage } from "./intelligence-ui.ts";
 
 export type AdminPageModel = {
   activePath: string;
@@ -9,6 +12,11 @@ export type AdminPageModel = {
   changes: AppliedChangeRecord[];
   issues: BlockedIssueRecord[];
   alerts: AlertMessage[];
+  shopifyApiKey?: string;
+  memoryStatus?: MemoryStatus;
+  memoryDocuments?: AgentMemoryDocument[];
+  intelligence?: IntelligenceDashboard;
+  intelligenceAuthWarning?: string;
 };
 
 const NAV_ITEMS = [
@@ -17,6 +25,8 @@ const NAV_ITEMS = [
   { href: "/runs", label: "Runs" },
   { href: "/changes", label: "Change Ledger" },
   { href: "/issues", label: "Match Issues" },
+  { href: "/intelligence", label: "Intelligence" },
+  { href: "/memory", label: "Agent Memory" },
   { href: "/settings", label: "Settings" },
 ];
 
@@ -26,9 +36,8 @@ export function renderAdminPage(model: AdminPageModel): string {
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="shopify-api-key" content="">
+    ${renderAppBridgeHead(model)}
     <title>Supplier Ops Agent</title>
-    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" data-app-bridge></script>
     <style>${styles()}</style>
   </head>
   <body>
@@ -47,11 +56,27 @@ export function renderAdminPage(model: AdminPageModel): string {
             <button type="submit">Run weekly sync now</button>
           </form>
         </header>
+        ${model.intelligenceAuthWarning ? renderAuthWarning(model.intelligenceAuthWarning) : ""}
         ${renderContent(model)}
       </main>
     </div>
   </body>
 </html>`;
+}
+
+function renderAppBridgeHead(model: AdminPageModel): string {
+  if (model.activePath.startsWith("/intelligence") || !model.shopifyApiKey) {
+    return "";
+  }
+  return `<meta name="shopify-api-key" content="${escapeHtml(model.shopifyApiKey)}">
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" data-app-bridge></script>`;
+}
+
+function renderAuthWarning(message: string): string {
+  return `<section class="auth-warning" role="status">
+    <strong>Internal dashboard auth setup needed</strong>
+    <span>${escapeHtml(message)}</span>
+  </section>`;
 }
 
 function navLink(item: { href: string; label: string }, activePath: string): string {
@@ -72,6 +97,12 @@ function renderContent(model: AdminPageModel): string {
   if (model.activePath.startsWith("/issues")) {
     return renderIssues(model.issues);
   }
+  if (model.activePath.startsWith("/intelligence")) {
+    return renderIntelligencePage(model.intelligence);
+  }
+  if (model.activePath.startsWith("/memory")) {
+    return renderMemoryPage(model.memoryStatus, model.memoryDocuments ?? []);
+  }
   if (model.activePath.startsWith("/settings")) {
     return renderSettings(model.suppliers);
   }
@@ -86,7 +117,9 @@ function renderDashboard(model: AdminPageModel): string {
       ${metric("Recent Runs", model.runs.length)}
       ${metric("Applied Changes", model.changes.length)}
       ${metric("Open Issues", model.issues.length)}
+      ${metric("Memory Docs", model.memoryStatus?.documentCount ?? 0)}
     </section>
+    ${renderMemoryStatus(model.memoryStatus)}
     <section class="panel">
       <h2>Latest run</h2>
       ${
@@ -104,6 +137,116 @@ function renderDashboard(model: AdminPageModel): string {
       <h2>Alerts</h2>
       ${model.alerts.length ? model.alerts.map(renderAlert).join("") : `<p class="empty">No alerts yet.</p>`}
     </section>`;
+}
+
+function renderMemoryPage(status: MemoryStatus | undefined, documents: AgentMemoryDocument[]): string {
+  return `
+    ${renderMemoryStatus(status)}
+    ${renderMemoryTrainingFeed(documents)}
+    <section class="panel">
+      <h2>How agent memory works</h2>
+      <dl class="settings-list">
+        <div><dt>Storage</dt><dd>Postgres is the durable source when DATABASE_URL is configured; otherwise this process uses in-memory fallback.</dd></div>
+        <div><dt>Retrieval</dt><dd>Vector search is used when local embeddings are available. Keyword fallback keeps the app working when the local dev model is offline.</dd></div>
+        <div><dt>Training mode</dt><dd>No paid fine-tuning jobs are started here. The dashboard feed powers retrieval memory for development and operator review.</dd></div>
+        <div><dt>Privacy</dt><dd>Memory stores sanitized summaries and structured facts, not raw customer dumps or unrestricted private content.</dd></div>
+        <div><dt>Safety</dt><dd>Memory can inform drafts and recommendations only. Shopify writes, emails, deletions, and price changes still require approval.</dd></div>
+      </dl>
+    </section>`;
+}
+
+function renderMemoryTrainingFeed(documents: AgentMemoryDocument[]): string {
+  return `<section class="panel">
+    <div class="panel-head">
+      <h2>Local Dev Training Feed</h2>
+      <span class="status-pill success">${documents.length} docs</span>
+    </div>
+    <p class="memory-note">No paid model training is running. These sanitized source cards feed retrieval memory for local/dev agent behavior and dashboard review.</p>
+    ${
+      documents.length
+        ? `<div class="memory-doc-list">${documents.map(renderMemoryDocument).join("")}</div>`
+        : `<p class="empty">No memory documents have been fed yet.</p>`
+    }
+  </section>`;
+}
+
+function renderMemoryDocument(document: AgentMemoryDocument): string {
+  return `<article class="memory-doc">
+    <div class="memory-doc-head">
+      <strong>${escapeHtml(document.title)}</strong>
+      <span>${escapeHtml(document.sourceType)}</span>
+      <span>${escapeHtml(document.sensitivity)}</span>
+    </div>
+    <p>${escapeHtml(document.summary)}</p>
+    <dl class="memory-doc-meta">
+      <div><dt>Updated</dt><dd>${escapeHtml(document.updatedAt)}</dd></div>
+      <div><dt>Metadata</dt><dd>${renderMemoryMetadata(document.metadata)}</dd></div>
+      <div><dt>Products</dt><dd>${escapeHtml(formatMemoryList(document.relatedProducts))}</dd></div>
+      <div><dt>Collections</dt><dd>${escapeHtml(formatMemoryList(document.relatedCollections))}</dd></div>
+      <div><dt>Evidence</dt><dd>${renderEvidenceLinks(document.evidenceLinks)}</dd></div>
+    </dl>
+  </article>`;
+}
+
+function renderMemoryMetadata(metadata: Record<string, unknown>): string {
+  const safeKeys = ["sourceBatch", "authority", "retrievalUse", "sourcePath", "requiresValidation", "aggregateOnly", "reportType", "seedSource"];
+  const entries = safeKeys
+    .filter((key) => Object.hasOwn(metadata, key))
+    .map((key) => [key, metadata[key]] as const)
+    .filter(([, value]) => isRenderableMemoryMetadata(value));
+  if (!entries.length) {
+    return "None";
+  }
+  return entries.map(([key, value]) => `${escapeHtml(key)}: ${escapeHtml(formatMemoryMetadataValue(value))}`).join(", ");
+}
+
+function isRenderableMemoryMetadata(value: unknown): boolean {
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return true;
+  return Array.isArray(value) && value.every((item) => typeof item === "string" || typeof item === "number" || typeof item === "boolean");
+}
+
+function formatMemoryMetadataValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item)).join(", ");
+  }
+  return String(value);
+}
+
+function formatMemoryList(values: string[]): string {
+  return values.length ? values.join(", ") : "None";
+}
+
+function renderEvidenceLinks(links: string[]): string {
+  if (!links.length) {
+    return "None";
+  }
+  return links.map((link) => `<code>${escapeHtml(link)}</code>`).join(", ");
+}
+
+function renderMemoryStatus(status: MemoryStatus | undefined): string {
+  const current = status ?? {
+    provider: "memory" as const,
+    connected: false,
+    vectorEnabled: false,
+    retrievalMode: "none" as const,
+    documentCount: 0,
+    chunkCount: 0,
+    message: "Agent memory status is unavailable.",
+  };
+  return `<section class="panel memory-status">
+    <div class="panel-head">
+      <h2>Agent Memory</h2>
+      <span class="status-pill ${current.connected ? "success" : "warning"}">${current.connected ? "Connected" : "Unavailable"}</span>
+    </div>
+    <dl class="run-summary">
+      <div><dt>Provider</dt><dd>${escapeHtml(current.provider)}</dd></div>
+      <div><dt>Retrieval</dt><dd>${escapeHtml(formatRetrievalMode(current.retrievalMode))}</dd></div>
+      <div><dt>Documents</dt><dd>${current.documentCount}</dd></div>
+      <div><dt>Chunks</dt><dd>${current.chunkCount}</dd></div>
+      <div><dt>Vector search</dt><dd>${current.vectorEnabled ? "Ready" : "Waiting for embeddings"}</dd></div>
+    </dl>
+    <p class="memory-note">${escapeHtml(current.message)}</p>
+  </section>`;
 }
 
 function renderSuppliers(suppliers: SupplierConfig[]): string {
@@ -215,6 +358,8 @@ function pageTitle(path: string): string {
   if (path.startsWith("/runs")) return "Runs";
   if (path.startsWith("/changes")) return "Change Ledger";
   if (path.startsWith("/issues")) return "Match Issues";
+  if (path.startsWith("/intelligence")) return "LWT Intelligence Center";
+  if (path.startsWith("/memory")) return "Agent Memory";
   if (path.startsWith("/settings")) return "Settings";
   return "Dashboard";
 }
@@ -224,8 +369,15 @@ function pageSubtitle(path: string): string {
   if (path.startsWith("/runs")) return "Weekly and manual sync history.";
   if (path.startsWith("/changes")) return "Every automated Shopify update, recorded before write.";
   if (path.startsWith("/issues")) return "Blocked changes that need attention before automation proceeds.";
+  if (path.startsWith("/intelligence")) return "Inventory risk, product strategy, and content radar for today's operator decisions.";
+  if (path.startsWith("/memory")) return "Cloud business memory and retrieval status for local intelligence.";
   if (path.startsWith("/settings")) return "Automation defaults and safety rules.";
   return "Supplier availability and pricing automation for Shopify.";
+}
+
+function formatRetrievalMode(mode: string): string {
+  if (mode === "keyword_fallback") return "keyword fallback";
+  return mode;
 }
 
 function escapeHtml(value: string): string {
@@ -268,12 +420,31 @@ function styles(): string {
     p { margin: 0; color: var(--muted); }
     button { border: 0; background: var(--accent); color: white; min-height: 40px; padding: 0 16px; border-radius: 6px; font-size: 14px; font-weight: 650; cursor: pointer; }
     button:hover { background: var(--accent-strong); }
-    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    input, select, textarea { width: 100%; min-height: 38px; border: 1px solid var(--border); border-radius: 6px; padding: 0 10px; background: #ffffff; color: var(--text); font: inherit; }
+    input[type="file"] { padding: 8px 10px; }
+    textarea { min-height: 92px; padding: 10px; resize: vertical; }
+    label span { display: block; color: var(--muted); font-size: 12px; font-weight: 750; margin-bottom: 6px; }
+    .metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
     .metric, .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
     .metric { padding: 16px; display: grid; gap: 10px; }
     .metric span { color: var(--muted); font-size: 13px; }
     .metric strong { font-size: 28px; }
     .panel { padding: 18px; margin-bottom: 16px; overflow: auto; }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .panel-head h2 { margin: 0; }
+    .status-pill { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 6px; font-size: 12px; font-weight: 760; }
+    .status-pill.success { color: #05603a; background: #d1fadf; }
+    .status-pill.warning { color: #93370d; background: #fef0c7; }
+    .memory-note { margin-top: 12px; }
+    .memory-doc-list { display: grid; gap: 12px; margin-top: 16px; }
+    .memory-doc { border: 1px solid #e1e6ea; border-radius: 8px; padding: 14px; display: grid; gap: 10px; }
+    .memory-doc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .memory-doc-head strong { color: #1f2937; font-size: 14px; margin-right: auto; }
+    .memory-doc-head span { display: inline-flex; align-items: center; min-height: 26px; padding: 0 8px; border-radius: 6px; background: #edf7f5; color: #0f4f4a; font-size: 12px; font-weight: 700; }
+    .memory-doc p { font-size: 13px; line-height: 1.45; }
+    .memory-doc-meta { display: grid; gap: 7px; margin: 0; font-size: 12px; }
+    .memory-doc-meta div { display: grid; grid-template-columns: 92px 1fr; gap: 10px; min-width: 0; }
+    .memory-doc-meta dd { min-width: 0; word-break: break-word; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; }
     th, td { text-align: left; padding: 11px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
     th { color: var(--muted); font-weight: 680; }
@@ -287,13 +458,90 @@ function styles(): string {
     .alert.error { border-color: #fecdca; color: var(--error); background: #fff5f5; }
     .alert.warning { border-color: #fedf89; color: var(--warning); background: #fffbeb; }
     .alert.info { background: #f5fbff; }
+    .auth-warning { display: grid; gap: 4px; border: 1px solid #fedf89; background: #fffbeb; color: #7a5c00; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
+    .auth-warning span { color: #7a5c00; }
+    .intelligence-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .intel-card { background: #fffaf0; border: 1px solid #dfc982; border-radius: 8px; padding: 16px; display: grid; gap: 8px; min-height: 96px; }
+    .intel-card span { color: #596273; font-size: 13px; font-weight: 700; }
+    .intel-card strong { color: #102a43; font-size: 24px; line-height: 1.15; }
+    .compact-summary { margin: 4px 0 18px; }
+    .intelligence-actions { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 16px; }
+    .button-row { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; min-width: 0; }
+    .button-row button { background: #102a43; }
+    .button-row button { flex: 1 1 180px; max-width: 220px; }
+    .button-row button:hover { background: #183b5c; }
+    .button-row button:disabled { cursor: wait; opacity: 0.72; }
+    .run-status { grid-column: 1 / -1; min-height: 20px; color: #596273; }
+    .intel-tabs { display: grid; gap: 14px; }
+    .tab-list { display: flex; flex-wrap: wrap; gap: 8px; background: #eef2f4; border: 1px solid var(--border); border-radius: 8px; padding: 6px; width: fit-content; max-width: 100%; }
+    .tab-list button { background: transparent; color: #334155; border-radius: 6px; min-height: 36px; padding: 0 12px; }
+    .tab-list button[aria-selected="true"] { background: #102a43; color: #fffaf0; }
+    .intelligence-panel { border-color: #d6dbe0; }
+    .brief { color: #25364a; font-size: 16px; line-height: 1.55; margin-bottom: 18px; max-width: 780px; }
+    .intel-grid { display: grid; gap: 14px; margin-bottom: 18px; }
+    .intel-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .config-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 16px 0; }
+    .mini-panel { border: 1px solid #e1e6ea; border-radius: 8px; padding: 14px; background: #ffffff; min-width: 0; }
+    .mini-panel h3, .source-card h3, .setup-note h3 { color: #102a43; font-size: 14px; line-height: 1.25; margin: 0 0 10px; }
+    .mini-panel ol { margin: 0; padding-left: 18px; display: grid; gap: 8px; color: #25364a; }
+    .mini-panel li { line-height: 1.45; }
+    .row-list { display: grid; gap: 10px; }
+    .signal-row, .source-row, .idea-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid #edf0f2; padding-bottom: 10px; }
+    .signal-row:last-child, .source-row:last-child, .idea-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .signal-row strong, .source-row strong, .idea-row strong { color: #1f2937; font-size: 14px; }
+    .signal-row p, .source-row p, .idea-row p { margin-top: 3px; font-size: 13px; line-height: 1.45; }
+    .idea-row { align-items: flex-start; }
+    .idea-main { display: grid; gap: 8px; flex: 1 1 auto; min-width: 0; }
+    .idea-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .idea-detail-list { display: grid; gap: 8px; margin: 8px 0 0; font-size: 13px; }
+    .idea-detail-list div { display: grid; grid-template-columns: 130px 1fr; gap: 10px; }
+    details summary { color: #334155; cursor: pointer; font-size: 13px; font-weight: 700; }
+    .idea-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    .idea-actions button { min-height: 34px; padding: 0 12px; font-size: 12px; }
+    .secondary-button { background: #eef2f4; color: #102a43; }
+    .secondary-button:hover { background: #dfe7eb; }
+    .danger-button { color: #912018; }
+    .idea-feedback { min-height: 18px; color: #596273; }
+    .brief-workspace { border-top: 1px solid #edf0f2; margin-top: 12px; padding-top: 12px; }
+    .brief-workspace pre { background: #111827; color: #f8fafc; border-radius: 8px; margin: 0; padding: 14px; overflow: auto; white-space: pre-wrap; font-size: 12px; line-height: 1.5; }
+    .weekly-brief-workspace { width: 100%; }
+    .import-panel { margin-bottom: 18px; }
+    .import-controls { display: grid; grid-template-columns: minmax(180px, 260px) minmax(240px, 1fr); gap: 12px; align-items: end; }
+    .import-buttons { grid-column: 1 / -1; }
+    .import-preview { background: #111827; color: #f8fafc; border-radius: 8px; margin: 12px 0 0; padding: 12px; overflow: auto; white-space: pre-wrap; font-size: 12px; line-height: 1.45; }
+    .recommendation-row { display: grid; gap: 7px; border-bottom: 1px solid #edf0f2; padding-bottom: 12px; }
+    .recommendation-row:last-child { border-bottom: 0; padding-bottom: 0; }
+    .recommendation-row p { font-size: 13px; line-height: 1.45; }
+    .action-create-button { width: fit-content; min-height: 32px; padding: 0 11px; font-size: 12px; }
+    .action-queue-panel .compact-summary { margin-bottom: 14px; }
+    .action-filters { display: grid; grid-template-columns: repeat(3, minmax(150px, 1fr)); gap: 12px; margin-bottom: 12px; }
+    .action-list { margin-top: 12px; }
+    .action-note-row { display: grid; grid-template-columns: minmax(160px, 1fr) auto; gap: 8px; align-items: center; }
+    .export-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 14px; }
+    .export-links a { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; border-radius: 6px; background: #edf7f5; color: #0f4f4a; font-size: 12px; font-weight: 750; text-decoration: none; }
+    .export-links a:hover { background: #d6efeb; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag-list span { display: inline-flex; align-items: center; min-height: 28px; padding: 0 9px; border-radius: 6px; background: #edf7f5; color: #0f4f4a; font-size: 12px; font-weight: 700; }
+    .source-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .shopper-source-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .source-card { border: 1px solid #e1e6ea; border-radius: 8px; padding: 14px; background: #ffffff; min-width: 0; }
+    .source-card .panel-head { margin-bottom: 8px; align-items: flex-start; }
+    .source-last-run { margin-top: 8px; font-size: 12px; }
+    .env-list { margin-top: 8px; color: #7a5c00; font-size: 12px; font-weight: 700; word-break: break-word; }
+    .setup-note { border-top: 1px solid #edf0f2; padding-top: 14px; }
+    .status-pill.danger { color: #912018; background: #fee4e2; }
     @media (max-width: 860px) {
       .app-shell { grid-template-columns: 1fr; }
       .sidebar { position: static; }
       .main { padding: 18px; }
       .topbar { align-items: flex-start; flex-direction: column; }
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .intelligence-summary, .intel-grid.two, .config-grid, .source-grid, .import-controls, .action-filters { grid-template-columns: 1fr; }
+      .import-buttons { grid-column: auto; }
+      .action-note-row { grid-template-columns: 1fr; }
+      .intelligence-actions { grid-template-columns: 1fr; }
+      .button-row { justify-content: flex-start; }
+      .idea-detail-list div { grid-template-columns: 1fr; }
     }
   `;
 }
-
