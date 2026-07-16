@@ -18,6 +18,9 @@ on:
 permissions:
   contents: read
 
+env:
+  SUPPLIER_OPS_REF: lwt-intelligence-center
+
 jobs:
   supabase-heartbeat:
     name: Supabase heartbeat
@@ -29,6 +32,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUPPLIER_OPS_REF }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -75,6 +80,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SUPPLIER_OPS_REF }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
