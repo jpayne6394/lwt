@@ -1,10 +1,18 @@
-name: LWT Supabase keep-active
+name: LWT Intelligence automation
 
 on:
   workflow_dispatch:
     inputs:
       run_inventory:
-        description: "Also run the weekly LWT inventory intelligence job"
+        description: "Also run the LWT inventory intelligence job"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      run_shopper_behavior:
+        description: "Also import folder shopper reports and run Shopper Behavior"
         required: true
         default: "false"
         type: choice
@@ -13,24 +21,44 @@ on:
           - "true"
   schedule:
     - cron: "17 13 * * 1,3,5"
-    - cron: "37 13 * * 1"
 
 permissions:
   contents: read
 
 env:
   SUPPLIER_OPS_REF: lwt-intelligence-center
+  NODE_VERSION: "24.14.0"
+  CONTENT_TOPICS_PATH: config/content_topics.json
+  CONTENT_RADAR_SOURCES_PATH: config/content-radar-sources.json
+  SHOPPER_BEHAVIOR_IMPORT_DIR: imports/shopper-behavior
+  SHOPIFY_API_VERSION: "2026-01"
+  REDDIT_USER_AGENT: lwt-intelligence-center/1.0
 
 jobs:
-  supabase-heartbeat:
-    name: Supabase heartbeat
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.schedule == '17 13 * * 1,3,5' }}
+  intelligence-radar:
+    name: Intelligence radar
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 45
     env:
-      LWT_DATABASE_URL: ${{ secrets.LWT_DATABASE_URL }}
+      DATABASE_URL: ${{ secrets.LWT_DATABASE_URL || secrets.DATABASE_URL }}
+      SHOPIFY_STORE_DOMAIN: ${{ secrets.SHOPIFY_STORE_DOMAIN }}
+      SHOPIFY_ADMIN_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ADMIN_ACCESS_TOKEN }}
+      SHOPIFY_SHOP: ${{ secrets.SHOPIFY_SHOP }}
+      SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
+      X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+      REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+      REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+      GOOGLE_TRENDS_PROVIDER_KEY: ${{ secrets.GOOGLE_TRENDS_PROVIDER_KEY }}
+      SEARCH_PROVIDER_KEY: ${{ secrets.SEARCH_PROVIDER_KEY }}
+      SEARCH_PROVIDER_URL: ${{ secrets.SEARCH_PROVIDER_URL }}
+      GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+      GA4_CREDENTIALS_JSON: ${{ secrets.GA4_CREDENTIALS_JSON }}
+      SEARCH_CONSOLE_SITE_URL: ${{ secrets.SEARCH_CONSOLE_SITE_URL }}
+      SEARCH_CONSOLE_CREDENTIALS_JSON: ${{ secrets.SEARCH_CONSOLE_CREDENTIALS_JSON }}
+      RUN_INVENTORY_INPUT: ${{ github.event.inputs.run_inventory || 'false' }}
+      RUN_SHOPPER_BEHAVIOR_INPUT: ${{ github.event.inputs.run_shopper_behavior || 'false' }}
     steps:
-      - name: Check out repository
+      - name: Check out supplier app branch
         uses: actions/checkout@v4
         with:
           ref: ${{ env.SUPPLIER_OPS_REF }}
@@ -38,23 +66,23 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: "24.14.0"
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Run safe database heartbeat
+      - name: Validate database connection
         shell: bash
         run: |
-          if [ -z "${LWT_DATABASE_URL:-}" ]; then
-            echo "LWT_DATABASE_URL GitHub secret is required"
+          if [ -z "${DATABASE_URL:-}" ]; then
+            echo "::error title=Missing database secret::Add a GitHub Actions secret named LWT_DATABASE_URL, or DATABASE_URL, with the LWT Supabase pooled Postgres URL."
             exit 1
           fi
 
           node --input-type=module <<'NODE'
           import pg from "pg";
 
-          const pool = new pg.Pool({ connectionString: process.env.LWT_DATABASE_URL });
+          const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
           try {
             await pool.query("select 1");
             console.log("Supabase heartbeat OK");
@@ -63,43 +91,30 @@ jobs:
           }
           NODE
 
-  weekly-inventory:
-    name: Weekly inventory intelligence
-    if: ${{ github.event.schedule == '37 13 * * 1' || (github.event_name == 'workflow_dispatch' && inputs.run_inventory == 'true') }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    env:
-      DATABASE_URL: ${{ secrets.LWT_DATABASE_URL }}
-      SHOPIFY_STORE_DOMAIN: ${{ secrets.SHOPIFY_STORE_DOMAIN }}
-      SHOPIFY_ADMIN_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ADMIN_ACCESS_TOKEN }}
-      SHOPIFY_SHOP: ${{ secrets.SHOPIFY_SHOP }}
-      SHOPIFY_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ACCESS_TOKEN }}
-      SHOPIFY_API_VERSION: "2026-01"
-      CONTENT_TOPICS_PATH: config/content_topics.json
-      SHOPPER_BEHAVIOR_IMPORT_DIR: imports/shopper-behavior
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ env.SUPPLIER_OPS_REF }}
-
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: "24.14.0"
-
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-
       - name: Run tests
         run: npm test
 
-      - name: Run inventory intelligence
+      - name: Run LWT intelligence jobs
         shell: bash
         run: |
-          if [ -z "${DATABASE_URL:-}" ]; then
-            echo "LWT_DATABASE_URL GitHub secret is required"
-            exit 1
+          should_run_inventory="${RUN_INVENTORY_INPUT}"
+          if [ "${GITHUB_EVENT_NAME}" = "schedule" ] && [ "$(date -u +%u)" = "1" ]; then
+            should_run_inventory="true"
           fi
 
-          npm run intelligence:inventory
+          if [ "${should_run_inventory}" = "true" ]; then
+            npm run intelligence:inventory
+          else
+            echo "Inventory intelligence skipped for this run"
+          fi
+
+          npm run intelligence:content-radar
+          npm run intelligence:product-strategy
+
+          if [ "${RUN_SHOPPER_BEHAVIOR_INPUT}" = "true" ]; then
+            npm run intelligence:shopper-behavior
+          else
+            echo "Shopper Behavior folder import skipped for this run"
+          fi
+
+          npm run intelligence:daily-bi
