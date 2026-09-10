@@ -199,6 +199,38 @@ test("supplier run endpoint requires its automation token and preserves dry-run 
   }
 });
 
+test("connection check endpoint requires the automation token and returns checks", async () => {
+  const repository = new MemoryRepository();
+  const server = startServer(
+    {
+      repository,
+      suppliers: [],
+      alerts: new AlertService(),
+      runNow: async () => {},
+      checkConnections: async () => [{ supplierId: "emerson", supplierName: "Emerson", status: "connected", message: "Accepted." }],
+      supplierRunToken: "scheduled-check-token",
+    },
+    { port: 0, host: "127.0.0.1" },
+  );
+
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const address = server.address();
+  assert(address && typeof address === "object");
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  try {
+    const denied = await fetch(`${baseUrl}/api/connection-checks`, { method: "POST" });
+    assert.equal(denied.status, 401);
+    const accepted = await fetch(`${baseUrl}/api/connection-checks`, {
+      method: "POST",
+      headers: { Authorization: "Bearer scheduled-check-token" },
+    });
+    assert.equal(accepted.status, 200);
+    assert.equal((await accepted.json()).checks[0].status, "connected");
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test("intelligence dashboard keeps inventory vendor summary for rendering", async () => {
   const variant: ShopifyVariant = {
     productId: "gid://shopify/Product/1",

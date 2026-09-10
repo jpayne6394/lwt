@@ -9,6 +9,7 @@ import type { IntelligenceRunType } from "../agents/intelligenceTypes.ts";
 import type { AgentMemoryService } from "../memory/memory-service.ts";
 import type { SupplierOpsRepository } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
+import type { SupplierConnectionCheck } from "../suppliers/types.ts";
 import { renderAdminPage } from "./admin-ui.ts";
 
 export type ServerContext = {
@@ -16,6 +17,7 @@ export type ServerContext = {
   suppliers: SupplierConfig[];
   alerts: AlertService;
   runNow: (dryRun: boolean) => Promise<void>;
+  checkConnections?: () => Promise<SupplierConnectionCheck[]>;
   shopifyApiKey?: string;
   memoryService?: AgentMemoryService;
   intelligenceService?: IntelligenceService;
@@ -80,6 +82,24 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
     await context.runNow(dryRun);
     response.writeHead(303, { Location: "/runs" });
     response.end();
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/connection-checks") {
+    const authorization = supplierRunAuthorization(request, context);
+    if (authorization === "setup_required") {
+      sendJson(response, 503, { error: "supplier_run_token_required" });
+      return;
+    }
+    if (authorization === "unauthorized") {
+      sendJson(response, 401, { error: "supplier_run_unauthorized" });
+      return;
+    }
+    if (!context.checkConnections) {
+      sendJson(response, 503, { error: "connection_checks_unavailable" });
+      return;
+    }
+    sendJson(response, 200, { checks: await context.checkConnections() });
     return;
   }
 

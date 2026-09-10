@@ -16,6 +16,7 @@ import { PostgresRepository } from "./storage/postgres-repository.ts";
 import type { SupplierOpsRepository } from "./storage/repository.ts";
 import { createAdaptersFromEnv } from "./suppliers/factory.ts";
 import { createSupplierRegistry } from "./suppliers/registry.ts";
+import type { SupplierConnectionCheck } from "./suppliers/types.ts";
 import { runSupplierSync } from "./worker/run-sync.ts";
 
 export async function createRuntime() {
@@ -77,12 +78,25 @@ export async function createRuntime() {
       dryRun,
     });
   };
+  const checkConnections = async (): Promise<SupplierConnectionCheck[]> =>
+    Promise.all(adapters.map(async (adapter) => {
+      if (!adapter.verifyLogin) {
+        return {
+          supplierId: adapter.supplier.id,
+          supplierName: adapter.supplier.name,
+          status: "unsupported" as const,
+          message: `${adapter.supplier.name} uses a feed, not a sign-in portal.`,
+        };
+      }
+      return adapter.verifyLogin();
+    }));
 
   const serverContext: ServerContext = {
     repository,
     suppliers,
     alerts,
     runNow,
+    checkConnections,
     shopifyApiKey: config.shopifyApiKey,
     memoryService,
     intelligenceService,
@@ -95,6 +109,7 @@ export async function createRuntime() {
     config,
     serverContext,
     runNow,
+    checkConnections,
   };
 }
 

@@ -20,6 +20,18 @@ export type SupplierAdapterContext = {
 export type SupplierAdapter = {
   supplier: SupplierConfig;
   fetchProducts(context?: SupplierAdapterContext): Promise<SupplierProduct[]>;
+  /**
+   * Confirms that a portal accepts the stored account without opening products,
+   * inventory, carts, or Shopify. Feed adapters intentionally omit this.
+   */
+  verifyLogin?(): Promise<SupplierConnectionCheck>;
+};
+
+export type SupplierConnectionCheck = {
+  supplierId: string;
+  supplierName: string;
+  status: "connected" | "two_factor_required" | "login_failed" | "not_configured" | "unsupported";
+  message: string;
 };
 
 export class SupplierAdapterError extends Error {

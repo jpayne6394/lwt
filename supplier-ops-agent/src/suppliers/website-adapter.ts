@@ -11,7 +11,7 @@ export type WebsiteAdapterConfig = {
     username: string;
     password: string;
     submit: string;
-    productRows: string;
+    productRows?: string;
   };
 };
 
@@ -25,7 +25,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
   }
 
   async fetchProducts(context: SupplierAdapterContext = {}) {
-    if (!this.#config.loginUrl || !this.#config.productsUrl || !this.#config.selectors) {
+    if (!this.#config.loginUrl || !this.#config.productsUrl || !this.#config.selectors?.productRows) {
       throw new SupplierAdapterError(
         this.supplier.id,
         "not_configured",
@@ -84,6 +84,51 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     } finally {
       await browser.close();
     }
+  }
+
+  async verifyLogin() {
+    const config = this.#config;
+    if (!config.loginUrl || !config.selectors) {
+      return this.#check("not_configured", `${this.supplier.name} needs a portal URL and sign-in selectors.`);
+    }
+    if (!config.username || !config.password) {
+      return this.#check("not_configured", `${this.supplier.name} has no saved account.`);
+    }
+
+    const playwright = await import("playwright");
+    const browser = await playwright.chromium.launch({ headless: true });
+    try {
+      const page = await browser.newPage();
+      await page.goto(config.loginUrl, { waitUntil: "domcontentloaded" });
+      await page.fill(config.selectors.username, config.username);
+      await page.fill(config.selectors.password, config.password);
+      await Promise.all([
+        page.waitForLoadState("domcontentloaded").catch(() => undefined),
+        page.click(config.selectors.submit),
+      ]);
+      await page.waitForTimeout(750);
+
+      const pageText = (await page.locator("body").innerText()).toLowerCase();
+      if (/two-factor|\b2fa\b|verification code|one-time code|security code/.test(pageText)) {
+        return this.#check("two_factor_required", `${this.supplier.name} requires a verification step.`);
+      }
+      if (/invalid (email|username|password|credentials)|incorrect (email|password)|sign in failed|login failed/.test(pageText)) {
+        return this.#check("login_failed", `${this.supplier.name} rejected the saved account.`);
+      }
+      if (await page.locator(config.selectors.password).count()) {
+        return this.#check("login_failed", `${this.supplier.name} stayed on the sign-in page.`);
+      }
+      return this.#check("connected", `${this.supplier.name} accepted the saved account.`);
+    } catch (error) {
+      if (error instanceof SupplierAdapterError) throw error;
+      return this.#check("login_failed", `${this.supplier.name} could not complete its sign-in check.`);
+    } finally {
+      await browser.close();
+    }
+  }
+
+  #check(status: "connected" | "two_factor_required" | "login_failed" | "not_configured", message: string) {
+    return { supplierId: this.supplier.id, supplierName: this.supplier.name, status, message } as const;
   }
 }
 

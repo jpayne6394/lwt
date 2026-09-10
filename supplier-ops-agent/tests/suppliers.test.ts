@@ -53,6 +53,7 @@ test("supplier registry includes the v1 supplier coverage", () => {
       "research-nutritionals",
       "world-health-mall",
       "desbio",
+      "physicians-standard",
     ],
   );
 });
