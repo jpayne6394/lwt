@@ -63,8 +63,9 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
   await input.repository.recordAppliedChanges(run.id, plan.changes);
   await input.repository.recordBlockedIssues(run.id, allIssues);
 
-  if (!input.dryRun && plan.changes.length > 0) {
-    await applyShopifyChanges(input, run.id, plan.changes, allIssues);
+  const automaticChanges = input.dryRun ? [] : plan.changes.filter(isApprovedForAutomaticWrite);
+  if (automaticChanges.length > 0) {
+    await applyShopifyChanges(input, run.id, automaticChanges, allIssues);
   }
 
   const completed = await input.repository.completeSyncRun(run.id, {
@@ -81,6 +82,20 @@ export async function runSupplierSync(input: RunSupplierSyncInput): Promise<RunS
       issues: allIssues,
     },
   };
+}
+
+/**
+ * The unattended worker may only take a matched item out of stock. Prices,
+ * costs, new products, restocks, and fuzzy matches remain proposals until
+ * somebody approves them in the review queue.
+ */
+function isApprovedForAutomaticWrite(change: PlannedChange): boolean {
+  return (
+    change.type === "inventory" &&
+    change.quantity === 0 &&
+    change.supplierStockStatus === "out_of_stock" &&
+    (change.matchStrategy === "manual" || change.matchStrategy === "sku" || change.matchStrategy === "upc")
+  );
 }
 
 async function applyShopifyChanges(

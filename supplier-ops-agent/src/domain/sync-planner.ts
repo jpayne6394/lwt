@@ -4,6 +4,7 @@ import { matchSupplierProduct } from "./product-matcher.ts";
 import { planPriceUpdate, resolveRegularPrice } from "./pricing-policy.ts";
 import type {
   BlockedIssue,
+  MatchResult,
   PlannedChange,
   ProductMapping,
   ShopifyVariant,
@@ -47,7 +48,7 @@ export function planSupplierSync(input: SupplierSyncInput): SyncPlan {
       continue;
     }
 
-    appendMatchedProductChanges(changes, issues, supplierProduct, match.variant);
+    appendMatchedProductChanges(changes, issues, supplierProduct, match);
   }
 
   return { changes, issues };
@@ -57,8 +58,9 @@ function appendMatchedProductChanges(
   changes: PlannedChange[],
   issues: BlockedIssue[],
   supplierProduct: SupplierProduct,
-  variant: ShopifyVariant,
+  match: Extract<MatchResult, { status: "matched" }>,
 ): void {
+  const variant = match.variant;
   const inventory = resolveInventoryQuantity({
     stockStatus: supplierProduct.stockStatus,
     quantity: supplierProduct.quantity,
@@ -71,6 +73,8 @@ function appendMatchedProductChanges(
       inventoryItemId: variant.inventoryItemId,
       locationId: variant.locationId,
       quantity: inventory.quantity,
+      matchStrategy: match.strategy,
+      supplierStockStatus: supplierProduct.stockStatus,
       reason:
         supplierProduct.stockStatus === "in_stock" && supplierProduct.quantity === undefined
           ? "Supplier in stock without exact quantity"

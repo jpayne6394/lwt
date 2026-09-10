@@ -46,6 +46,16 @@ test("sync planner creates inventory, cost, and price changes for matched produc
     plan.changes.map((change) => change.type),
     ["inventory", "cost", "price"],
   );
+  assert.deepEqual(plan.changes[0], {
+    type: "inventory",
+    variantId: shopifyVariant.variantId,
+    inventoryItemId: shopifyVariant.inventoryItemId,
+    locationId: shopifyVariant.locationId,
+    quantity: 8,
+    matchStrategy: "sku",
+    supplierStockStatus: "in_stock",
+    reason: "Supplier stock changed",
+  });
 });
 
 test("sync planner drafts new products when no Shopify match exists", () => {

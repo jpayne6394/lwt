@@ -24,7 +24,7 @@ const shopifyVariant: ShopifyVariant = {
   status: "active",
 };
 
-test("runSupplierSync records snapshots, changes, issues, and applies writes outside dry-run mode", async () => {
+test("runSupplierSync records all proposals but does not auto-apply price, cost, or restock changes", async () => {
   const product: SupplierProduct = {
     supplierId: "desbio",
     supplierName: "DesBio",
@@ -57,9 +57,35 @@ test("runSupplierSync records snapshots, changes, issues, and applies writes out
   assert.equal(repository.listSupplierSnapshots()[0].products.length, 1);
   assert.deepEqual(repository.listAppliedChanges().map((change) => change.type), ["inventory", "cost", "price"]);
   assert.equal(repository.listBlockedIssues().length, 0);
-  assert.equal(applied.length, 3);
+  assert.equal(applied.length, 0);
   assert.equal((await repository.memoryStatus()).documentCount, 1);
   assert.match((await repository.searchMemory({ query: "DesBio inventory supplier sync", limit: 1 }))[0].document.summary, /1 supplier products/);
+});
+
+test("runSupplierSync auto-applies an exact SKU stock-out but leaves price and cost proposals pending", async () => {
+  const product: SupplierProduct = {
+    supplierId: "desbio",
+    supplierName: "DesBio",
+    sku: "MOLD",
+    title: "MOLD:PLUS by DesBio",
+    stockStatus: "out_of_stock",
+    cost: 18,
+    msrp: 40,
+    capturedAt: "2026-05-24T12:00:00.000Z",
+  };
+  const applied: PlannedChange[] = [];
+
+  await runSupplierSync({
+    adapters: [successfulAdapter(product)],
+    repository: new MemoryRepository({ shopifyVariants: [shopifyVariant] }),
+    alerts: new AlertService(),
+    shopifyClient: { applyChanges: async (changes) => applied.push(...changes) },
+    dryRun: false,
+  });
+
+  assert.deepEqual(applied.map((change) => change.type), ["inventory"]);
+  assert.equal(applied[0].type, "inventory");
+  if (applied[0].type === "inventory") assert.equal(applied[0].quantity, 0);
 });
 
 test("runSupplierSync alerts and records failed supplier adapters", async () => {

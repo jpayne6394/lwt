@@ -68,6 +68,8 @@ export type PlannedChange =
       inventoryItemId: string;
       locationId: string;
       quantity: number;
+      matchStrategy: MatchStrategy;
+      supplierStockStatus: StockStatus;
       reason: string;
     }
   | {
