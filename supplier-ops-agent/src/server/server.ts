@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { URL } from "node:url";
 
@@ -20,6 +21,7 @@ export type ServerContext = {
   intelligenceService?: IntelligenceService;
   internalDashboardPassword?: string;
   internalDashboardAuthRequired?: boolean;
+  supplierRunToken?: string;
 };
 
 export type StartServerOptions = {
@@ -65,6 +67,15 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
   }
 
   if (request.method === "POST" && url.pathname === "/api/runs") {
+    const authorization = supplierRunAuthorization(request, context);
+    if (authorization === "setup_required") {
+      sendJson(response, 503, { error: "supplier_run_token_required" });
+      return;
+    }
+    if (authorization === "unauthorized") {
+      sendJson(response, 401, { error: "supplier_run_unauthorized" });
+      return;
+    }
     const dryRun = url.searchParams.get("dryRun") === "true";
     await context.runNow(dryRun);
     response.writeHead(303, { Location: "/runs" });
@@ -399,6 +410,15 @@ function intelligenceAuthStatus(request: IncomingMessage, context: ServerContext
   return isAuthorized(request, password) ? "authorized" : "unauthorized";
 }
 
+function supplierRunAuthorization(request: IncomingMessage, context: ServerContext): "authorized" | "unauthorized" | "setup_required" {
+  const token = context.supplierRunToken;
+  if (!token) return "setup_required";
+  const supplied = request.headers.authorization;
+  if (supplied?.startsWith("Bearer ") && safeSecretMatch(supplied.slice("Bearer ".length), token)) return "authorized";
+  if (context.internalDashboardPassword && isAuthorized(request, context.internalDashboardPassword)) return "authorized";
+  return "unauthorized";
+}
+
 function isAuthorized(request: IncomingMessage, password: string): boolean {
   const header = request.headers.authorization;
   if (!header?.startsWith("Basic ")) {
@@ -407,7 +427,13 @@ function isAuthorized(request: IncomingMessage, password: string): boolean {
   const decoded = Buffer.from(header.slice("Basic ".length), "base64").toString("utf8");
   const separator = decoded.indexOf(":");
   const suppliedPassword = separator >= 0 ? decoded.slice(separator + 1) : decoded;
-  return suppliedPassword === password;
+  return safeSecretMatch(suppliedPassword, password);
+}
+
+function safeSecretMatch(supplied: string, expected: string): boolean {
+  const suppliedBuffer = Buffer.from(supplied);
+  const expectedBuffer = Buffer.from(expected);
+  return suppliedBuffer.length === expectedBuffer.length && timingSafeEqual(suppliedBuffer, expectedBuffer);
 }
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {

@@ -88,6 +88,7 @@ export async function createRuntime() {
     intelligenceService,
     internalDashboardPassword: config.internalDashboardPassword,
     internalDashboardAuthRequired: config.internalDashboardAuthRequired,
+    supplierRunToken: config.supplierRunToken,
   };
 
   return {
