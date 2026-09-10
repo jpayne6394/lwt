@@ -28,7 +28,6 @@ jobs:
           fi
           curl \
             --fail-with-body \
-            --location \
             --retry 2 \
             --retry-all-errors \
             --retry-delay 20 \
