@@ -1,0 +1,38 @@
+name: Supplier inventory read-only check
+
+on:
+  schedule:
+    # Monday 10:15 UTC. This starts the sleeping Render worker only to perform
+    # the existing dry-run supplier check; it never writes changes to Shopify.
+    - cron: "15 10 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  supplier-inventory-readonly:
+    name: Supplier inventory read-only check
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Run the existing supplier check without writes
+        env:
+          SUPPLIER_OPS_URL: https://supplier-ops-agent.onrender.com
+          SUPPLIER_OPS_RUN_TOKEN: ${{ secrets.SUPPLIER_OPS_RUN_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPPLIER_OPS_RUN_TOKEN:-}" ]; then
+            echo "::error title=Missing supplier run token::Add the SUPPLIER_OPS_RUN_TOKEN repository secret before enabling this schedule."
+            exit 1
+          fi
+          curl \
+            --fail-with-body \
+            --location \
+            --retry 2 \
+            --retry-all-errors \
+            --retry-delay 20 \
+            --max-time 1200 \
+            --request POST \
+            --header "Authorization: Bearer ${SUPPLIER_OPS_RUN_TOKEN}" \
+            "${SUPPLIER_OPS_URL}/api/runs?dryRun=true"
