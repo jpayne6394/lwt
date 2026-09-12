@@ -24,6 +24,47 @@ type LoginCheckPhase =
   | "submit"
   | "response_check";
 
+export type LoginOutcome = "connected" | "two_factor_required" | "login_failed" | "pending";
+
+export function classifyLoginOutcome(pageText: string, passwordFieldCount: number): LoginOutcome {
+  const normalizedText = pageText.toLowerCase();
+  if (/two-factor|\b2fa\b|verification code|one-time code|security code/.test(normalizedText)) {
+    return "two_factor_required";
+  }
+  if (/invalid (email|username|password|credentials)|incorrect (email|password)|sign in failed|login failed/.test(normalizedText)) {
+    return "login_failed";
+  }
+  return passwordFieldCount === 0 ? "connected" : "pending";
+}
+
+type LoginStateReader = () => Promise<{ pageText: string; passwordFieldCount: number }>;
+
+export async function waitForLoginOutcome(
+  readState: LoginStateReader,
+  options: {
+    timeoutMs?: number;
+    pollIntervalMs?: number;
+    now?: () => number;
+    sleep?: (milliseconds: number) => Promise<void>;
+  } = {},
+): Promise<Exclude<LoginOutcome, "pending"> | "timed_out"> {
+  const timeoutMs = options.timeoutMs ?? 15_000;
+  const pollIntervalMs = options.pollIntervalMs ?? 250;
+  const now = options.now ?? Date.now;
+  const sleep = options.sleep ?? ((milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+  const deadline = now() + timeoutMs;
+
+  while (true) {
+    const state = await readState();
+    const outcome = classifyLoginOutcome(state.pageText, state.passwordFieldCount);
+    if (outcome !== "pending") return outcome;
+
+    const remainingMs = deadline - now();
+    if (remainingMs <= 0) return "timed_out";
+    await sleep(Math.min(pollIntervalMs, remainingMs));
+  }
+}
+
 export function loginCheckFailureMessage(supplierName: string, phase: LoginCheckPhase) {
   const phaseLabel: Record<LoginCheckPhase, string> = {
     browser_start: "starting its secure browser",
@@ -127,21 +168,20 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
         phase = "password_field";
         await page.fill(config.selectors.password, config.password);
         phase = "submit";
-        await Promise.all([
-          page.waitForLoadState("domcontentloaded").catch(() => undefined),
-          page.click(config.selectors.submit),
-        ]);
-        await page.waitForTimeout(750);
+        await page.click(config.selectors.submit);
 
         phase = "response_check";
-        const pageText = (await page.locator("body").innerText()).toLowerCase();
-        if (/two-factor|\b2fa\b|verification code|one-time code|security code/.test(pageText)) {
+        const outcome = await waitForLoginOutcome(async () => ({
+          pageText: await page.locator("body").innerText().catch(() => ""),
+          passwordFieldCount: await page.locator(config.selectors!.password).count(),
+        }));
+        if (outcome === "two_factor_required") {
           return this.#check("two_factor_required", `${this.supplier.name} requires a verification step.`);
         }
-        if (/invalid (email|username|password|credentials)|incorrect (email|password)|sign in failed|login failed/.test(pageText)) {
+        if (outcome === "login_failed") {
           return this.#check("login_failed", `${this.supplier.name} rejected the saved account.`);
         }
-        if (await page.locator(config.selectors.password).count()) {
+        if (outcome === "timed_out") {
           return this.#check("login_failed", `${this.supplier.name} stayed on the sign-in page.`);
         }
         return this.#check("connected", `${this.supplier.name} accepted the saved account.`);
