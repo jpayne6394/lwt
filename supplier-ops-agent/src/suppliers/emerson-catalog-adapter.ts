@@ -15,7 +15,7 @@ export type EmersonCatalogAdapterConfig = {
 
 type ApolloState = Record<string, Record<string, unknown>>;
 
-const DEFAULT_CATALOG_URL = "https://www.emersonecologics.com/shop";
+const DEFAULT_CATALOG_URL = "https://emersonecologics.com/shop";
 
 /**
  * Uses a session created by a real, user-completed Emerson login. This avoids

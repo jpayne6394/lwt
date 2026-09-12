@@ -111,7 +111,7 @@ SUPPLIER_PASSWORD_DESBIO=portal-password
 
 Website product rows should expose `data-*` fields such as `data-title`, `data-sku`, `data-upc`, `data-available`, `data-quantity`, `data-cost`, `data-msrp`, and `data-sale-price`.
 
-Emerson uses a reusable session instead of replaying its protected sign-in form on every run. Run `npm run capture:emerson`, complete one normal browser sign-in, and store the generated `SUPPLIER_COOKIE_EMERSON_ECOLOGICS` value in Render. The worker validates the session with a read-only catalog request and reports that one reconnection is needed when Emerson expires it. The session value is ignored by Git and is never printed by the worker.
+Emerson uses a reusable session instead of replaying its protected sign-in form on every run. Run `npm run capture:emerson`, complete one normal browser sign-in, and store the generated `SUPPLIER_COOKIE_EMERSON_ECOLOGICS` value in Render. When an existing, idle Chrome profile is already signed in, `npm run capture:emerson -- --from-chrome-profile "Profile 2"` can securely reuse that profile without displaying the session value. The worker validates the session with a read-only catalog request and reports that one reconnection is needed when Emerson expires it. Temporary browser data and the resulting session file stay under the Git-ignored `.auth` directory and are never printed by the worker.
 
 ## Shopify permissions
 
