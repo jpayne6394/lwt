@@ -20,6 +20,8 @@ export type SupplierAdapterContext = {
 export type SupplierAdapter = {
   supplier: SupplierConfig;
   fetchProducts(context?: SupplierAdapterContext): Promise<SupplierProduct[]>;
+  /** Reads one exact supplier SKU without expanding to a cart or order workflow. */
+  lookupProduct?(supplierSku: string, context?: SupplierAdapterContext): Promise<SupplierProduct | null>;
   /**
    * Confirms that a portal accepts the stored account without opening products,
    * inventory, carts, or Shopify. Feed adapters intentionally omit this.

@@ -64,3 +64,12 @@ test("loadConfig accepts intelligence connector environment variables", () => {
   assert.equal(config.internalDashboardPassword, "secret");
   assert.equal(config.contentTopicsPath, "config/test-topics.json");
 });
+
+test("loadConfig keeps supplier read authorization separate from run authorization", () => {
+  const config = loadConfig({
+    SUPPLIER_OPS_RUN_TOKEN: "run-token",
+    SUPPLIER_OPS_READ_TOKEN: "read-token",
+  });
+  assert.equal(config.supplierRunToken, "run-token");
+  assert.equal(config.supplierReadToken, "read-token");
+});

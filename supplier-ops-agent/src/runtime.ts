@@ -90,6 +90,14 @@ export async function createRuntime() {
       }
       return adapter.verifyLogin();
     }));
+  const lookupSupplierProduct = async (input: { supplierKey: string; supplierSku: string }) => {
+    const adapter = adapters.find((candidate) => candidate.supplier.id === input.supplierKey);
+    if (!adapter) return null;
+    if (adapter.lookupProduct) return adapter.lookupProduct(input.supplierSku, { dryRun: true });
+    const products = await adapter.fetchProducts({ dryRun: true });
+    const wanted = normalizeSku(input.supplierSku);
+    return products.find((product) => normalizeSku(product.sku) === wanted) ?? null;
+  };
 
   const serverContext: ServerContext = {
     repository,
@@ -97,12 +105,14 @@ export async function createRuntime() {
     alerts,
     runNow,
     checkConnections,
+    lookupSupplierProduct,
     shopifyApiKey: config.shopifyApiKey,
     memoryService,
     intelligenceService,
     internalDashboardPassword: config.internalDashboardPassword,
     internalDashboardAuthRequired: config.internalDashboardAuthRequired,
     supplierRunToken: config.supplierRunToken,
+    supplierReadToken: config.supplierReadToken,
   };
 
   return {
@@ -111,6 +121,10 @@ export async function createRuntime() {
     runNow,
     checkConnections,
   };
+}
+
+function normalizeSku(value: string | undefined): string {
+  return String(value ?? '').trim().toUpperCase();
 }
 
 async function createRepository(databaseUrl: string | undefined): Promise<SupplierOpsRepository> {

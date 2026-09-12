@@ -20,6 +20,7 @@ export type RuntimeConfig = {
   internalDashboardPassword?: string;
   internalDashboardAuthRequired: boolean;
   supplierRunToken?: string;
+  supplierReadToken?: string;
   contentTopicsPath: string;
   contentRadarSourcesPath: string;
   shopperBehaviorImportDir: string;
@@ -63,6 +64,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
       env.RENDER === "true" || env.NODE_ENV === "production",
     ),
     supplierRunToken: env.SUPPLIER_OPS_RUN_TOKEN,
+    supplierReadToken: env.SUPPLIER_OPS_READ_TOKEN,
     contentTopicsPath: env.CONTENT_TOPICS_PATH ?? "config/content_topics.json",
     contentRadarSourcesPath: env.CONTENT_RADAR_SOURCES_PATH ?? "config/content-radar-sources.json",
     shopperBehaviorImportDir: env.SHOPPER_BEHAVIOR_IMPORT_DIR ?? "imports/shopper-behavior",

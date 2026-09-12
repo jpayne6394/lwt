@@ -10,6 +10,7 @@ import type { AgentMemoryService } from "../memory/memory-service.ts";
 import type { SupplierOpsRepository } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
 import type { SupplierConnectionCheck } from "../suppliers/types.ts";
+import type { SupplierProduct } from "../domain/types.ts";
 import { renderAdminPage } from "./admin-ui.ts";
 
 export type ServerContext = {
@@ -18,12 +19,14 @@ export type ServerContext = {
   alerts: AlertService;
   runNow: (dryRun: boolean) => Promise<void>;
   checkConnections?: () => Promise<SupplierConnectionCheck[]>;
+  lookupSupplierProduct?: (input: { supplierKey: string; supplierSku: string }) => Promise<SupplierProduct | null>;
   shopifyApiKey?: string;
   memoryService?: AgentMemoryService;
   intelligenceService?: IntelligenceService;
   internalDashboardPassword?: string;
   internalDashboardAuthRequired?: boolean;
   supplierRunToken?: string;
+  supplierReadToken?: string;
 };
 
 export type StartServerOptions = {
@@ -103,6 +106,67 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
       sendJson(response, 200, { checks: await context.checkConnections() });
     } catch {
       sendJson(response, 502, { error: "connection_check_failed" });
+    }
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/suppliers/lookup") {
+    const authorization = supplierLookupAuthorization(request, context);
+    if (authorization === "setup_required") {
+      sendJson(response, 503, { error: "supplier_run_token_required" });
+      return;
+    }
+    if (authorization === "unauthorized") {
+      sendJson(response, 401, { error: "supplier_run_unauthorized" });
+      return;
+    }
+    if (!context.lookupSupplierProduct) {
+      sendJson(response, 503, { error: "supplier_lookup_unavailable" });
+      return;
+    }
+    if (!/^application\/json(?:;.*)?$/i.test(String(request.headers["content-type"] ?? "").trim())) {
+      sendJson(response, 415, { error: "supplier_lookup_content_type_required" });
+      return;
+    }
+    try {
+      const input = supplierLookupInput(await readJsonBody(request, 8_192));
+      if (!input) {
+        sendJson(response, 400, { error: "supplier_lookup_arguments_invalid" });
+        return;
+      }
+      const product = await context.lookupSupplierProduct(input);
+      if (!product) {
+        sendJson(response, 404, {
+          ok: false,
+          error: "supplier_product_not_found",
+          supplierKey: input.supplierKey,
+          supplierSku: input.supplierSku,
+        });
+        return;
+      }
+      sendJson(response, 200, {
+        ok: true,
+        data: {
+          supplierKey: product.supplierId,
+          supplierName: product.supplierName,
+          supplierSku: product.sku,
+          title: product.title,
+          brand: product.brand,
+          availability: product.stockStatus,
+          quantity: product.quantity,
+          cost: product.cost,
+          msrp: product.msrp,
+          salePrice: product.salePrice,
+          sourceUrl: product.productUrl,
+          observedAt: product.capturedAt,
+          flags: ["read_only", "no_cart_action", "no_order_action"],
+        },
+      });
+    } catch (error) {
+      const code = error instanceof Error && error.message === "Request body is too large"
+        ? "supplier_lookup_body_too_large"
+        : "supplier_lookup_failed";
+      sendJson(response, 502, { error: code });
     }
     return;
   }
@@ -441,6 +505,24 @@ function supplierRunAuthorization(request: IncomingMessage, context: ServerConte
   if (supplied?.startsWith("Bearer ") && safeSecretMatch(supplied.slice("Bearer ".length), token)) return "authorized";
   if (context.internalDashboardPassword && isAuthorized(request, context.internalDashboardPassword)) return "authorized";
   return "unauthorized";
+}
+
+function supplierLookupAuthorization(request: IncomingMessage, context: ServerContext): "authorized" | "unauthorized" | "setup_required" {
+  const token = context.supplierReadToken;
+  if (!token) return "setup_required";
+  const supplied = request.headers.authorization;
+  return supplied?.startsWith("Bearer ") && safeSecretMatch(supplied.slice("Bearer ".length), token)
+    ? "authorized"
+    : "unauthorized";
+}
+
+function supplierLookupInput(value: unknown): { supplierKey: string; supplierSku: string } | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  if (Object.keys(raw).length !== 2 || raw.supplierKey !== "emerson-ecologics" || typeof raw.supplierSku !== "string") return null;
+  const supplierSku = raw.supplierSku.trim();
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:/+ -]{0,119}$/.test(supplierSku)) return null;
+  return { supplierKey: raw.supplierKey, supplierSku };
 }
 
 function isAuthorized(request: IncomingMessage, password: string): boolean {

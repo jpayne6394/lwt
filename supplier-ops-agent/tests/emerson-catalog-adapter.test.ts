@@ -60,6 +60,24 @@ test("Emerson connection check accepts a reusable authenticated catalog session"
   assert.equal((await adapter.verifyLogin()).status, "connected");
 });
 
+test("Emerson exact lookup searches one SKU and does not open cart or order routes", async () => {
+  let requestedUrl = "";
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, {
+    cookieHeader: "session=private-value",
+    fetchImpl: async (url) => {
+      requestedUrl = String(url);
+      return new Response(authenticatedCatalogHtml(), { status: 200 });
+    },
+  });
+  const product = await adapter.lookupProduct("PUR-MG9", { now: new Date("2026-09-12T12:00:00.000Z") });
+  assert.equal(product?.sku, "PUR-MG9");
+  const parsed = new URL(requestedUrl);
+  assert.equal(parsed.origin, "https://emersonecologics.com");
+  assert.equal(parsed.pathname, "/shop");
+  assert.equal(parsed.searchParams.get("query"), '"PUR-MG9"');
+  assert.equal(/cart|checkout|order/i.test(parsed.pathname), false);
+});
+
 test("Emerson session adapter fails closed when the session returns a public sign-in page", async () => {
   const adapter = new EmersonCatalogSupplierAdapter(emerson, {
     cookieHeader: "expired=true",

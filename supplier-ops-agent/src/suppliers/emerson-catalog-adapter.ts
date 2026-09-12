@@ -103,6 +103,39 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     );
   }
 
+  async lookupProduct(supplierSku: string, context: SupplierAdapterContext = {}) {
+    if (!this.#cookieHeader) {
+      throw new SupplierAdapterError(
+        this.supplier.id,
+        "not_configured",
+        `${this.supplier.name} needs a one-time browser session connection`,
+      );
+    }
+    const wanted = cleanString(supplierSku);
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:/+ -]{0,119}$/.test(wanted)) {
+      throw new SupplierAdapterError(this.supplier.id, "parse_failed", "Emerson supplier SKU is invalid");
+    }
+    const url = new URL(DEFAULT_CATALOG_URL);
+    url.searchParams.set("query", `"${wanted}"`);
+    const { html, responseUrl } = await this.#readCatalog(url.toString());
+    if (requiresSignIn(html, responseUrl)) {
+      throw new SupplierAdapterError(
+        this.supplier.id,
+        "verification_required",
+        `${this.supplier.name} session expired and needs one browser reconnection`,
+      );
+    }
+    const match = recordsFromState(parseApolloState(html, this.supplier.id))
+      .find((record) => cleanString(record.sku).toUpperCase() === wanted.toUpperCase());
+    if (!match) return null;
+    return normalizeSupplierRecord({
+      supplierId: this.supplier.id,
+      supplierName: this.supplier.name,
+      record: match,
+      capturedAt: (context.now ?? new Date()).toISOString(),
+    });
+  }
+
   async #readCatalog(catalogUrl: string): Promise<{ html: string; responseUrl: string }> {
     assertSafeEmersonUrl(catalogUrl, this.supplier.id);
     const response = await this.#fetch(catalogUrl, {

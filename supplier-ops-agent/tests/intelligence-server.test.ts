@@ -174,6 +174,7 @@ test("supplier run endpoint requires its automation token and preserves dry-run 
       alerts: new AlertService(),
       runNow: async (dryRun) => { runs.push(dryRun); },
       supplierRunToken: "scheduled-check-token",
+      supplierReadToken: "separate-read-only-token",
     },
     { port: 0, host: "127.0.0.1" },
   );
@@ -186,6 +187,13 @@ test("supplier run endpoint requires its automation token and preserves dry-run 
   try {
     const denied = await fetch(`${baseUrl}/api/runs?dryRun=true`, { method: "POST", redirect: "manual" });
     assert.equal(denied.status, 401);
+
+    const readTokenDenied = await fetch(`${baseUrl}/api/runs?dryRun=true`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { authorization: "Bearer separate-read-only-token" },
+    });
+    assert.equal(readTokenDenied.status, 401);
 
     const accepted = await fetch(`${baseUrl}/api/runs?dryRun=true`, {
       method: "POST",
@@ -260,6 +268,97 @@ test("connection check failures stay contained and keep the service healthy", as
     const health = await fetch(`${baseUrl}/healthz`);
     assert.equal(health.status, 200);
     assert.deepEqual(await health.json(), { ok: true });
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test("supplier lookup is token-authenticated, exact-SKU, read-only, and minimized", async () => {
+  const repository = new MemoryRepository();
+  const lookups: Array<{ supplierKey: string; supplierSku: string }> = [];
+  const server = startServer(
+    {
+      repository,
+      suppliers: [],
+      alerts: new AlertService(),
+      runNow: async () => {},
+      supplierRunToken: "scheduled-check-token",
+      supplierReadToken: "separate-read-only-token",
+      internalDashboardPassword: "dashboard-password",
+      lookupSupplierProduct: async (input) => {
+        lookups.push(input);
+        return {
+          supplierId: "emerson-ecologics",
+          supplierName: "Emerson Ecologics",
+          brand: "Life Extension",
+          sku: "LIF-01639",
+          title: "CoQ10",
+          stockStatus: "in_stock",
+          quantity: 14,
+          cost: 20.5,
+          msrp: 32,
+          productUrl: "https://www.emersonecologics.com/products/detail/life-extension/coq10/1/2",
+          capturedAt: "2026-09-12T12:00:00.000Z",
+        };
+      },
+    },
+    { port: 0, host: "127.0.0.1" },
+  );
+
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const address = server.address();
+  assert(address && typeof address === "object");
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  try {
+    const denied = await fetch(`${baseUrl}/api/suppliers/lookup`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ supplierKey: "emerson-ecologics", supplierSku: "LIF-01639" }),
+    });
+    assert.equal(denied.status, 401);
+
+    const basicDenied = await fetch(`${baseUrl}/api/suppliers/lookup`, {
+      method: "POST",
+      headers: { authorization: `Basic ${Buffer.from("user:dashboard-password").toString("base64")}`, "content-type": "application/json" },
+      body: JSON.stringify({ supplierKey: "emerson-ecologics", supplierSku: "LIF-01639" }),
+    });
+    assert.equal(basicDenied.status, 401);
+
+    const runTokenDenied = await fetch(`${baseUrl}/api/suppliers/lookup`, {
+      method: "POST",
+      headers: { authorization: "Bearer scheduled-check-token", "content-type": "application/json" },
+      body: JSON.stringify({ supplierKey: "emerson-ecologics", supplierSku: "LIF-01639" }),
+    });
+    assert.equal(runTokenDenied.status, 401);
+
+    const wrongType = await fetch(`${baseUrl}/api/suppliers/lookup`, {
+      method: "POST",
+      headers: { authorization: "Bearer separate-read-only-token", "content-type": "text/plain" },
+      body: JSON.stringify({ supplierKey: "emerson-ecologics", supplierSku: "LIF-01639" }),
+    });
+    assert.equal(wrongType.status, 415);
+
+    const invalid = await fetch(`${baseUrl}/api/suppliers/lookup`, {
+      method: "POST",
+      headers: { authorization: "Bearer separate-read-only-token", "content-type": "application/json" },
+      body: JSON.stringify({ supplierKey: "emerson-ecologics", supplierSku: "LIF-01639", action: "add_to_cart" }),
+    });
+    assert.equal(invalid.status, 400);
+
+    const accepted = await fetch(`${baseUrl}/api/suppliers/lookup`, {
+      method: "POST",
+      headers: { authorization: "Bearer separate-read-only-token", "content-type": "application/json" },
+      body: JSON.stringify({ supplierKey: "emerson-ecologics", supplierSku: "LIF-01639" }),
+    });
+    assert.equal(accepted.status, 200);
+    const result = await accepted.json();
+    assert.equal(result.ok, true);
+    assert.equal(result.data.supplierSku, "LIF-01639");
+    assert.equal(result.data.availability, "in_stock");
+    assert.equal(result.data.cost, 20.5);
+    assert.deepEqual(result.data.flags, ["read_only", "no_cart_action", "no_order_action"]);
+    assert.equal(JSON.stringify(result).includes("scheduled-check-token"), false);
+    assert.deepEqual(lookups, [{ supplierKey: "emerson-ecologics", supplierSku: "LIF-01639" }]);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }
