@@ -99,7 +99,11 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
       sendJson(response, 503, { error: "connection_checks_unavailable" });
       return;
     }
-    sendJson(response, 200, { checks: await context.checkConnections() });
+    try {
+      sendJson(response, 200, { checks: await context.checkConnections() });
+    } catch {
+      sendJson(response, 502, { error: "connection_check_failed" });
+    }
     return;
   }
 

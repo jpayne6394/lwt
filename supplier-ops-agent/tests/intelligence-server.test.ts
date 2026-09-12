@@ -231,6 +231,40 @@ test("connection check endpoint requires the automation token and returns checks
   }
 });
 
+test("connection check failures stay contained and keep the service healthy", async () => {
+  const repository = new MemoryRepository();
+  const server = startServer(
+    {
+      repository,
+      suppliers: [],
+      alerts: new AlertService(),
+      runNow: async () => {},
+      checkConnections: async () => { throw new Error("browser unavailable"); },
+      supplierRunToken: "scheduled-check-token",
+    },
+    { port: 0, host: "127.0.0.1" },
+  );
+
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const address = server.address();
+  assert(address && typeof address === "object");
+  const baseUrl = `http://127.0.0.1:${address.port}`;
+  try {
+    const failed = await fetch(`${baseUrl}/api/connection-checks`, {
+      method: "POST",
+      headers: { Authorization: "Bearer scheduled-check-token" },
+    });
+    assert.equal(failed.status, 502);
+    assert.deepEqual(await failed.json(), { error: "connection_check_failed" });
+
+    const health = await fetch(`${baseUrl}/healthz`);
+    assert.equal(health.status, 200);
+    assert.deepEqual(await health.json(), { ok: true });
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
 test("intelligence dashboard keeps inventory vendor summary for rendering", async () => {
   const variant: ShopifyVariant = {
     productId: "gid://shopify/Product/1",

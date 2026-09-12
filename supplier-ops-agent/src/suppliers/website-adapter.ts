@@ -96,34 +96,36 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     }
 
     const playwright = await import("playwright");
-    const browser = await playwright.chromium.launch({ headless: true });
     try {
-      const page = await browser.newPage();
-      await page.goto(config.loginUrl, { waitUntil: "domcontentloaded" });
-      await page.fill(config.selectors.username, config.username);
-      await page.fill(config.selectors.password, config.password);
-      await Promise.all([
-        page.waitForLoadState("domcontentloaded").catch(() => undefined),
-        page.click(config.selectors.submit),
-      ]);
-      await page.waitForTimeout(750);
+      const browser = await playwright.chromium.launch({ headless: true });
+      try {
+        const page = await browser.newPage();
+        await page.goto(config.loginUrl, { waitUntil: "domcontentloaded" });
+        await page.fill(config.selectors.username, config.username);
+        await page.fill(config.selectors.password, config.password);
+        await Promise.all([
+          page.waitForLoadState("domcontentloaded").catch(() => undefined),
+          page.click(config.selectors.submit),
+        ]);
+        await page.waitForTimeout(750);
 
-      const pageText = (await page.locator("body").innerText()).toLowerCase();
-      if (/two-factor|\b2fa\b|verification code|one-time code|security code/.test(pageText)) {
-        return this.#check("two_factor_required", `${this.supplier.name} requires a verification step.`);
+        const pageText = (await page.locator("body").innerText()).toLowerCase();
+        if (/two-factor|\b2fa\b|verification code|one-time code|security code/.test(pageText)) {
+          return this.#check("two_factor_required", `${this.supplier.name} requires a verification step.`);
+        }
+        if (/invalid (email|username|password|credentials)|incorrect (email|password)|sign in failed|login failed/.test(pageText)) {
+          return this.#check("login_failed", `${this.supplier.name} rejected the saved account.`);
+        }
+        if (await page.locator(config.selectors.password).count()) {
+          return this.#check("login_failed", `${this.supplier.name} stayed on the sign-in page.`);
+        }
+        return this.#check("connected", `${this.supplier.name} accepted the saved account.`);
+      } finally {
+        await browser.close();
       }
-      if (/invalid (email|username|password|credentials)|incorrect (email|password)|sign in failed|login failed/.test(pageText)) {
-        return this.#check("login_failed", `${this.supplier.name} rejected the saved account.`);
-      }
-      if (await page.locator(config.selectors.password).count()) {
-        return this.#check("login_failed", `${this.supplier.name} stayed on the sign-in page.`);
-      }
-      return this.#check("connected", `${this.supplier.name} accepted the saved account.`);
     } catch (error) {
       if (error instanceof SupplierAdapterError) throw error;
       return this.#check("login_failed", `${this.supplier.name} could not complete its sign-in check.`);
-    } finally {
-      await browser.close();
     }
   }
 
