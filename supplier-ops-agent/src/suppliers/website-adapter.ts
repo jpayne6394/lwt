@@ -24,12 +24,15 @@ type LoginCheckPhase =
   | "submit"
   | "response_check";
 
-export type LoginOutcome = "connected" | "two_factor_required" | "login_failed" | "pending";
+export type LoginOutcome = "connected" | "verification_required" | "two_factor_required" | "login_failed" | "pending";
 
 export function classifyLoginOutcome(pageText: string, passwordFieldCount: number): LoginOutcome {
   const normalizedText = pageText.toLowerCase();
   if (/two-factor|\b2fa\b|verification code|one-time code|security code/.test(normalizedText)) {
     return "two_factor_required";
+  }
+  if (/complete (the )?captcha|captcha (challenge|required)|verify (that )?you are human|i'm not a robot|unusual traffic/.test(normalizedText)) {
+    return "verification_required";
   }
   if (/invalid (email|username|password|credentials)|incorrect (email|password)|sign in failed|login failed/.test(normalizedText)) {
     return "login_failed";
@@ -60,7 +63,9 @@ export async function waitForLoginOutcome(
     if (outcome !== "pending") return outcome;
 
     const remainingMs = deadline - now();
-    if (remainingMs <= 0) return "timed_out";
+    if (remainingMs <= 0) {
+      return /captcha|recaptcha/.test(state.pageText.toLowerCase()) ? "verification_required" : "timed_out";
+    }
     await sleep(Math.min(pollIntervalMs, remainingMs));
   }
 }
@@ -178,6 +183,12 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
         if (outcome === "two_factor_required") {
           return this.#check("two_factor_required", `${this.supplier.name} requires a verification step.`);
         }
+        if (outcome === "verification_required") {
+          return this.#check(
+            "verification_required",
+            `${this.supplier.name} requires a browser verification step before automated sign-in can continue.`,
+          );
+        }
         if (outcome === "login_failed") {
           return this.#check("login_failed", `${this.supplier.name} rejected the saved account.`);
         }
@@ -195,7 +206,10 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     }
   }
 
-  #check(status: "connected" | "two_factor_required" | "login_failed" | "not_configured", message: string) {
+  #check(
+    status: "connected" | "verification_required" | "two_factor_required" | "login_failed" | "not_configured",
+    message: string,
+  ) {
     return { supplierId: this.supplier.id, supplierName: this.supplier.name, status, message } as const;
   }
 }

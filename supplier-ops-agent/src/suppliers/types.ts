@@ -30,7 +30,13 @@ export type SupplierAdapter = {
 export type SupplierConnectionCheck = {
   supplierId: string;
   supplierName: string;
-  status: "connected" | "two_factor_required" | "login_failed" | "not_configured" | "unsupported";
+  status:
+    | "connected"
+    | "verification_required"
+    | "two_factor_required"
+    | "login_failed"
+    | "not_configured"
+    | "unsupported";
   message: string;
 };
 

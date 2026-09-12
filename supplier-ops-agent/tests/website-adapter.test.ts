@@ -28,13 +28,22 @@ test("login classification distinguishes a pending page from verified outcomes",
   assert.equal(classifyLoginOutcome("Sign in to your account", 1), "pending");
   assert.equal(classifyLoginOutcome("Incorrect email or password", 1), "login_failed");
   assert.equal(classifyLoginOutcome("Enter your verification code", 1), "two_factor_required");
+  assert.equal(classifyLoginOutcome("This page is protected by reCAPTCHA", 1), "pending");
+  assert.equal(classifyLoginOutcome("Verify you are human", 1), "verification_required");
   assert.equal(classifyLoginOutcome("Welcome back", 0), "connected");
+});
+
+test("verification challenges take precedence over generic credential errors", () => {
+  assert.equal(
+    classifyLoginOutcome("Sign in failed. Please complete the CAPTCHA to continue.", 1),
+    "verification_required",
+  );
 });
 
 test("connection checks wait for a delayed successful redirect instead of failing early", async () => {
   const states = [
-    { pageText: "Sign in to your account", passwordFieldCount: 1 },
-    { pageText: "Signing in", passwordFieldCount: 1 },
+    { pageText: "Sign in to your account. Protected by reCAPTCHA.", passwordFieldCount: 1 },
+    { pageText: "Signing in. Protected by reCAPTCHA.", passwordFieldCount: 1 },
     { pageText: "Welcome back", passwordFieldCount: 0 },
   ];
   let elapsedMs = 0;
@@ -52,5 +61,23 @@ test("connection checks wait for a delayed successful redirect instead of failin
   );
 
   assert.equal(outcome, "connected");
+  assert.equal(elapsedMs, 500);
+});
+
+test("a reCAPTCHA-protected login that never redirects becomes verification required", async () => {
+  let elapsedMs = 0;
+  const outcome = await waitForLoginOutcome(
+    async () => ({ pageText: "Sign in. This page is protected by reCAPTCHA.", passwordFieldCount: 1 }),
+    {
+      timeoutMs: 500,
+      pollIntervalMs: 250,
+      now: () => elapsedMs,
+      sleep: async (milliseconds) => {
+        elapsedMs += milliseconds;
+      },
+    },
+  );
+
+  assert.equal(outcome, "verification_required");
   assert.equal(elapsedMs, 500);
 });
