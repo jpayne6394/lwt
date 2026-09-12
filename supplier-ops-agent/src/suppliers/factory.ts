@@ -2,6 +2,7 @@ import { JsonFeedSupplierAdapter } from "./json-feed-adapter.ts";
 import { EmersonCatalogSupplierAdapter, parseEmersonCatalogUrls } from "./emerson-catalog-adapter.ts";
 import type { SupplierAdapter, SupplierConfig } from "./types.ts";
 import { WebsiteSupplierAdapter, type WebsiteAdapterConfig } from "./website-adapter.ts";
+import { defaultWebsiteConfig, mergeWebsiteConfig } from "./portal-defaults.ts";
 
 export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.ProcessEnv = process.env): SupplierAdapter[] {
   return suppliers.map((supplier) => {
@@ -19,9 +20,13 @@ export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.P
       });
     }
 
-    const websiteConfig = parseWebsiteConfig(env[`SUPPLIER_WEBSITE_CONFIG_${suffix}`]);
+    const websiteConfig = mergeWebsiteConfig(
+      defaultWebsiteConfig(supplier.id),
+      parseWebsiteConfig(env[`SUPPLIER_WEBSITE_CONFIG_${suffix}`]),
+    );
     return new WebsiteSupplierAdapter(supplier, {
       ...websiteConfig,
+      sessionCookieHeader: env[`SUPPLIER_COOKIE_${suffix}`] ?? websiteConfig.sessionCookieHeader,
       username: env[`SUPPLIER_USERNAME_${suffix}`] ?? websiteConfig.username,
       password: env[`SUPPLIER_PASSWORD_${suffix}`] ?? websiteConfig.password,
     });

@@ -28,9 +28,9 @@ export function createSupplierRegistry(): SupplierConfig[] {
     },
     {
       id: "research-nutritionals",
-      name: "Research Nutritionals",
+      name: "Researched Nutritionals",
       mode: "website",
-      brands: ["Research Nutritionals"],
+      brands: ["Researched Nutritionals"],
       credentialEnvVar: "SUPPLIER_CREDENTIAL_RESEARCH_NUTRITIONALS",
       notes: "Direct supplier portal.",
     },
