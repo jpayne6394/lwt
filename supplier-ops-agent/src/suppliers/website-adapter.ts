@@ -1,4 +1,5 @@
 import { normalizeSupplierRecord } from "./normalization.ts";
+import { launchSupplierBrowser } from "./browser-launcher.ts";
 import type { SupplierAdapter, SupplierAdapterContext, SupplierConfig } from "./types.ts";
 import { SupplierAdapterError } from "./types.ts";
 
@@ -57,8 +58,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
       throw new SupplierAdapterError(this.supplier.id, "login_failed", `${this.supplier.name} credentials are missing`);
     }
 
-    const playwright = await import("playwright");
-    const browser = await playwright.chromium.launch({ headless: true });
+    const browser = await launchSupplierBrowser();
     try {
       const page = await browser.newPage();
       await page.goto(this.#config.loginUrl, { waitUntil: "networkidle" });
@@ -115,10 +115,9 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
       return this.#check("not_configured", `${this.supplier.name} has no saved account.`);
     }
 
-    const playwright = await import("playwright");
     let phase: LoginCheckPhase = "browser_start";
     try {
-      const browser = await playwright.chromium.launch({ headless: true });
+      const browser = await launchSupplierBrowser();
       try {
         const page = await browser.newPage();
         phase = "login_page";

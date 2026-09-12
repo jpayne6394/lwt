@@ -5,7 +5,6 @@
   "type": "module",
   "description": "Embedded Shopify supplier operations app with background inventory and pricing agents.",
   "scripts": {
-    "postinstall": "playwright install --only-shell chromium",
     "test": "node --test --experimental-strip-types \"tests/**/*.test.ts\"",
     "start": "node --experimental-strip-types src/index.ts",
     "dev": "node --experimental-strip-types src/index.ts",
@@ -19,6 +18,7 @@
     "check": "node --test --experimental-strip-types \"tests/**/*.test.ts\""
   },
   "dependencies": {
+    "@sparticuz/chromium": "^153.0.0",
     "pg": "^8.13.1",
     "playwright": "^1.50.0"
   },
