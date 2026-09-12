@@ -42,7 +42,12 @@ export type SupplierConnectionCheck = {
 
 export class SupplierAdapterError extends Error {
   readonly supplierId: string;
-  readonly kind: "login_failed" | "two_factor_required" | "parse_failed" | "not_configured";
+  readonly kind:
+    | "login_failed"
+    | "verification_required"
+    | "two_factor_required"
+    | "parse_failed"
+    | "not_configured";
 
   constructor(supplierId: string, kind: SupplierAdapterError["kind"], message: string) {
     super(message);

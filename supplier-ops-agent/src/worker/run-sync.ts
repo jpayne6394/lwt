@@ -152,6 +152,9 @@ function issueKindToAlertKind(issue: BlockedIssue): string {
   if (adapterKind === "two_factor_required") {
     return "supplier_two_factor_required";
   }
+  if (adapterKind === "verification_required") {
+    return "supplier_verification_required";
+  }
   if (adapterKind === "not_configured") {
     return "supplier_not_configured";
   }

@@ -15,6 +15,7 @@
     "intelligence:content-radar": "node --experimental-strip-types src/intelligence-worker.ts content-radar",
     "intelligence:product-strategy": "node --experimental-strip-types src/intelligence-worker.ts product-strategy",
     "intelligence:shopper-behavior": "node --experimental-strip-types src/intelligence-worker.ts shopper-behavior",
+    "capture:emerson": "node --experimental-strip-types scripts/capture-emerson-cookie.ts",
     "check": "node --test --experimental-strip-types \"tests/**/*.test.ts\""
   },
   "dependencies": {

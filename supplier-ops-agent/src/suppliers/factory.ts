@@ -1,4 +1,5 @@
 import { JsonFeedSupplierAdapter } from "./json-feed-adapter.ts";
+import { EmersonCatalogSupplierAdapter, parseEmersonCatalogUrls } from "./emerson-catalog-adapter.ts";
 import type { SupplierAdapter, SupplierConfig } from "./types.ts";
 import { WebsiteSupplierAdapter, type WebsiteAdapterConfig } from "./website-adapter.ts";
 
@@ -9,6 +10,13 @@ export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.P
 
     if (feedUrl) {
       return new JsonFeedSupplierAdapter(supplier, feedUrl);
+    }
+
+    if (supplier.id === "emerson-ecologics" && env.SUPPLIER_COOKIE_EMERSON_ECOLOGICS) {
+      return new EmersonCatalogSupplierAdapter(supplier, {
+        cookieHeader: env.SUPPLIER_COOKIE_EMERSON_ECOLOGICS,
+        catalogUrls: parseEmersonCatalogUrls(env.SUPPLIER_CATALOG_URLS_EMERSON_ECOLOGICS),
+      });
     }
 
     const websiteConfig = parseWebsiteConfig(env[`SUPPLIER_WEBSITE_CONFIG_${suffix}`]);
