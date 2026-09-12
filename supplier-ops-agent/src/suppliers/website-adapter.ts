@@ -15,6 +15,26 @@ export type WebsiteAdapterConfig = {
   };
 };
 
+type LoginCheckPhase =
+  | "browser_start"
+  | "login_page"
+  | "username_field"
+  | "password_field"
+  | "submit"
+  | "response_check";
+
+export function loginCheckFailureMessage(supplierName: string, phase: LoginCheckPhase) {
+  const phaseLabel: Record<LoginCheckPhase, string> = {
+    browser_start: "starting its secure browser",
+    login_page: "opening the sign-in page",
+    username_field: "locating the email field",
+    password_field: "locating the password field",
+    submit: "submitting the sign-in form",
+    response_check: "checking the sign-in response",
+  };
+  return `${supplierName} could not complete the sign-in check while ${phaseLabel[phase]}.`;
+}
+
 export class WebsiteSupplierAdapter implements SupplierAdapter {
   readonly supplier: SupplierConfig;
   readonly #config: WebsiteAdapterConfig;
@@ -96,19 +116,25 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     }
 
     const playwright = await import("playwright");
+    let phase: LoginCheckPhase = "browser_start";
     try {
       const browser = await playwright.chromium.launch({ headless: true });
       try {
         const page = await browser.newPage();
+        phase = "login_page";
         await page.goto(config.loginUrl, { waitUntil: "domcontentloaded" });
+        phase = "username_field";
         await page.fill(config.selectors.username, config.username);
+        phase = "password_field";
         await page.fill(config.selectors.password, config.password);
+        phase = "submit";
         await Promise.all([
           page.waitForLoadState("domcontentloaded").catch(() => undefined),
           page.click(config.selectors.submit),
         ]);
         await page.waitForTimeout(750);
 
+        phase = "response_check";
         const pageText = (await page.locator("body").innerText()).toLowerCase();
         if (/two-factor|\b2fa\b|verification code|one-time code|security code/.test(pageText)) {
           return this.#check("two_factor_required", `${this.supplier.name} requires a verification step.`);
@@ -125,7 +151,8 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
       }
     } catch (error) {
       if (error instanceof SupplierAdapterError) throw error;
-      return this.#check("login_failed", `${this.supplier.name} could not complete its sign-in check.`);
+      console.warn(`[supplier-connection-check] supplier=${this.supplier.id} phase=${phase} result=failed`);
+      return this.#check("login_failed", loginCheckFailureMessage(this.supplier.name, phase));
     }
   }
 
