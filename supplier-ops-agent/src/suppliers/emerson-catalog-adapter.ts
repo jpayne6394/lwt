@@ -165,7 +165,8 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     }
 
     if (hasApolloState(html)) {
-      return recordsFromState(parseApolloState(html, this.supplier.id));
+      const legacyRecords = recordsFromState(parseApolloState(html, this.supplier.id));
+      if (legacyRecords.length > 0) return legacyRecords;
     }
 
     const rendered = await this.#renderCatalog(catalogUrl, this.#cookieHeader!, this.supplier.id);

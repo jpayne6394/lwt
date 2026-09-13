@@ -92,6 +92,27 @@ test("Emerson falls back to the current rendered catalog when legacy product sta
   assert.equal(new URL(renderedCalls[1]).searchParams.get("query"), '"mag49"');
 });
 
+test("Emerson ignores an empty legacy state marker and reads the current rendered catalog", async () => {
+  let rendered = false;
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, {
+    cookieHeader: "session=private-value",
+    fetchImpl: async () => new Response(
+      '<html><head><meta name="apollo-state" content="e30="></head><body>Catalog shell</body></html>',
+      { status: 200 },
+    ),
+    renderCatalogImpl: async (url) => {
+      rendered = true;
+      return {
+        responseUrl: url,
+        records: [{ title: "Magnesium Glycinate", sku: "MAG49", cost: 13.5, available: true }],
+      };
+    },
+  });
+
+  assert.equal((await adapter.lookupProduct("MAG49"))?.sku, "MAG49");
+  assert.equal(rendered, true);
+});
+
 test("Emerson rendered fallback still treats a login redirect as an expired session", async () => {
   const adapter = new EmersonCatalogSupplierAdapter(emerson, {
     cookieHeader: "session=private-value",
