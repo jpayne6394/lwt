@@ -115,7 +115,7 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     }
     const url = new URL(DEFAULT_CATALOG_URL);
     url.searchParams.set("query", `"${wanted}"`);
-    const match = (await this.#readCatalogRecords(url.toString()))
+    const match = (await this.#readCatalogRecords(url.toString(), wanted))
       .find((record) => cleanString(record.sku).toUpperCase() === wanted.toUpperCase());
     if (!match) return null;
     return normalizeSupplierRecord({
@@ -154,7 +154,7 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     return { html: await response.text(), responseUrl: response.url || catalogUrl };
   }
 
-  async #readCatalogRecords(catalogUrl: string): Promise<Record<string, unknown>[]> {
+  async #readCatalogRecords(catalogUrl: string, expectedSku?: string): Promise<Record<string, unknown>[]> {
     const { html, responseUrl } = await this.#readCatalog(catalogUrl);
     if (requiresSignIn(html, responseUrl)) {
       throw new SupplierAdapterError(
@@ -166,7 +166,10 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
 
     if (hasApolloState(html)) {
       const legacyRecords = recordsFromState(parseApolloState(html, this.supplier.id));
-      if (legacyRecords.length > 0) return legacyRecords;
+      const legacyHasExpectedSku = !expectedSku || legacyRecords.some(
+        (record) => cleanString(record.sku).toUpperCase() === expectedSku.toUpperCase(),
+      );
+      if (legacyRecords.length > 0 && legacyHasExpectedSku) return legacyRecords;
     }
 
     const rendered = await this.#renderCatalog(catalogUrl, this.#cookieHeader!, this.supplier.id);

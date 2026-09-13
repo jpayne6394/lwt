@@ -113,6 +113,24 @@ test("Emerson ignores an empty legacy state marker and reads the current rendere
   assert.equal(rendered, true);
 });
 
+test("Emerson exact lookup ignores unrelated legacy products and reads the current search result", async () => {
+  let rendered = false;
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, {
+    cookieHeader: "session=private-value",
+    fetchImpl: async () => new Response(authenticatedCatalogHtml(), { status: 200 }),
+    renderCatalogImpl: async (url) => {
+      rendered = true;
+      return {
+        responseUrl: url,
+        records: [{ title: "Magnesium Glycinate", sku: "MAG49", cost: 13.5, available: true }],
+      };
+    },
+  });
+
+  assert.equal((await adapter.lookupProduct("MAG49"))?.sku, "MAG49");
+  assert.equal(rendered, true);
+});
+
 test("Emerson rendered fallback still treats a login redirect as an expired session", async () => {
   const adapter = new EmersonCatalogSupplierAdapter(emerson, {
     cookieHeader: "session=private-value",
