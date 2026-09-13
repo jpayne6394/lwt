@@ -278,8 +278,9 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     }
 
     let phase = "browser_start";
-    const browser = await this.#launchBrowser();
+    let browser: Awaited<ReturnType<typeof launchSupplierBrowser>> | undefined;
     try {
+      browser = await this.#launchBrowser();
       phase = "browser_context";
       const browserContext = await browser.newContext();
       const page = await browserContext.newPage();
@@ -302,7 +303,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
       console.warn(`[supplier-lookup] supplier=${this.supplier.id} phase=${phase} result=failed kind=${kind}`);
       throw error;
     } finally {
-      await browser.close();
+      await browser?.close();
     }
   }
 

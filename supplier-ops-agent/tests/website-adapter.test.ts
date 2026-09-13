@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Browser, BrowserContext, Page } from "playwright";
 
-import { supplierBrowserMode } from "../src/suppliers/browser-launcher.ts";
+import { prewarmSupplierBrowser, supplierBrowserMode } from "../src/suppliers/browser-launcher.ts";
 import {
   allowedSupplierHosts,
   assertSafeSupplierUrl,
@@ -31,6 +31,52 @@ const desbio: SupplierConfig = {
 test("Render Linux uses the self-contained browser runtime", () => {
   assert.equal(supplierBrowserMode("linux"), "portable");
   assert.equal(supplierBrowserMode("win32"), "managed");
+});
+
+test("browser prewarming completes a full launch and close before service startup", async () => {
+  const events: string[] = [];
+  await prewarmSupplierBrowser(async () => {
+    events.push("launch");
+    return {
+      close: async () => { events.push("close"); },
+    } as Browser;
+  });
+
+  assert.deepEqual(events, ["launch", "close"]);
+});
+
+test("protected lookup reports browser startup failures inside its diagnostic boundary", async () => {
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (message?: unknown) => { warnings.push(String(message)); };
+
+  try {
+    const adapter = new WebsiteSupplierAdapter(
+      desbio,
+      {
+        loginUrl: "https://portal.desbio.com/login",
+        productsUrl: "https://portal.desbio.com/products",
+        username: "orders@example.test",
+        password: "private-value",
+        allowedHosts: ["portal.desbio.com"],
+        authenticatedSelector: "[data-account-menu]",
+        selectors: {
+          username: "#email",
+          password: "#password",
+          submit: "button[type=submit]",
+        },
+      },
+      { launchBrowser: async () => { throw new Error("portable browser unavailable"); } },
+    );
+
+    await assert.rejects(() => adapter.lookupProduct("HA2CG"), /portable browser unavailable/);
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.deepEqual(warnings, [
+    "[supplier-lookup] supplier=desbio phase=browser_start result=failed kind=unexpected",
+  ]);
 });
 
 test("connection checks expose only a safe failing phase", () => {

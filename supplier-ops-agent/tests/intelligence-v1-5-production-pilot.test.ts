@@ -3,16 +3,21 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("v1.5 production pilot runbook covers Render env, schema, jobs, and guardrails", async () => {
-  const [runbook, renderYaml, packageJson, schemaSql] = await Promise.all([
+  const [runbook, renderYaml, packageJson, schemaSql, serviceEntry] = await Promise.all([
     readFile("docs/LWT_INTELLIGENCE_CENTER_V1_5_PRODUCTION_PILOT.md", "utf8"),
     readFile("render.yaml", "utf8"),
     readFile("package.json", "utf8"),
     readFile("src/storage/schema.sql", "utf8"),
+    readFile("src/index.ts", "utf8"),
   ]);
   const scripts = JSON.parse(packageJson).scripts as Record<string, string>;
 
   assert.match(renderYaml, /startCommand: npm run start/);
   assert.match(renderYaml, /healthCheckPath: \/healthz/);
+  assert.ok(
+    serviceEntry.indexOf("await prewarmSupplierBrowser()") < serviceEntry.indexOf("startServer("),
+    "portable supplier browser must prewarm before the service is marked ready",
+  );
   assert.match(renderYaml, /key: DATABASE_URL/);
   assert.match(renderYaml, /key: INTERNAL_DASHBOARD_AUTH_REQUIRED\s+value: "true"/);
   assert.match(renderYaml, /startCommand: npm run intelligence:inventory/);

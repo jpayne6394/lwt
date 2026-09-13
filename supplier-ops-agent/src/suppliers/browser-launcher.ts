@@ -17,3 +17,15 @@ export async function launchSupplierBrowser() {
     headless: true,
   });
 }
+
+/**
+ * Extracts and starts the supplier browser before the HTTP service is marked
+ * ready. Portable Chromium may take longer than the request proxy permits on
+ * the first launch after a fresh deployment.
+ */
+export async function prewarmSupplierBrowser(
+  launchBrowser: typeof launchSupplierBrowser = launchSupplierBrowser,
+): Promise<void> {
+  const browser = await launchBrowser();
+  await browser.close();
+}

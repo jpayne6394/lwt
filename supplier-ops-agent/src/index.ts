@@ -1,8 +1,10 @@
 import { createRuntime } from "./runtime.ts";
 import { startServer } from "./server/server.ts";
+import { prewarmSupplierBrowser } from "./suppliers/browser-launcher.ts";
 import { startWeeklyScheduler } from "./worker/scheduler.ts";
 
 const runtime = await createRuntime();
+await prewarmSupplierBrowser();
 startServer(runtime.serverContext, {
   port: runtime.config.port,
   host: runtime.config.host,
