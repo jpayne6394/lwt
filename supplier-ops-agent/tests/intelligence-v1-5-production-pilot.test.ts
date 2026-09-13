@@ -15,9 +15,10 @@ test("v1.5 production pilot runbook covers Render env, schema, jobs, and guardra
   assert.match(renderYaml, /startCommand: npm run start/);
   assert.match(renderYaml, /healthCheckPath: \/healthz/);
   assert.ok(
-    serviceEntry.indexOf("await prewarmSupplierBrowser()") < serviceEntry.indexOf("startServer("),
-    "portable supplier browser must prewarm before the service is marked ready",
+    serviceEntry.indexOf("startServer(") < serviceEntry.indexOf("startSupplierBrowserPrewarm()"),
+    "the HTTP service must listen before portable supplier browser prewarming begins",
   );
+  assert.doesNotMatch(serviceEntry, /await\s+(?:prewarmSupplierBrowser|startSupplierBrowserPrewarm)\s*\(/);
   assert.match(renderYaml, /key: DATABASE_URL/);
   assert.match(renderYaml, /key: INTERNAL_DASHBOARD_AUTH_REQUIRED\s+value: "true"/);
   assert.match(renderYaml, /startCommand: npm run intelligence:inventory/);

@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { Browser, BrowserContext, Page } from "playwright";
 
-import { prewarmSupplierBrowser, supplierBrowserMode } from "../src/suppliers/browser-launcher.ts";
+import {
+  prewarmSupplierBrowser,
+  startSupplierBrowserPrewarm,
+  supplierBrowserMode,
+} from "../src/suppliers/browser-launcher.ts";
 import {
   allowedSupplierHosts,
   assertSafeSupplierUrl,
@@ -34,7 +38,7 @@ test("Render Linux uses the self-contained browser runtime", () => {
   assert.equal(supplierBrowserMode("win32"), "managed");
 });
 
-test("browser prewarming completes a full launch and close before service startup", async () => {
+test("browser prewarming completes a full launch and close", async () => {
   const events: string[] = [];
   await prewarmSupplierBrowser(async () => {
     events.push("launch");
@@ -44,6 +48,38 @@ test("browser prewarming completes a full launch and close before service startu
   });
 
   assert.deepEqual(events, ["launch", "close"]);
+});
+
+test("background browser prewarming never delays service startup", async () => {
+  const events: string[] = [];
+  let releaseLaunch: ((browser: Browser) => void) | undefined;
+  const launch = new Promise<Browser>((resolve) => {
+    releaseLaunch = resolve;
+  });
+
+  startSupplierBrowserPrewarm(async () => {
+    events.push("launch-started");
+    return launch;
+  });
+  events.push("startup-continued");
+
+  assert.deepEqual(events, ["launch-started", "startup-continued"]);
+  releaseLaunch?.({ close: async () => undefined } as unknown as Browser);
+  await new Promise((resolve) => setImmediate(resolve));
+});
+
+test("background browser prewarming contains launch failures", async () => {
+  const failures: unknown[] = [];
+  startSupplierBrowserPrewarm(
+    async () => {
+      throw new Error("portable browser unavailable");
+    },
+    (error) => failures.push(error),
+  );
+
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(failures.length, 1);
+  assert.match(String(failures[0]), /portable browser unavailable/);
 });
 
 test("protected lookup reports browser startup failures inside its diagnostic boundary", async () => {

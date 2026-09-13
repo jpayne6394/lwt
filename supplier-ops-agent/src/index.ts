@@ -1,10 +1,9 @@
 import { createRuntime } from "./runtime.ts";
 import { startServer } from "./server/server.ts";
-import { prewarmSupplierBrowser } from "./suppliers/browser-launcher.ts";
+import { startSupplierBrowserPrewarm } from "./suppliers/browser-launcher.ts";
 import { startWeeklyScheduler } from "./worker/scheduler.ts";
 
 const runtime = await createRuntime();
-await prewarmSupplierBrowser();
 startServer(runtime.serverContext, {
   port: runtime.config.port,
   host: runtime.config.host,
@@ -12,4 +11,5 @@ startServer(runtime.serverContext, {
 startWeeklyScheduler(() => runtime.runNow(false), runtime.config.weeklySyncIntervalMs);
 
 console.log(`Supplier Ops Agent listening on http://${runtime.config.host}:${runtime.config.port}`);
+startSupplierBrowserPrewarm();
 

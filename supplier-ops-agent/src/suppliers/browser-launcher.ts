@@ -19,13 +19,26 @@ export async function launchSupplierBrowser() {
 }
 
 /**
- * Extracts and starts the supplier browser before the HTTP service is marked
- * ready. Portable Chromium may take longer than the request proxy permits on
- * the first launch after a fresh deployment.
+ * Extracts and starts the supplier browser so the first protected supplier
+ * read does not have to pay the full portable-Chromium startup cost.
  */
 export async function prewarmSupplierBrowser(
   launchBrowser: typeof launchSupplierBrowser = launchSupplierBrowser,
 ): Promise<void> {
   const browser = await launchBrowser();
   await browser.close();
+}
+
+/**
+ * Starts browser prewarming without delaying the HTTP listener. Public catalog
+ * reads do not use Chromium, so a slow or failed prewarm must not keep the
+ * service unhealthy. Protected reads still launch the browser on demand.
+ */
+export function startSupplierBrowserPrewarm(
+  launchBrowser: typeof launchSupplierBrowser = launchSupplierBrowser,
+  onError: (error: unknown) => void = () => {
+    console.warn("Supplier browser prewarm failed; protected reads will retry on demand.");
+  },
+): void {
+  void prewarmSupplierBrowser(launchBrowser).catch(onError);
 }
