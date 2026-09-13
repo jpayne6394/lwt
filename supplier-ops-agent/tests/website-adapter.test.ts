@@ -10,6 +10,7 @@ import {
   isCookieDomainAllowed,
   loginCheckFailureMessage,
   parseSessionCookieHeader,
+  prioritizeWooProductLinks,
   protectedShopifyRecord,
   sessionCookiesForHosts,
   WebsiteSupplierAdapter,
@@ -81,6 +82,28 @@ test("connection checks wait for a delayed successful redirect instead of failin
 
   assert.equal(outcome, "connected");
   assert.equal(elapsedMs, 500);
+});
+
+test("connection checks tolerate a transient document replacement during login", async () => {
+  let elapsedMs = 0;
+  let reads = 0;
+  const outcome = await waitForLoginOutcome(
+    async () => {
+      reads += 1;
+      if (reads === 1) throw new Error("document replaced");
+      return { pageText: "My account", passwordFieldCount: 0 };
+    },
+    {
+      timeoutMs: 1_000,
+      pollIntervalMs: 250,
+      now: () => elapsedMs,
+      sleep: async (milliseconds) => { elapsedMs += milliseconds; },
+    },
+  );
+
+  assert.equal(outcome, "connected");
+  assert.equal(reads, 2);
+  assert.equal(elapsedMs, 250);
 });
 
 test("a reCAPTCHA-protected login that never redirects becomes verification required", async () => {
@@ -204,6 +227,23 @@ test("WooCommerce exact simple-product reads use the final displayed price", () 
   assert.equal(
     wooCommerceSimpleRecord({ sku: "other", title: "Wrong", priceText: "$1", stockText: "In Stock" }, "HA2CG", "https://desbio.com/product/wrong/"),
     null,
+  );
+});
+
+test("WooCommerce searches prioritize links containing the exact SKU hint", () => {
+  assert.deepEqual(
+    prioritizeWooProductLinks(
+      [
+        { url: "https://desbio.com/product/unrelated/", text: "Unrelated product" },
+        { url: "https://desbio.com/product/ha2cg-evolution-2/", text: "hA2cg Evolution" },
+        { url: "https://desbio.com/product/unrelated/", text: "Duplicate" },
+      ],
+      "hA2cg",
+    ),
+    [
+      "https://desbio.com/product/ha2cg-evolution-2/",
+      "https://desbio.com/product/unrelated/",
+    ],
   );
 });
 

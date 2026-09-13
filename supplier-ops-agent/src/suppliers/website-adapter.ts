@@ -69,15 +69,22 @@ export async function waitForLoginOutcome(
   const now = options.now ?? Date.now;
   const sleep = options.sleep ?? ((milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
   const deadline = now() + timeoutMs;
+  let lastState = { pageText: "", passwordFieldCount: 1 };
 
   while (true) {
-    const state = await readState();
-    const outcome = classifyLoginOutcome(state.pageText, state.passwordFieldCount);
-    if (outcome !== "pending") return outcome;
+    try {
+      lastState = await readState();
+      const outcome = classifyLoginOutcome(lastState.pageText, lastState.passwordFieldCount);
+      if (outcome !== "pending") return outcome;
+    } catch {
+      // A navigation can briefly destroy the old document while the supplier
+      // replaces it with the authenticated page. Treat that as pending until
+      // the same bounded deadline instead of reporting a false login failure.
+    }
 
     const remainingMs = deadline - now();
     if (remainingMs <= 0) {
-      return /captcha|recaptcha/.test(state.pageText.toLowerCase()) ? "verification_required" : "timed_out";
+      return /captcha|recaptcha/.test(lastState.pageText.toLowerCase()) ? "verification_required" : "timed_out";
     }
     await sleep(Math.min(pollIntervalMs, remainingMs));
   }
@@ -444,10 +451,13 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     const direct = await readWooCommerceProductPage(page, wanted);
     if (direct) return direct;
 
-    const productUrls = await page.$$eval('li.product a[href*="/product/"]', (links) =>
-      [...new Set(links.map((link) => (link as HTMLAnchorElement).href).filter(Boolean))].slice(0, 8),
+    const productLinks = await page.$$eval('li.product a[href*="/product/"]', (links) =>
+      links.map((link) => ({
+        url: (link as HTMLAnchorElement).href,
+        text: link.textContent ?? "",
+      })),
     );
-    for (const productUrl of productUrls) {
+    for (const productUrl of prioritizeWooProductLinks(productLinks, wanted).slice(0, 8)) {
       await page.goto(this.#safeUrl(productUrl, "product detail"), { waitUntil: "domcontentloaded" });
       assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "product detail response");
       const record = await readWooCommerceProductPage(page, wanted);
@@ -650,6 +660,25 @@ export function wooCommerceVariationRecord(
   };
 }
 
+export function prioritizeWooProductLinks(
+  links: Array<{ url: string; text: string }>,
+  wantedSku: string,
+): string[] {
+  const needle = cleanString(wantedSku).toLowerCase().replace(/[^a-z0-9]/g, "");
+  const unique = [...new Map(
+    links
+      .filter((link) => cleanString(link.url))
+      .map((link) => [cleanString(link.url), { url: cleanString(link.url), text: cleanString(link.text) }]),
+  ).values()];
+  return unique
+    .map((link, index) => {
+      const haystack = `${link.url} ${link.text}`.toLowerCase().replace(/[^a-z0-9]/g, "");
+      return { ...link, index, exactHint: Boolean(needle && haystack.includes(needle)) };
+    })
+    .sort((left, right) => Number(right.exactHint) - Number(left.exactHint) || left.index - right.index)
+    .map((link) => link.url);
+}
+
 export function protectedShopifyRecord(
   body: unknown,
   wantedSku: string,
@@ -721,7 +750,7 @@ async function waitForVisible(
 }
 
 async function visibleLocatorCount(page: import("playwright").Page, selector: string): Promise<number> {
-  const locators = await page.locator(selector).all();
+  const locators = await page.locator(selector).all().catch(() => []);
   const visible = await Promise.all(locators.map((locator) => locator.isVisible().catch(() => false)));
   return visible.filter(Boolean).length;
 }
