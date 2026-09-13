@@ -287,12 +287,15 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
       phase = "browser_context";
       const browserContext = await browser.newContext();
       const page = await browserContext.newPage();
+      const exactSearchUrl = this.supplier.id === "physicians-standard"
+        ? undefined
+        : this.#wordPressSearchUrl(wanted);
       phase = "authentication";
-      await this.#openAuthenticatedProducts(browserContext, page);
+      await this.#openAuthenticatedProducts(browserContext, page, exactSearchUrl);
       phase = "catalog_lookup";
       const record = this.supplier.id === "physicians-standard"
         ? await this.#lookupProtectedShopifyProduct(browserContext, page, wanted)
-        : await this.#lookupWordPressProduct(page, wanted);
+        : await this.#lookupWordPressProduct(page, wanted, true);
       if (!record) return null;
       phase = "normalization";
       return normalizeSupplierRecord({
@@ -368,6 +371,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
   async #openAuthenticatedProducts(
     browserContext: import("playwright").BrowserContext,
     page: import("playwright").Page,
+    initialCatalogUrl?: string,
   ) {
     const config = this.#config;
     if (!config.productsUrl || !config.authenticatedSelector) {
@@ -380,7 +384,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
 
     if (this.#sessionCookieHeader) {
       try {
-        await this.#openWithReusableSession(browserContext, page);
+        await this.#openWithReusableSession(browserContext, page, initialCatalogUrl);
         return;
       } catch (error) {
         if (!(error instanceof SupplierAdapterError) || error.kind !== "verification_required") throw error;
@@ -397,7 +401,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     }
 
     await this.#signInWithCredentials(page);
-    await page.goto(this.#safeUrl(config.productsUrl, "catalog"), { waitUntil: "domcontentloaded" });
+    await page.goto(this.#safeUrl(initialCatalogUrl ?? config.productsUrl, "catalog"), { waitUntil: "domcontentloaded" });
     assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "catalog response");
     const accountMarkerVisible = await waitForVisible(page, config.authenticatedSelector);
     if (!accountMarkerVisible) {
@@ -413,6 +417,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
   async #openWithReusableSession(
     browserContext: import("playwright").BrowserContext,
     page: import("playwright").Page,
+    initialCatalogUrl?: string,
   ) {
     const config = this.#config;
     if (!config.productsUrl || !config.authenticatedSelector || !this.#sessionCookieHeader) {
@@ -423,7 +428,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
       );
     }
 
-    const catalogUrl = this.#safeUrl(config.productsUrl, "catalog");
+    const catalogUrl = this.#safeUrl(initialCatalogUrl ?? config.productsUrl, "catalog");
     const allowedHosts = this.#allowedHosts();
     const cookies = sessionCookiesForHosts(this.#sessionCookieHeader, allowedHosts);
     if (cookies.length === 0) {
@@ -479,13 +484,19 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     if (cookieHeader) this.#sessionCookieHeader = cookieHeader;
   }
 
-  async #lookupWordPressProduct(page: import("playwright").Page, wanted: string) {
+  #wordPressSearchUrl(wanted: string): string {
     const productsUrl = this.#safeUrl(this.#config.productsUrl, "catalog");
     const searchUrl = new URL("/", productsUrl);
     searchUrl.searchParams.set("s", wanted);
     searchUrl.searchParams.set("post_type", "product");
-    await page.goto(this.#safeUrl(searchUrl.toString(), "catalog search"), { waitUntil: "domcontentloaded" });
-    assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "catalog search response");
+    return this.#safeUrl(searchUrl.toString(), "catalog search");
+  }
+
+  async #lookupWordPressProduct(page: import("playwright").Page, wanted: string, searchAlreadyOpen = false) {
+    if (!searchAlreadyOpen) {
+      await page.goto(this.#wordPressSearchUrl(wanted), { waitUntil: "domcontentloaded" });
+      assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "catalog search response");
+    }
 
     const direct = await readWooCommerceProductPage(page, wanted);
     if (direct) return direct;

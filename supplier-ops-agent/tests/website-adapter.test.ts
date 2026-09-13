@@ -154,6 +154,64 @@ test("reusable session diagnostics isolate a slow catalog navigation without exp
   assert.equal(warnings.join(" ").includes("private-cookie-value"), false);
 });
 
+test("an exact WooCommerce lookup authenticates on the SKU search page without a redundant catalog load", async () => {
+  const navigations: string[] = [];
+  let currentUrl = "about:blank";
+  const textBySelector: Record<string, string> = {
+    "h1.product_title": "hA2cg Evolution",
+    ".sku": "HA2CG",
+    ".summary .price": "$34.50",
+    ".stock": "In stock",
+  };
+  const locator = (selector: string) => ({
+    isVisible: async () => selector === "[data-account-menu]",
+    waitFor: async () => undefined,
+    first: () => ({
+      count: async () => selector === "form.variations_form" ? 0 : 1,
+      innerText: async () => textBySelector[selector] ?? "",
+      getAttribute: async (name: string) => selector === ".woocommerce-product-gallery img" && name === "src"
+        ? "https://portal.desbio.com/product.jpg"
+        : null,
+    }),
+  });
+  const page = {
+    goto: async (url: string) => { currentUrl = url; navigations.push(url); },
+    url: () => currentUrl,
+    locator,
+    $$eval: async () => [],
+  } as unknown as Page;
+  const browserContext = {
+    addCookies: async () => undefined,
+    newPage: async () => page,
+  } as unknown as BrowserContext;
+  const adapter = new WebsiteSupplierAdapter(
+    desbio,
+    {
+      productsUrl: "https://portal.desbio.com/products",
+      sessionCookieHeader: "session=fresh",
+      allowedHosts: ["portal.desbio.com"],
+      authenticatedSelector: "[data-account-menu]",
+      selectors: {
+        username: "#email",
+        password: "#password",
+        submit: "button[type=submit]",
+      },
+    },
+    {
+      launchBrowser: async () => ({
+        newContext: async () => browserContext,
+        close: async () => undefined,
+      } as unknown as Browser),
+    },
+  );
+
+  const product = await adapter.lookupProduct("HA2CG", { dryRun: true });
+
+  assert.equal(product?.sku, "HA2CG");
+  assert.equal(navigations.length, 1);
+  assert.equal(navigations[0], "https://portal.desbio.com/?s=HA2CG&post_type=product");
+});
+
 test("a blocked credential field is reported as human verification when a CAPTCHA is present", async () => {
   const timeout = new Error("operation timed out");
   timeout.name = "TimeoutError";
