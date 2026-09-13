@@ -276,10 +276,17 @@ test("connection check failures stay contained and keep the service healthy", as
 test("supplier lookup is token-authenticated, exact-SKU, read-only, and minimized", async () => {
   const repository = new MemoryRepository();
   const lookups: Array<{ supplierKey: string; supplierSku: string }> = [];
+  const supplierConfig = {
+    id: "emerson-ecologics",
+    name: "Emerson Ecologics",
+    mode: "website" as const,
+    brands: [],
+    notes: "",
+  };
   const server = startServer(
     {
       repository,
-      suppliers: [],
+      suppliers: [supplierConfig],
       alerts: new AlertService(),
       runNow: async () => {},
       supplierRunToken: "scheduled-check-token",
@@ -345,6 +352,13 @@ test("supplier lookup is token-authenticated, exact-SKU, read-only, and minimize
     });
     assert.equal(invalid.status, 400);
 
+    const unregisteredSupplier = await fetch(`${baseUrl}/api/suppliers/lookup`, {
+      method: "POST",
+      headers: { authorization: "Bearer separate-read-only-token", "content-type": "application/json" },
+      body: JSON.stringify({ supplierKey: "unregistered-supplier", supplierSku: "LIF-01639" }),
+    });
+    assert.equal(unregisteredSupplier.status, 400);
+
     const accepted = await fetch(`${baseUrl}/api/suppliers/lookup`, {
       method: "POST",
       headers: { authorization: "Bearer separate-read-only-token", "content-type": "application/json" },
@@ -359,6 +373,53 @@ test("supplier lookup is token-authenticated, exact-SKU, read-only, and minimize
     assert.deepEqual(result.data.flags, ["read_only", "no_cart_action", "no_order_action"]);
     assert.equal(JSON.stringify(result).includes("scheduled-check-token"), false);
     assert.deepEqual(lookups, [{ supplierKey: "emerson-ecologics", supplierSku: "LIF-01639" }]);
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
+  }
+});
+
+test("supplier lookup accepts every registered supplier while preserving the same exact-SKU contract", async () => {
+  const repository = new MemoryRepository();
+  const server = startServer(
+    {
+      repository,
+      suppliers: [{
+        id: "bioresource-pekana",
+        name: "BioResource / Pekana",
+        mode: "website",
+        brands: [],
+        notes: "",
+      }],
+      alerts: new AlertService(),
+      runNow: async () => {},
+      supplierReadToken: "separate-read-only-token",
+      lookupSupplierProduct: async (input) => ({
+        supplierId: input.supplierKey,
+        supplierName: "BioResource / Pekana",
+        sku: input.supplierSku,
+        title: "Pekana Formula",
+        stockStatus: "in_stock",
+        msrp: 24,
+        capturedAt: "2026-09-12T12:00:00.000Z",
+      }),
+    },
+    { port: 0, host: "127.0.0.1" },
+  );
+
+  await new Promise<void>((resolve) => server.once("listening", resolve));
+  const address = server.address();
+  assert(address && typeof address === "object");
+  try {
+    const response = await fetch(`http://127.0.0.1:${address.port}/api/suppliers/lookup`, {
+      method: "POST",
+      headers: { authorization: "Bearer separate-read-only-token", "content-type": "application/json" },
+      body: JSON.stringify({ supplierKey: "bioresource-pekana", supplierSku: "PK-101" }),
+    });
+    assert.equal(response.status, 200);
+    const result = await response.json();
+    assert.equal(result.data.supplierKey, "bioresource-pekana");
+    assert.equal(result.data.supplierSku, "PK-101");
+    assert.deepEqual(result.data.flags, ["read_only", "no_cart_action", "no_order_action"]);
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

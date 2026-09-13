@@ -129,7 +129,10 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
       return;
     }
     try {
-      const input = supplierLookupInput(await readJsonBody(request, 8_192));
+      const input = supplierLookupInput(
+        await readJsonBody(request, 8_192),
+        new Set(context.suppliers.map((supplier) => supplier.id)),
+      );
       if (!input) {
         sendJson(response, 400, { error: "supplier_lookup_arguments_invalid" });
         return;
@@ -516,10 +519,18 @@ function supplierLookupAuthorization(request: IncomingMessage, context: ServerCo
     : "unauthorized";
 }
 
-function supplierLookupInput(value: unknown): { supplierKey: string; supplierSku: string } | null {
+function supplierLookupInput(
+  value: unknown,
+  allowedSupplierKeys: ReadonlySet<string>,
+): { supplierKey: string; supplierSku: string } | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  if (Object.keys(raw).length !== 2 || raw.supplierKey !== "emerson-ecologics" || typeof raw.supplierSku !== "string") return null;
+  if (
+    Object.keys(raw).length !== 2 ||
+    typeof raw.supplierKey !== "string" ||
+    !allowedSupplierKeys.has(raw.supplierKey) ||
+    typeof raw.supplierSku !== "string"
+  ) return null;
   const supplierSku = raw.supplierSku.trim();
   if (!/^[A-Za-z0-9][A-Za-z0-9._:/+ -]{0,119}$/.test(supplierSku)) return null;
   return { supplierKey: raw.supplierKey, supplierSku };
