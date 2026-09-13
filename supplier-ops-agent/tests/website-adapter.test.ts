@@ -113,8 +113,45 @@ test("credential login diagnostics identify the exact safe sub-phase", async () 
 
   assert.deepEqual(warnings, [
     "[supplier-login] supplier=desbio phase=submit result=failed kind=timeout",
-    "[supplier-lookup] supplier=desbio phase=authentication result=failed kind=unexpected",
+    "[supplier-lookup] supplier=desbio phase=authentication result=failed kind=timeout",
   ]);
+});
+
+test("reusable session diagnostics isolate a slow catalog navigation without exposing session data", async () => {
+  const timeout = new Error("private-cookie-value must not appear");
+  timeout.name = "TimeoutError";
+  const harness = createSupplierBrowserHarness({ gotoError: timeout });
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (message?: unknown) => { warnings.push(String(message)); };
+
+  try {
+    const adapter = new WebsiteSupplierAdapter(
+      desbio,
+      {
+        productsUrl: "https://portal.desbio.com/products",
+        sessionCookieHeader: "session=private-cookie-value",
+        allowedHosts: ["portal.desbio.com"],
+        authenticatedSelector: "[data-account-menu]",
+        selectors: {
+          username: "#email",
+          password: "#password",
+          submit: "button[type=submit]",
+        },
+      },
+      { launchBrowser: harness.launchBrowser },
+    );
+
+    await assert.rejects(() => adapter.lookupProduct("HA2CG"), /private-cookie-value/);
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.deepEqual(warnings, [
+    "[supplier-session] supplier=desbio phase=catalog_navigation result=failed kind=timeout",
+    "[supplier-lookup] supplier=desbio phase=authentication result=failed kind=timeout",
+  ]);
+  assert.equal(warnings.join(" ").includes("private-cookie-value"), false);
 });
 
 test("a blocked credential field is reported as human verification when a CAPTCHA is present", async () => {
@@ -462,6 +499,7 @@ function createSupplierBrowserHarness(
   options: {
     outcomeAfterSubmit?: "connected" | "two_factor_required";
     clickError?: Error;
+    gotoError?: Error;
     verificationChallenge?: boolean;
   } = {},
 ) {
@@ -488,6 +526,7 @@ function createSupplierBrowserHarness(
         const page = {
           goto: async (url: string) => {
             currentUrl = url;
+            if (options.gotoError) throw options.gotoError;
           },
           url: () => currentUrl,
           fill: async () => undefined,

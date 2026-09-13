@@ -302,7 +302,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
         capturedAt: (context.now ?? new Date()).toISOString(),
       });
     } catch (error) {
-      const kind = error instanceof SupplierAdapterError ? error.kind : "unexpected";
+      const kind = error instanceof SupplierAdapterError ? error.kind : automationFailureKind(error);
       console.warn(`[supplier-lookup] supplier=${this.supplier.id} phase=${phase} result=failed kind=${kind}`);
       throw error;
     } finally {
@@ -429,30 +429,44 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     if (cookies.length === 0) {
       throw new SupplierAdapterError(this.supplier.id, "not_configured", `${this.supplier.name} session is empty`);
     }
-    await browserContext.addCookies(cookies);
-    await page.goto(catalogUrl, { waitUntil: "domcontentloaded" });
-    assertSafeSupplierUrl(page.url(), allowedHosts, this.supplier.id, "catalog response");
+    let phase = "cookie_install";
+    try {
+      await browserContext.addCookies(cookies);
+      phase = "catalog_navigation";
+      await page.goto(catalogUrl, { waitUntil: "domcontentloaded" });
+      phase = "catalog_response";
+      assertSafeSupplierUrl(page.url(), allowedHosts, this.supplier.id, "catalog response");
 
-    const accountMarkerVisible = await waitForVisible(page, config.authenticatedSelector);
-    if (accountMarkerVisible) return;
+      phase = "account_marker";
+      const accountMarkerVisible = await waitForVisible(page, config.authenticatedSelector);
+      if (accountMarkerVisible) return;
 
-    const pageText = await page.locator("body").innerText().catch(() => "");
-    const passwordVisible = config.selectors?.password
-      ? (await visibleLocatorCount(page, config.selectors.password)) > 0
-      : false;
-    const outcome = classifyLoginOutcome(pageText, passwordVisible ? 1 : 0);
-    if (outcome === "two_factor_required") {
+      phase = "page_classification";
+      const pageText = await page.locator("body").innerText().catch(() => "");
+      const passwordVisible = config.selectors?.password
+        ? (await visibleLocatorCount(page, config.selectors.password)) > 0
+        : false;
+      const outcome = classifyLoginOutcome(pageText, passwordVisible ? 1 : 0);
+      if (outcome === "two_factor_required") {
+        throw new SupplierAdapterError(
+          this.supplier.id,
+          "two_factor_required",
+          `${this.supplier.name} session requires a verification code`,
+        );
+      }
       throw new SupplierAdapterError(
         this.supplier.id,
-        "two_factor_required",
-        `${this.supplier.name} session requires a verification code`,
+        "verification_required",
+        `${this.supplier.name} session expired and needs one browser reconnection`,
       );
+    } catch (error) {
+      if (!(error instanceof SupplierAdapterError)) {
+        console.warn(
+          `[supplier-session] supplier=${this.supplier.id} phase=${phase} result=failed kind=${automationFailureKind(error)}`,
+        );
+      }
+      throw error;
     }
-    throw new SupplierAdapterError(
-      this.supplier.id,
-      "verification_required",
-      `${this.supplier.name} session expired and needs one browser reconnection`,
-    );
   }
 
   async #rememberSession(browserContext: import("playwright").BrowserContext) {
