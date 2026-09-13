@@ -352,6 +352,13 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
       }
     } catch (error) {
       if (!(error instanceof SupplierAdapterError)) {
+        if (await pageHasVerificationChallenge(page)) {
+          throw new SupplierAdapterError(
+            this.supplier.id,
+            "verification_required",
+            `${this.supplier.name} requires one browser verification before automated reads can continue`,
+          );
+        }
         console.warn(`[supplier-login] supplier=${this.supplier.id} phase=${phase} result=failed kind=${automationFailureKind(error)}`);
       }
       throw error;
@@ -529,6 +536,14 @@ function automationFailureKind(error: unknown): "timeout" | "browser_closed" | "
   if (error instanceof Error && /timeout/i.test(error.name)) return "timeout";
   if (error instanceof Error && /closed|destroyed|detached/i.test(error.message)) return "browser_closed";
   return "unexpected";
+}
+
+async function pageHasVerificationChallenge(page: import("playwright").Page): Promise<boolean> {
+  const [pageText, verificationFrameCount] = await Promise.all([
+    page.locator("body").innerText().catch(() => ""),
+    page.locator('iframe[src*="recaptcha" i], iframe[src*="captcha" i], [class*="captcha" i]').count().catch(() => 0),
+  ]);
+  return verificationFrameCount > 0 || /captcha|verify (that )?you are human|i'm not a robot|unusual traffic/i.test(pageText);
 }
 
 export function allowedSupplierHosts(config: Pick<WebsiteAdapterConfig, "allowedHosts" | "loginUrl" | "productsUrl">): string[] {

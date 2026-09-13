@@ -117,6 +117,44 @@ test("credential login diagnostics identify the exact safe sub-phase", async () 
   ]);
 });
 
+test("a blocked credential field is reported as human verification when a CAPTCHA is present", async () => {
+  const timeout = new Error("operation timed out");
+  timeout.name = "TimeoutError";
+  const harness = createSupplierBrowserHarness({ clickError: timeout, verificationChallenge: true });
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (message?: unknown) => { warnings.push(String(message)); };
+  const adapter = new WebsiteSupplierAdapter(
+    desbio,
+    {
+      loginUrl: "https://portal.desbio.com/login",
+      productsUrl: "https://portal.desbio.com/products",
+      username: "orders@example.test",
+      password: "private-value",
+      allowedHosts: ["portal.desbio.com"],
+      authenticatedSelector: "[data-account-menu]",
+      selectors: {
+        username: "#email",
+        password: "#password",
+        submit: "button[type=submit]",
+      },
+    },
+    { launchBrowser: harness.launchBrowser },
+  );
+
+  try {
+    await assert.rejects(
+      () => adapter.lookupProduct("HA2CG"),
+      (error: unknown) => error instanceof Error && (error as { kind?: string }).kind === "verification_required",
+    );
+  } finally {
+    console.warn = originalWarn;
+  }
+  assert.deepEqual(warnings, [
+    "[supplier-lookup] supplier=desbio phase=authentication result=failed kind=verification_required",
+  ]);
+});
+
 test("connection checks expose only a safe failing phase", () => {
   assert.equal(
     loginCheckFailureMessage("Emerson Ecologics", "browser_start"),
@@ -421,7 +459,11 @@ test("a supplier verification code is reported distinctly after automatic creden
 });
 
 function createSupplierBrowserHarness(
-  options: { outcomeAfterSubmit?: "connected" | "two_factor_required"; clickError?: Error } = {},
+  options: {
+    outcomeAfterSubmit?: "connected" | "two_factor_required";
+    clickError?: Error;
+    verificationChallenge?: boolean;
+  } = {},
 ) {
   let credentialSubmissions = 0;
   let submitted = false;
@@ -468,7 +510,9 @@ function createSupplierBrowserHarness(
                 ? "Enter your verification code"
                 : "Sign in",
             all: async () => [{ isVisible: async () => !authenticated }],
-            count: async () => authenticated ? 0 : 1,
+            count: async () => selector.includes("captcha")
+              ? (options.verificationChallenge ? 1 : 0)
+              : authenticated ? 0 : 1,
           }),
           $$eval: async () => [],
         } as unknown as Page;
