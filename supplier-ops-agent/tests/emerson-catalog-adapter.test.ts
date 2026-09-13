@@ -60,6 +60,47 @@ test("Emerson connection check accepts a reusable authenticated catalog session"
   assert.equal((await adapter.verifyLogin()).status, "connected");
 });
 
+test("Emerson falls back to the current rendered catalog when legacy product state is absent", async () => {
+  const renderedCalls: string[] = [];
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, {
+    cookieHeader: "session=private-value",
+    fetchImpl: async () => new Response("<html><body>Authenticated catalog shell</body></html>", { status: 200 }),
+    renderCatalogImpl: async (url, cookieHeader, supplierId) => {
+      renderedCalls.push(url);
+      assert.equal(cookieHeader, "session=private-value");
+      assert.equal(supplierId, "emerson-ecologics");
+      return {
+        responseUrl: url,
+        records: [{
+          title: "Magnesium Glycinate, 120 mg (90 capsules)",
+          brand: "Pure Encapsulations",
+          sku: "MAG49",
+          cost: 13.5,
+          available: true,
+          url: "https://emersonecologics.com/products/detail/Pure-Encapsulations/magnesium/MAG49",
+        }],
+      };
+    },
+  });
+
+  assert.equal((await adapter.verifyLogin()).status, "connected");
+  const product = await adapter.lookupProduct("mag49", { now: new Date("2026-09-12T12:00:00.000Z") });
+  assert.equal(product?.sku, "MAG49");
+  assert.equal(product?.cost, 13.5);
+  assert.equal(product?.stockStatus, "in_stock");
+  assert.equal(renderedCalls.length, 2);
+  assert.equal(new URL(renderedCalls[1]).searchParams.get("query"), '"mag49"');
+});
+
+test("Emerson rendered fallback still treats a login redirect as an expired session", async () => {
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, {
+    cookieHeader: "session=private-value",
+    fetchImpl: async () => new Response("<html><body>Catalog shell</body></html>", { status: 200 }),
+    renderCatalogImpl: async () => ({ responseUrl: "https://emersonecologics.com/login", records: [] }),
+  });
+  assert.equal((await adapter.verifyLogin()).status, "verification_required");
+});
+
 test("Emerson exact lookup searches one SKU and does not open cart or order routes", async () => {
   let requestedUrl = "";
   const adapter = new EmersonCatalogSupplierAdapter(emerson, {

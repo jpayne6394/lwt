@@ -3,6 +3,7 @@ import { EmersonCatalogSupplierAdapter, parseEmersonCatalogUrls } from "./emerso
 import type { SupplierAdapter, SupplierConfig } from "./types.ts";
 import { WebsiteSupplierAdapter, type WebsiteAdapterConfig } from "./website-adapter.ts";
 import { defaultWebsiteConfig, mergeWebsiteConfig } from "./portal-defaults.ts";
+import { defaultPublicCatalogConfig, PublicCatalogSupplierAdapter } from "./public-catalog-adapter.ts";
 
 export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.ProcessEnv = process.env): SupplierAdapter[] {
   return suppliers.map((supplier) => {
@@ -11,6 +12,11 @@ export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.P
 
     if (feedUrl) {
       return new JsonFeedSupplierAdapter(supplier, feedUrl);
+    }
+
+    const publicCatalogConfig = defaultPublicCatalogConfig(supplier.id);
+    if (publicCatalogConfig) {
+      return new PublicCatalogSupplierAdapter(supplier, publicCatalogConfig);
     }
 
     if (supplier.id === "emerson-ecologics" && env.SUPPLIER_COOKIE_EMERSON_ECOLOGICS) {

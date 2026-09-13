@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { EmersonCatalogSupplierAdapter } from "../src/suppliers/emerson-catalog-adapter.ts";
 import { createAdaptersFromEnv } from "../src/suppliers/factory.ts";
+import { PublicCatalogSupplierAdapter } from "../src/suppliers/public-catalog-adapter.ts";
 import { WebsiteSupplierAdapter } from "../src/suppliers/website-adapter.ts";
 import type { SupplierConfig } from "../src/suppliers/types.ts";
 import { defaultWebsiteConfig, mergeWebsiteConfig } from "../src/suppliers/portal-defaults.ts";
@@ -22,6 +23,12 @@ const desbio: SupplierConfig = {
   brands: ["DesBio"],
   notes: "",
 };
+
+const publicSuppliers: SupplierConfig[] = [
+  { id: "bioresource-pekana", name: "BioResource / Pekana", mode: "website", brands: [], notes: "" },
+  { id: "systemic-formulas", name: "Systemic Formulas", mode: "website", brands: [], notes: "" },
+  { id: "world-health-mall", name: "World Health Mall", mode: "website", brands: [], notes: "" },
+];
 
 test("factory uses Emerson reusable-session adapter when a captured session exists", () => {
   const [adapter] = createAdaptersFromEnv([emerson], {
@@ -61,6 +68,11 @@ test("factory supplies an isolated reusable session to every configured website 
   } as NodeJS.ProcessEnv);
 
   assert.equal(adapter instanceof WebsiteSupplierAdapter, true);
+});
+
+test("factory uses credential-free read adapters for verified public supplier catalogs", () => {
+  const adapters = createAdaptersFromEnv(publicSuppliers, {} as NodeJS.ProcessEnv);
+  assert.equal(adapters.every((adapter) => adapter instanceof PublicCatalogSupplierAdapter), true);
 });
 
 test("reviewed portal defaults keep non-secret site structure out of deployment settings", () => {

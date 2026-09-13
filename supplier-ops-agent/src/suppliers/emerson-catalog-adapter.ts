@@ -1,4 +1,5 @@
 import { normalizeSupplierRecord } from "./normalization.ts";
+import { launchSupplierBrowser } from "./browser-launcher.ts";
 import type {
   SupplierAdapter,
   SupplierAdapterContext,
@@ -11,7 +12,14 @@ export type EmersonCatalogAdapterConfig = {
   catalogUrls?: string[];
   cookieHeader?: string;
   fetchImpl?: typeof fetch;
+  renderCatalogImpl?: EmersonRenderedCatalogReader;
 };
+
+export type EmersonRenderedCatalogReader = (
+  catalogUrl: string,
+  cookieHeader: string,
+  supplierId: string,
+) => Promise<{ responseUrl: string; records: Record<string, unknown>[] }>;
 
 type ApolloState = Record<string, Record<string, unknown>>;
 
@@ -26,12 +34,14 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
   readonly #catalogUrls: string[];
   readonly #cookieHeader?: string;
   readonly #fetch: typeof fetch;
+  readonly #renderCatalog: EmersonRenderedCatalogReader;
 
   constructor(supplier: SupplierConfig, config: EmersonCatalogAdapterConfig = {}) {
     this.supplier = supplier;
     this.#catalogUrls = config.catalogUrls?.length ? config.catalogUrls : [DEFAULT_CATALOG_URL];
     this.#cookieHeader = cleanString(config.cookieHeader) || undefined;
     this.#fetch = config.fetchImpl ?? fetch;
+    this.#renderCatalog = config.renderCatalogImpl ?? readRenderedEmersonCatalog;
   }
 
   async verifyLogin(): Promise<SupplierConnectionCheck> {
@@ -40,21 +50,17 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     }
 
     try {
-      const { html, responseUrl } = await this.#readCatalog(this.#catalogUrls[0]);
-      if (requiresSignIn(html, responseUrl)) {
-        return this.#check(
-          "verification_required",
-          `${this.supplier.name} session expired and needs one browser reconnection.`,
-        );
-      }
-      const state = parseApolloState(html, this.supplier.id);
-      if (recordsFromState(state).length === 0) {
+      const records = await this.#readCatalogRecords(this.#catalogUrls[0]);
+      if (records.length === 0) {
         return this.#check("login_failed", `${this.supplier.name} did not return a readable catalog.`);
       }
       return this.#check("connected", `${this.supplier.name} reusable session is connected for read-only catalog access.`);
     } catch (error) {
       if (error instanceof SupplierAdapterError && error.kind === "verification_required") {
         return this.#check("verification_required", error.message);
+      }
+      if (error instanceof SupplierAdapterError && error.kind === "parse_failed") {
+        return this.#check("login_failed", `${this.supplier.name} catalog loaded, but its product layout was not recognized.`);
       }
       return this.#check("login_failed", `${this.supplier.name} session check could not read the catalog.`);
     }
@@ -73,15 +79,7 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     const records: Record<string, unknown>[] = [];
 
     for (const catalogUrl of this.#catalogUrls) {
-      const { html, responseUrl } = await this.#readCatalog(catalogUrl);
-      if (requiresSignIn(html, responseUrl)) {
-        throw new SupplierAdapterError(
-          this.supplier.id,
-          "verification_required",
-          `${this.supplier.name} session expired and needs one browser reconnection`,
-        );
-      }
-      records.push(...recordsFromState(parseApolloState(html, this.supplier.id)));
+      records.push(...await this.#readCatalogRecords(catalogUrl));
     }
 
     const deduped = dedupeBySku(records);
@@ -117,15 +115,7 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     }
     const url = new URL(DEFAULT_CATALOG_URL);
     url.searchParams.set("query", `"${wanted}"`);
-    const { html, responseUrl } = await this.#readCatalog(url.toString());
-    if (requiresSignIn(html, responseUrl)) {
-      throw new SupplierAdapterError(
-        this.supplier.id,
-        "verification_required",
-        `${this.supplier.name} session expired and needs one browser reconnection`,
-      );
-    }
-    const match = recordsFromState(parseApolloState(html, this.supplier.id))
+    const match = (await this.#readCatalogRecords(url.toString()))
       .find((record) => cleanString(record.sku).toUpperCase() === wanted.toUpperCase());
     if (!match) return null;
     return normalizeSupplierRecord({
@@ -164,9 +154,129 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     return { html: await response.text(), responseUrl: response.url || catalogUrl };
   }
 
+  async #readCatalogRecords(catalogUrl: string): Promise<Record<string, unknown>[]> {
+    const { html, responseUrl } = await this.#readCatalog(catalogUrl);
+    if (requiresSignIn(html, responseUrl)) {
+      throw new SupplierAdapterError(
+        this.supplier.id,
+        "verification_required",
+        `${this.supplier.name} session expired and needs one browser reconnection`,
+      );
+    }
+
+    if (hasApolloState(html)) {
+      return recordsFromState(parseApolloState(html, this.supplier.id));
+    }
+
+    const rendered = await this.#renderCatalog(catalogUrl, this.#cookieHeader!, this.supplier.id);
+    if (requiresSignIn("", rendered.responseUrl)) {
+      throw new SupplierAdapterError(
+        this.supplier.id,
+        "verification_required",
+        `${this.supplier.name} session expired and needs one browser reconnection`,
+      );
+    }
+    return rendered.records;
+  }
+
   #check(status: SupplierConnectionCheck["status"], message: string): SupplierConnectionCheck {
     return { supplierId: this.supplier.id, supplierName: this.supplier.name, status, message };
   }
+}
+
+async function readRenderedEmersonCatalog(
+  catalogUrl: string,
+  cookieHeader: string,
+  supplierId: string,
+): Promise<{ responseUrl: string; records: Record<string, unknown>[] }> {
+  assertSafeEmersonUrl(catalogUrl, supplierId);
+  const browser = await launchSupplierBrowser();
+  try {
+    const browserContext = await browser.newContext();
+    await browserContext.addCookies(emersonSessionCookies(cookieHeader));
+    const page = await browserContext.newPage();
+    await page.goto(catalogUrl, { waitUntil: "domcontentloaded" });
+    assertSafeEmersonUrl(page.url(), supplierId);
+
+    const accountMarker = page.locator('[aria-label="Account Dropdown"]').first();
+    await accountMarker.waitFor({ state: "visible", timeout: 30_000 }).catch(() => undefined);
+    if (!(await accountMarker.isVisible().catch(() => false))) {
+      const pageText = await page.locator("body").innerText().catch(() => "");
+      const passwordVisible = await page.locator('input[type="password"]').first().isVisible().catch(() => false);
+      if (passwordVisible || requiresSignIn(pageText, page.url())) {
+        throw new SupplierAdapterError(
+          supplierId,
+          "verification_required",
+          "Emerson Ecologics session expired and needs one browser reconnection",
+        );
+      }
+      throw new SupplierAdapterError(supplierId, "parse_failed", "Emerson account marker was not present");
+    }
+
+    const productLinks = page.locator('a[data-testid="go-to-pdp"]');
+    await productLinks.first().waitFor({ state: "visible", timeout: 20_000 }).catch(() => undefined);
+    const records = await page.$$eval('a[data-testid="go-to-pdp"]', renderedEmersonRecords);
+    return { responseUrl: page.url(), records };
+  } finally {
+    await browser.close();
+  }
+}
+
+export function renderedEmersonRecords(links: Element[]): Record<string, unknown>[] {
+  return links.flatMap((link) => {
+    const href = link.getAttribute("href") ?? "";
+    const parts = href.split("/").filter(Boolean);
+    const sku = decodeURIComponent(parts.at(-1) ?? "").trim();
+    const title = (link.getAttribute("aria-label") ?? "").trim();
+    const card = link.closest('div[aria-busy="false"]') as HTMLElement | null;
+    if (!card || !sku || !title) return [];
+
+    const titled = Array.from(card.querySelectorAll<HTMLElement>("[title]"))
+      .map((element) => (element.getAttribute("title") ?? "").trim())
+      .filter(Boolean);
+    const brand = titled.find((value) => value !== title);
+    const variant = (card.querySelector<HTMLElement>('[data-testid="aviary-dropdown-button-base"]')?.innerText ?? "")
+      .trim();
+    const prices = Array.from(card.innerText.matchAll(/\$\s*([0-9]+(?:\.[0-9]{1,2})?)/g))
+      .map((match) => Number(match[1]))
+      .filter(Number.isFinite);
+    const addButton = Array.from(card.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => /add to cart/i.test(button.innerText));
+    const image = card.querySelector<HTMLImageElement>('img[data-testid="aviary-product-image"]')?.src;
+
+    return [{
+      title: variant && !title.includes(variant) ? `${title} (${variant})` : title,
+      brand,
+      sku,
+      cost: prices.at(-1),
+      available: addButton ? !addButton.disabled : undefined,
+      url: new URL(href, "https://emersonecologics.com").toString(),
+      image,
+    }];
+  });
+}
+
+function emersonSessionCookies(cookieHeader: string) {
+  const hosts = ["emersonecologics.com", "www.emersonecologics.com"];
+  return hosts.flatMap((host) =>
+    cookieHeader
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .flatMap((part) => {
+        const separator = part.indexOf("=");
+        if (separator <= 0) return [];
+        const name = part.slice(0, separator).trim();
+        const value = part.slice(separator + 1).trim();
+        return name && value
+          ? [{ name, value, url: `https://${host}/`, secure: true, sameSite: "Lax" as const }]
+          : [];
+      }),
+  );
+}
+
+function hasApolloState(html: string): boolean {
+  return /<meta[^>]+name=["']apollo-state["']/i.test(html);
 }
 
 export function parseEmersonCatalogUrls(value: string | undefined): string[] | undefined {
