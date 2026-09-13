@@ -352,6 +352,7 @@ test("an expired session refreshes once with saved credentials and the replaceme
   assert.equal((await adapter.verifyLogin()).status, "connected");
   assert.equal((await adapter.verifyLogin()).status, "connected");
   assert.equal(harness.credentialSubmissions(), 1);
+  assert.deepEqual(harness.credentialSubmitOptions(), [{ noWaitAfter: true }]);
   assert.deepEqual(harness.addedSessionValues(), ["stale", "fresh"]);
 });
 
@@ -387,6 +388,7 @@ function createSupplierBrowserHarness(
   let credentialSubmissions = 0;
   let submitted = false;
   const addedSessionValues: string[] = [];
+  const credentialSubmitOptions: unknown[] = [];
 
   const launchBrowser = async () => {
     const browser = {
@@ -409,8 +411,9 @@ function createSupplierBrowserHarness(
           },
           url: () => currentUrl,
           fill: async () => undefined,
-          click: async () => {
+          click: async (_selector: string, clickOptions: unknown) => {
             credentialSubmissions += 1;
+            credentialSubmitOptions.push(clickOptions);
             submitted = true;
             authenticated = options.outcomeAfterSubmit !== "two_factor_required";
           },
@@ -441,6 +444,7 @@ function createSupplierBrowserHarness(
   return {
     launchBrowser,
     credentialSubmissions: () => credentialSubmissions,
+    credentialSubmitOptions: () => [...credentialSubmitOptions],
     addedSessionValues: () => [...addedSessionValues],
   };
 }

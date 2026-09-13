@@ -233,7 +233,10 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
         phase = "password_field";
         await page.fill(config.selectors.password, config.password);
         phase = "submit";
-        await page.click(config.selectors.submit);
+        // Supplier portals can hold the form navigation open while an
+        // invisible verification check finishes. The bounded outcome poll
+        // below owns that wait and distinguishes success from a real prompt.
+        await page.click(config.selectors.submit, { noWaitAfter: true });
 
         phase = "response_check";
         const outcome = await waitForLoginOutcome(async () => ({
@@ -320,7 +323,9 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "sign-in response");
     await page.fill(config.selectors!.username, config.username!);
     await page.fill(config.selectors!.password, config.password!);
-    await page.click(config.selectors!.submit);
+    // Do not let Playwright's implicit navigation wait consume the entire
+    // request window. The outcome poll below safely owns the bounded wait.
+    await page.click(config.selectors!.submit, { noWaitAfter: true });
 
     const outcome = await waitForLoginOutcome(async () => ({
       pageText: await page.locator("body").innerText().catch(() => ""),
