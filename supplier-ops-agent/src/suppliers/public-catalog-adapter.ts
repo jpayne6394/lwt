@@ -232,6 +232,13 @@ export function defaultPublicCatalogConfig(supplierId: string): PublicCatalogAda
       allowedHosts: ["theworldhealthmall.com"],
     };
   }
+  if (supplierId === "physicians-standard") {
+    return {
+      kind: "shopify-json",
+      catalogUrl: "https://www.physiciansstandard.com/products.json?limit=250",
+      allowedHosts: ["www.physiciansstandard.com"],
+    };
+  }
   return undefined;
 }
 

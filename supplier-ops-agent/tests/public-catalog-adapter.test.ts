@@ -119,10 +119,15 @@ test("public WooCommerce HTML parser reads encoded exact-SKU product data withou
   }]);
 });
 
-test("public catalog defaults cover the three supplier sites that do not require account sessions", () => {
+test("public catalog defaults cover the four supplier sites that do not require account sessions", () => {
   assert.equal(defaultPublicCatalogConfig("bioresource-pekana")?.kind, "squarespace-json");
   assert.equal(defaultPublicCatalogConfig("systemic-formulas")?.kind, "woocommerce-html");
   assert.equal(defaultPublicCatalogConfig("world-health-mall")?.kind, "shopify-json");
+  assert.deepEqual(defaultPublicCatalogConfig("physicians-standard"), {
+    kind: "shopify-json",
+    catalogUrl: "https://www.physiciansstandard.com/products.json?limit=250",
+    allowedHosts: ["www.physiciansstandard.com"],
+  });
   assert.equal(defaultPublicCatalogConfig("desbio"), undefined);
 });
 

@@ -28,6 +28,7 @@ const publicSuppliers: SupplierConfig[] = [
   { id: "bioresource-pekana", name: "BioResource / Pekana", mode: "website", brands: [], notes: "" },
   { id: "systemic-formulas", name: "Systemic Formulas", mode: "website", brands: [], notes: "" },
   { id: "world-health-mall", name: "World Health Mall", mode: "website", brands: [], notes: "" },
+  { id: "physicians-standard", name: "Physicians’ Standard", mode: "website", brands: [], notes: "" },
 ];
 
 test("factory uses Emerson reusable-session adapter when a captured session exists", () => {
@@ -71,7 +72,10 @@ test("factory supplies an isolated reusable session to every configured website 
 });
 
 test("factory uses credential-free read adapters for verified public supplier catalogs", () => {
-  const adapters = createAdaptersFromEnv(publicSuppliers, {} as NodeJS.ProcessEnv);
+  const adapters = createAdaptersFromEnv(publicSuppliers, {
+    SUPPLIER_USERNAME_PHYSICIANS_STANDARD: "unused@example.test",
+    SUPPLIER_PASSWORD_PHYSICIANS_STANDARD: "unused-private-value",
+  } as NodeJS.ProcessEnv);
   assert.equal(adapters.every((adapter) => adapter instanceof PublicCatalogSupplierAdapter), true);
 });
 
