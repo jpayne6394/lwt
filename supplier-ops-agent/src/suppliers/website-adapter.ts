@@ -270,21 +270,30 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
       return products.find((product) => cleanString(product.sku).toUpperCase() === wanted) ?? null;
     }
 
+    let phase = "browser_start";
     const browser = await this.#launchBrowser();
     try {
+      phase = "browser_context";
       const browserContext = await browser.newContext();
       const page = await browserContext.newPage();
+      phase = "authentication";
       await this.#openAuthenticatedProducts(browserContext, page);
+      phase = "catalog_lookup";
       const record = this.supplier.id === "physicians-standard"
         ? await this.#lookupProtectedShopifyProduct(browserContext, page, wanted)
         : await this.#lookupWordPressProduct(page, wanted);
       if (!record) return null;
+      phase = "normalization";
       return normalizeSupplierRecord({
         supplierId: this.supplier.id,
         supplierName: this.supplier.name,
         record,
         capturedAt: (context.now ?? new Date()).toISOString(),
       });
+    } catch (error) {
+      const kind = error instanceof SupplierAdapterError ? error.kind : "unexpected";
+      console.warn(`[supplier-lookup] supplier=${this.supplier.id} phase=${phase} result=failed kind=${kind}`);
+      throw error;
     } finally {
       await browser.close();
     }
@@ -299,7 +308,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
 
   async #signInWithCredentials(page: import("playwright").Page) {
     const config = this.#config;
-    await page.goto(this.#safeUrl(config.loginUrl, "sign-in"), { waitUntil: "networkidle" });
+    await page.goto(this.#safeUrl(config.loginUrl, "sign-in"), { waitUntil: "domcontentloaded" });
     assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "sign-in response");
     await page.fill(config.selectors!.username, config.username!);
     await page.fill(config.selectors!.password, config.password!);
@@ -356,9 +365,9 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     }
 
     await this.#signInWithCredentials(page);
-    await page.goto(this.#safeUrl(config.productsUrl, "catalog"), { waitUntil: "networkidle" });
+    await page.goto(this.#safeUrl(config.productsUrl, "catalog"), { waitUntil: "domcontentloaded" });
     assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "catalog response");
-    const accountMarkerVisible = await page.locator(config.authenticatedSelector).isVisible().catch(() => false);
+    const accountMarkerVisible = await waitForVisible(page, config.authenticatedSelector);
     if (!accountMarkerVisible) {
       throw new SupplierAdapterError(
         this.supplier.id,
@@ -389,10 +398,10 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
       throw new SupplierAdapterError(this.supplier.id, "not_configured", `${this.supplier.name} session is empty`);
     }
     await browserContext.addCookies(cookies);
-    await page.goto(catalogUrl, { waitUntil: "networkidle" });
+    await page.goto(catalogUrl, { waitUntil: "domcontentloaded" });
     assertSafeSupplierUrl(page.url(), allowedHosts, this.supplier.id, "catalog response");
 
-    const accountMarkerVisible = await page.locator(config.authenticatedSelector).isVisible().catch(() => false);
+    const accountMarkerVisible = await waitForVisible(page, config.authenticatedSelector);
     if (accountMarkerVisible) return;
 
     const pageText = await page.locator("body").innerText().catch(() => "");
@@ -572,19 +581,24 @@ function cleanSessionValue(value: string | undefined): string | undefined {
 }
 
 async function readWooCommerceProductPage(page: import("playwright").Page, wanted: string) {
-  const variations = await page.locator("form.variations_form").first()
-    .getAttribute("data-product_variations")
-    .catch(() => null);
-  const title = cleanString(await page.locator("h1.product_title").first().innerText().catch(() => ""));
+  const variationForm = page.locator("form.variations_form").first();
+  const variations = (await variationForm.count()) > 0
+    ? await variationForm.getAttribute("data-product_variations").catch(() => null)
+    : null;
+  const title = cleanString(await firstTextIfPresent(page, "h1.product_title"));
   if (variations) {
     const variation = wooCommerceVariationRecord(variations, wanted, title, page.url());
     if (variation) return variation;
   }
 
-  const sku = cleanString(await page.locator(".sku").first().innerText().catch(() => ""));
-  const priceText = await page.locator(".summary .price").first().innerText().catch(() => "");
-  const stockText = await page.locator(".stock").first().innerText().catch(() => "");
-  const image = await page.locator(".woocommerce-product-gallery img").first().getAttribute("src").catch(() => null);
+  const sku = cleanString(await firstTextIfPresent(page, ".sku"));
+  if (!sku) return null;
+  const priceText = await firstTextIfPresent(page, ".summary .price");
+  const stockText = await firstTextIfPresent(page, ".stock");
+  const imageLocator = page.locator(".woocommerce-product-gallery img").first();
+  const image = (await imageLocator.count()) > 0
+    ? await imageLocator.getAttribute("src").catch(() => null)
+    : null;
   return wooCommerceSimpleRecord({ sku, title, priceText, stockText, image }, wanted, page.url());
 }
 
@@ -689,6 +703,21 @@ function cleanString(value: unknown): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+async function firstTextIfPresent(page: import("playwright").Page, selector: string): Promise<string> {
+  const locator = page.locator(selector).first();
+  return (await locator.count()) > 0 ? locator.innerText().catch(() => "") : "";
+}
+
+async function waitForVisible(
+  page: import("playwright").Page,
+  selector: string,
+  timeoutMs = 15_000,
+): Promise<boolean> {
+  const locator = page.locator(selector);
+  if (await locator.isVisible().catch(() => false)) return true;
+  return locator.waitFor({ state: "visible", timeout: timeoutMs }).then(() => true).catch(() => false);
 }
 
 async function visibleLocatorCount(page: import("playwright").Page, selector: string): Promise<number> {

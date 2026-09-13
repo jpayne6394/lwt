@@ -330,6 +330,10 @@ function createSupplierBrowserHarness(
           },
           locator: (selector: string) => ({
             isVisible: async () => selector === "[data-account-menu]" ? authenticated : !authenticated,
+            waitFor: async () => {
+              if (selector === "[data-account-menu]" && authenticated) return;
+              throw new Error("not visible");
+            },
             innerText: async () => authenticated
               ? "Account"
               : submitted && options.outcomeAfterSubmit === "two_factor_required"
