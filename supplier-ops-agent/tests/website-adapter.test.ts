@@ -16,6 +16,7 @@ import {
   WebsiteSupplierAdapter,
   waitForLoginOutcome,
   wooCommerceSimpleRecord,
+  wooCommerceRecordFromHtml,
   wooCommerceVariationRecord,
 } from "../src/suppliers/website-adapter.ts";
 import type { SupplierConfig } from "../src/suppliers/types.ts";
@@ -117,10 +118,9 @@ test("credential login diagnostics identify the exact safe sub-phase", async () 
   ]);
 });
 
-test("reusable session diagnostics isolate a slow catalog navigation without exposing session data", async () => {
+test("reusable session diagnostics isolate a slow catalog response without exposing session data", async () => {
   const timeout = new Error("private-cookie-value must not appear");
   timeout.name = "TimeoutError";
-  const harness = createSupplierBrowserHarness({ gotoError: timeout });
   const warnings: string[] = [];
   const originalWarn = console.warn;
   console.warn = (message?: unknown) => { warnings.push(String(message)); };
@@ -139,7 +139,10 @@ test("reusable session diagnostics isolate a slow catalog navigation without exp
           submit: "button[type=submit]",
         },
       },
-      { launchBrowser: harness.launchBrowser },
+      {
+        fetchImpl: async () => { throw timeout; },
+        launchBrowser: async () => { throw new Error("browser should not launch"); },
+      },
     );
 
     await assert.rejects(() => adapter.lookupProduct("HA2CG"), /private-cookie-value/);
@@ -148,16 +151,16 @@ test("reusable session diagnostics isolate a slow catalog navigation without exp
   }
 
   assert.deepEqual(warnings, [
-    "[supplier-session] supplier=desbio phase=catalog_navigation result=failed kind=timeout",
-    "[supplier-lookup] supplier=desbio phase=authentication result=failed kind=timeout",
+    "[supplier-lookup] supplier=desbio phase=catalog_lookup result=failed kind=timeout",
   ]);
   assert.equal(warnings.join(" ").includes("private-cookie-value"), false);
 });
 
-test("an exact WooCommerce lookup authenticates on the SKU search page without a redundant catalog load", async () => {
+test("an expired WooCommerce session refreshes on the exact SKU page without a generic catalog load", async () => {
   const navigations: string[] = [];
   const navigationOptions: unknown[] = [];
   let currentUrl = "about:blank";
+  let authenticated = false;
   const textBySelector: Record<string, string> = {
     "h1.product_title": "hA2cg Evolution",
     ".sku": "HA2CG",
@@ -165,8 +168,14 @@ test("an exact WooCommerce lookup authenticates on the SKU search page without a
     ".stock": "In stock",
   };
   const locator = (selector: string) => ({
-    isVisible: async () => selector === "[data-account-menu]",
-    waitFor: async () => undefined,
+    isVisible: async () => selector === "[data-account-menu]" ? authenticated : !authenticated,
+    waitFor: async () => {
+      if (selector === "[data-account-menu]" && authenticated) return;
+      throw new Error("not visible");
+    },
+    innerText: async () => authenticated ? "Account" : "Sign in",
+    all: async () => [{ isVisible: async () => !authenticated }],
+    count: async () => authenticated ? 0 : 1,
     first: () => ({
       count: async () => selector === "form.variations_form" ? 0 : 1,
       innerText: async () => textBySelector[selector] ?? "",
@@ -182,18 +191,24 @@ test("an exact WooCommerce lookup authenticates on the SKU search page without a
       navigationOptions.push(options);
     },
     url: () => currentUrl,
+    fill: async () => undefined,
+    click: async () => { authenticated = true; },
     locator,
     $$eval: async () => [],
   } as unknown as Page;
   const browserContext = {
     addCookies: async () => undefined,
+    cookies: async () => [{ name: "session", value: "refreshed", domain: ".desbio.com" }],
     newPage: async () => page,
   } as unknown as BrowserContext;
   const adapter = new WebsiteSupplierAdapter(
     desbio,
     {
+      loginUrl: "https://portal.desbio.com/my-account/",
       productsUrl: "https://portal.desbio.com/products",
       sessionCookieHeader: "session=fresh",
+      username: "account@example.test",
+      password: "test-password",
       allowedHosts: ["portal.desbio.com"],
       authenticatedSelector: "[data-account-menu]",
       selectors: {
@@ -203,6 +218,7 @@ test("an exact WooCommerce lookup authenticates on the SKU search page without a
       },
     },
     {
+      fetchImpl: async () => new Response("<body class=\"signed-out\">Sign in</body>", { status: 200 }),
       launchBrowser: async () => ({
         newContext: async () => browserContext,
         close: async () => undefined,
@@ -213,9 +229,114 @@ test("an exact WooCommerce lookup authenticates on the SKU search page without a
   const product = await adapter.lookupProduct("HA2CG", { dryRun: true });
 
   assert.equal(product?.sku, "HA2CG");
-  assert.equal(navigations.length, 1);
-  assert.equal(navigations[0], "https://portal.desbio.com/?s=HA2CG&post_type=product");
-  assert.deepEqual(navigationOptions[0], { waitUntil: "commit", timeout: 12_000 });
+  assert.equal(navigations.length, 2);
+  assert.equal(navigations[0], "https://portal.desbio.com/my-account/");
+  assert.equal(navigations[1], "https://portal.desbio.com/?s=HA2CG&post_type=product");
+  assert.deepEqual(navigationOptions[1], { waitUntil: "commit", timeout: 12_000 });
+});
+
+test("an exact protected WooCommerce lookup reads authenticated HTML without launching a browser", async () => {
+  let browserLaunches = 0;
+  const requestedUrls: string[] = [];
+  const html = `
+    <html>
+      <body class="customer logged-in woocommerce-account">
+        <h1 class="product_title entry-title">Tri-Fortify &reg; Liposomal Glutathione</h1>
+        <form class="variations_form" data-product_variations='[{"attributes":{"attribute_pa_flavor":"orange","attribute_pa_size":"8-oz"},"sku":"RN136","display_price":93.98,"is_in_stock":true,"image":{"src":"https://www.researchednutritionals.com/rn136.jpg"}}]'></form>
+      </body>
+    </html>
+  `;
+  const adapter = new WebsiteSupplierAdapter(
+    {
+      id: "research-nutritionals",
+      name: "Researched Nutritionals",
+      mode: "website",
+      brands: ["Researched Nutritionals"],
+      notes: "",
+    },
+    {
+      productsUrl: "https://www.researchednutritionals.com/shop/",
+      sessionCookieHeader: "session=fresh",
+      allowedHosts: ["www.researchednutritionals.com"],
+      authenticatedSelector: "body.logged-in",
+      selectors: {
+        username: "#username",
+        password: "#password",
+        submit: "button[name=login]",
+      },
+    },
+    {
+      fetchImpl: async (url) => {
+        requestedUrls.push(String(url));
+        return new Response(html, { status: 200, headers: { "content-type": "text/html" } });
+      },
+      launchBrowser: async () => {
+        browserLaunches += 1;
+        throw new Error("browser should not launch for a healthy reusable session");
+      },
+    },
+  );
+
+  const product = await adapter.lookupProduct("RN136", { now: new Date("2026-09-12T12:00:00.000Z") });
+
+  assert.equal(product?.sku, "RN136");
+  assert.equal(product?.title, "Tri-Fortify ® Liposomal Glutathione (orange / 8-oz)");
+  assert.equal(product?.cost, 93.98);
+  assert.equal(product?.stockStatus, "in_stock");
+  assert.equal(browserLaunches, 0);
+  assert.deepEqual(requestedUrls, [
+    "https://www.researchednutritionals.com/?s=RN136&post_type=product",
+  ]);
+});
+
+test("authenticated WooCommerce HTML parsing preserves exact variant evidence", () => {
+  const html = `<body class="logged-in"><h1 class="product_title">Product</h1><form data-product_variations="[{&quot;attributes&quot;:{&quot;attribute_pa_size&quot;:&quot;8-oz&quot;},&quot;sku&quot;:&quot;RN136&quot;,&quot;display_price&quot;:93.98,&quot;is_in_stock&quot;:true}]"></form></body>`;
+
+  assert.deepEqual(
+    wooCommerceRecordFromHtml(html, "RN136", "https://www.researchednutritionals.com/product/example/"),
+    {
+      title: "Product (8-oz)",
+      sku: "RN136",
+      cost: 93.98,
+      available: true,
+      url: "https://www.researchednutritionals.com/product/example/",
+      image: "",
+    },
+  );
+});
+
+test("a reusable supplier session is never forwarded across an unapproved redirect", async () => {
+  let requests = 0;
+  const adapter = new WebsiteSupplierAdapter(
+    desbio,
+    {
+      productsUrl: "https://portal.desbio.com/products",
+      sessionCookieHeader: "session=fresh",
+      allowedHosts: ["portal.desbio.com"],
+      authenticatedSelector: "body.logged-in",
+      selectors: {
+        username: "#email",
+        password: "#password",
+        submit: "button[type=submit]",
+      },
+    },
+    {
+      fetchImpl: async () => {
+        requests += 1;
+        return new Response(null, {
+          status: 302,
+          headers: { location: "https://unapproved.example/catalog" },
+        });
+      },
+      launchBrowser: async () => { throw new Error("browser should not launch"); },
+    },
+  );
+
+  await assert.rejects(
+    () => adapter.lookupProduct("HA2CG"),
+    /approved HTTPS catalog response address/,
+  );
+  assert.equal(requests, 1);
 });
 
 test("a blocked credential field is reported as human verification when a CAPTCHA is present", async () => {

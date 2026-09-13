@@ -27,6 +27,7 @@ export type WebsiteAdapterConfig = {
 
 export type WebsiteAdapterDependencies = {
   launchBrowser?: typeof launchSupplierBrowser;
+  fetchImpl?: typeof fetch;
 };
 
 type LoginCheckPhase =
@@ -57,6 +58,7 @@ type LoginStateReader = () => Promise<{ pageText: string; passwordFieldCount: nu
 
 const EXACT_LOOKUP_NAVIGATION_TIMEOUT_MS = 12_000;
 const EXACT_LOOKUP_ACCOUNT_MARKER_TIMEOUT_MS = 10_000;
+const EXACT_LOOKUP_HTTP_TIMEOUT_MS = 20_000;
 
 export async function waitForLoginOutcome(
   readState: LoginStateReader,
@@ -109,6 +111,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
   readonly supplier: SupplierConfig;
   readonly #config: WebsiteAdapterConfig;
   readonly #launchBrowser: typeof launchSupplierBrowser;
+  readonly #fetch: typeof fetch;
   #sessionCookieHeader?: string;
 
   constructor(
@@ -119,6 +122,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     this.supplier = supplier;
     this.#config = config;
     this.#launchBrowser = dependencies.launchBrowser ?? launchSupplierBrowser;
+    this.#fetch = dependencies.fetchImpl ?? fetch;
     this.#sessionCookieHeader = cleanSessionValue(config.sessionCookieHeader);
   }
 
@@ -283,7 +287,33 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
       return products.find((product) => cleanString(product.sku).toUpperCase() === wanted) ?? null;
     }
 
-    let phase = "browser_start";
+    let phase = "catalog_lookup";
+    if (this.#sessionCookieHeader && this.supplier.id !== "physicians-standard") {
+      try {
+        const record = await this.#lookupWordPressProductFromSession(wanted);
+        if (!record) return null;
+        return normalizeSupplierRecord({
+          supplierId: this.supplier.id,
+          supplierName: this.supplier.name,
+          record,
+          capturedAt: (context.now ?? new Date()).toISOString(),
+        });
+      } catch (error) {
+        const canRefreshSession = error instanceof SupplierAdapterError &&
+          error.kind === "verification_required" &&
+          Boolean(this.#config.loginUrl && this.#config.username && this.#config.password);
+        if (!canRefreshSession) {
+          const kind = error instanceof SupplierAdapterError ? error.kind : automationFailureKind(error);
+          console.warn(`[supplier-lookup] supplier=${this.supplier.id} phase=${phase} result=failed kind=${kind}`);
+          throw error;
+        }
+        // The authenticated HTTP response already proved this cookie is stale.
+        // Do not spend another browser navigation retrying the same session.
+        this.#sessionCookieHeader = undefined;
+      }
+    }
+
+    phase = "browser_start";
     let browser: Awaited<ReturnType<typeof launchSupplierBrowser>> | undefined;
     try {
       browser = await this.#launchBrowser();
@@ -535,6 +565,55 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     return null;
   }
 
+  async #lookupWordPressProductFromSession(wanted: string): Promise<Record<string, unknown> | null> {
+    const signal = AbortSignal.timeout(EXACT_LOOKUP_HTTP_TIMEOUT_MS);
+    const allowedHosts = this.#allowedHosts();
+    let responseUrl = this.#wordPressSearchUrl(wanted);
+    let response: Response | undefined;
+    for (let redirectCount = 0; redirectCount <= 5; redirectCount += 1) {
+      assertSafeSupplierUrl(responseUrl, allowedHosts, this.supplier.id, "catalog response");
+      response = await this.#fetch(responseUrl, {
+        redirect: "manual",
+        headers: {
+          accept: "text/html,application/xhtml+xml",
+          cookie: this.#sessionCookieHeader!,
+          "user-agent": "Mozilla/5.0 Supplier Ops Agent",
+        },
+        signal,
+      });
+      if (response.status < 300 || response.status >= 400) break;
+      const location = response.headers.get("location");
+      if (!location || redirectCount === 5) {
+        throw new SupplierAdapterError(
+          this.supplier.id,
+          "parse_failed",
+          this.supplier.name + " catalog returned an invalid redirect",
+        );
+      }
+      responseUrl = new URL(location, responseUrl).toString();
+    }
+    if (!response) {
+      throw new SupplierAdapterError(this.supplier.id, "parse_failed", this.supplier.name + " catalog returned no response");
+    }
+    assertSafeSupplierUrl(response.url || responseUrl, allowedHosts, this.supplier.id, "catalog response");
+    if (!response.ok) {
+      throw new SupplierAdapterError(
+        this.supplier.id,
+        "parse_failed",
+        `${this.supplier.name} catalog returned HTTP ${response.status}`,
+      );
+    }
+    const html = await response.text();
+    if (!htmlBodyHasClass(html, "logged-in")) {
+      throw new SupplierAdapterError(
+        this.supplier.id,
+        "verification_required",
+        `${this.supplier.name} session expired and needs one browser reconnection`,
+      );
+    }
+    return wooCommerceRecordFromHtml(html, wanted, response.url || responseUrl);
+  }
+
   async #lookupProtectedShopifyProduct(
     browserContext: import("playwright").BrowserContext,
     page: import("playwright").Page,
@@ -741,6 +820,73 @@ export function wooCommerceVariationRecord(
     url: productUrl,
     image,
   };
+}
+
+export function wooCommerceRecordFromHtml(
+  html: string,
+  wantedSku: string,
+  productUrl: string,
+): Record<string, unknown> | null {
+  const title = textFromHtmlElementWithClass(html, "product_title");
+  const encodedVariations = firstHtmlAttribute(html, "data-product_variations");
+  if (encodedVariations) {
+    const variation = wooCommerceVariationRecord(
+      decodeHtmlAttribute(encodedVariations),
+      wantedSku,
+      title,
+      productUrl,
+    );
+    if (variation) return variation;
+  }
+
+  const sku = textFromHtmlElementWithClass(html, "sku");
+  if (!sku) return null;
+  return wooCommerceSimpleRecord(
+    {
+      sku,
+      title,
+      priceText: textFromHtmlElementWithClass(html, "price"),
+      stockText: textFromHtmlElementWithClass(html, "stock"),
+      image: firstHtmlAttribute(html, "data-large_image") || undefined,
+    },
+    wantedSku,
+    productUrl,
+  );
+}
+
+function htmlBodyHasClass(html: string, className: string): boolean {
+  const bodyTag = html.match(/<body\b[^>]*>/i)?.[0] ?? "";
+  const classes = firstHtmlAttribute(bodyTag, "class").split(/\s+/);
+  return classes.includes(className);
+}
+
+function firstHtmlAttribute(html: string, attribute: string): string {
+  const escaped = attribute.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = html.match(new RegExp(`${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i"));
+  return match?.[1] ?? match?.[2] ?? "";
+}
+
+function textFromHtmlElementWithClass(html: string, className: string): string {
+  const escaped = className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = html.match(
+    new RegExp(`<([a-z0-9]+)\\b[^>]*class\\s*=\\s*(?:"[^"]*\\b${escaped}\\b[^"]*"|'[^']*\\b${escaped}\\b[^']*')[^>]*>([\\s\\S]*?)<\\/\\1>`, "i"),
+  );
+  return cleanString(decodeHtmlAttribute((match?.[2] ?? "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " "));
+}
+
+function decodeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&#x([0-9a-f]+);/gi, (_match, hex: string) => String.fromCodePoint(Number.parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_match, decimal: string) => String.fromCodePoint(Number.parseInt(decimal, 10)))
+    .replace(/&quot;|&#34;/gi, '"')
+    .replace(/&#039;|&#39;|&apos;/gi, "'")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&reg;/gi, "®")
+    .replace(/&trade;/gi, "™")
+    .replace(/&copy;/gi, "©")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
 }
 
 export function prioritizeWooProductLinks(
