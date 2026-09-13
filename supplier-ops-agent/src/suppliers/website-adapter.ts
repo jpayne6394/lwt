@@ -259,6 +259,37 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     }
   }
 
+  async lookupProduct(supplierSku: string, context: SupplierAdapterContext = {}) {
+    const wanted = cleanString(supplierSku).toUpperCase();
+    if (!/^[A-Z0-9][A-Z0-9._:/+ -]{0,119}$/.test(wanted)) {
+      throw new SupplierAdapterError(this.supplier.id, "parse_failed", `${this.supplier.name} supplier SKU is invalid`);
+    }
+
+    if (!["desbio", "research-nutritionals", "physicians-standard"].includes(this.supplier.id)) {
+      const products = await this.fetchProducts(context);
+      return products.find((product) => cleanString(product.sku).toUpperCase() === wanted) ?? null;
+    }
+
+    const browser = await this.#launchBrowser();
+    try {
+      const browserContext = await browser.newContext();
+      const page = await browserContext.newPage();
+      await this.#openAuthenticatedProducts(browserContext, page);
+      const record = this.supplier.id === "physicians-standard"
+        ? await this.#lookupProtectedShopifyProduct(browserContext, page, wanted)
+        : await this.#lookupWordPressProduct(page, wanted);
+      if (!record) return null;
+      return normalizeSupplierRecord({
+        supplierId: this.supplier.id,
+        supplierName: this.supplier.name,
+        record,
+        capturedAt: (context.now ?? new Date()).toISOString(),
+      });
+    } finally {
+      await browser.close();
+    }
+  }
+
   #check(
     status: "connected" | "verification_required" | "two_factor_required" | "login_failed" | "not_configured",
     message: string,
@@ -393,6 +424,57 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     if (cookieHeader) this.#sessionCookieHeader = cookieHeader;
   }
 
+  async #lookupWordPressProduct(page: import("playwright").Page, wanted: string) {
+    const productsUrl = this.#safeUrl(this.#config.productsUrl, "catalog");
+    const searchUrl = new URL("/", productsUrl);
+    searchUrl.searchParams.set("s", wanted);
+    searchUrl.searchParams.set("post_type", "product");
+    await page.goto(this.#safeUrl(searchUrl.toString(), "catalog search"), { waitUntil: "domcontentloaded" });
+    assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "catalog search response");
+
+    const direct = await readWooCommerceProductPage(page, wanted);
+    if (direct) return direct;
+
+    const productUrls = await page.$$eval('li.product a[href*="/product/"]', (links) =>
+      [...new Set(links.map((link) => (link as HTMLAnchorElement).href).filter(Boolean))].slice(0, 8),
+    );
+    for (const productUrl of productUrls) {
+      await page.goto(this.#safeUrl(productUrl, "product detail"), { waitUntil: "domcontentloaded" });
+      assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "product detail response");
+      const record = await readWooCommerceProductPage(page, wanted);
+      if (record) return record;
+    }
+    return null;
+  }
+
+  async #lookupProtectedShopifyProduct(
+    browserContext: import("playwright").BrowserContext,
+    page: import("playwright").Page,
+    wanted: string,
+  ) {
+    const productsUrl = this.#safeUrl(this.#config.productsUrl, "catalog");
+    const origin = new URL(productsUrl).origin;
+    const productsJsonUrl = `${origin}/products.json?limit=250`;
+    assertSafeSupplierUrl(productsJsonUrl, this.#allowedHosts(), this.supplier.id, "catalog data");
+    const response = await browserContext.request.get(productsJsonUrl, {
+      headers: { accept: "application/json" },
+    });
+    if (response.ok()) {
+      return protectedShopifyRecord(await response.json(), wanted, origin);
+    }
+
+    const pageText = await page.locator("body").innerText().catch(() => "");
+    const outcome = classifyLoginOutcome(pageText, await visibleLocatorCount(page, this.#config.selectors!.password));
+    if (outcome === "verification_required" || outcome === "two_factor_required") {
+      throw new SupplierAdapterError(
+        this.supplier.id,
+        "verification_required",
+        `${this.supplier.name} requires one browser verification before automated reads can continue`,
+      );
+    }
+    throw new SupplierAdapterError(this.supplier.id, "parse_failed", `${this.supplier.name} catalog data was not readable`);
+  }
+
   #safeUrl(value: string | undefined, purpose: string): string {
     if (!value) {
       throw new SupplierAdapterError(this.supplier.id, "not_configured", `${this.supplier.name} ${purpose} URL is missing`);
@@ -487,6 +569,126 @@ export function isCookieDomainAllowed(cookieDomain: string, allowedHosts: string
 function cleanSessionValue(value: string | undefined): string | undefined {
   const cleaned = value?.trim();
   return cleaned || undefined;
+}
+
+async function readWooCommerceProductPage(page: import("playwright").Page, wanted: string) {
+  const variations = await page.locator("form.variations_form").first()
+    .getAttribute("data-product_variations")
+    .catch(() => null);
+  const title = cleanString(await page.locator("h1.product_title").first().innerText().catch(() => ""));
+  if (variations) {
+    const variation = wooCommerceVariationRecord(variations, wanted, title, page.url());
+    if (variation) return variation;
+  }
+
+  const sku = cleanString(await page.locator(".sku").first().innerText().catch(() => ""));
+  const priceText = await page.locator(".summary .price").first().innerText().catch(() => "");
+  const stockText = await page.locator(".stock").first().innerText().catch(() => "");
+  const image = await page.locator(".woocommerce-product-gallery img").first().getAttribute("src").catch(() => null);
+  return wooCommerceSimpleRecord({ sku, title, priceText, stockText, image }, wanted, page.url());
+}
+
+export function wooCommerceSimpleRecord(
+  input: { sku: unknown; title: unknown; priceText: unknown; stockText: unknown; image?: unknown },
+  wantedSku: string,
+  productUrl: string,
+): Record<string, unknown> | null {
+  const sku = cleanString(input.sku);
+  if (sku.toUpperCase() !== wantedSku.toUpperCase()) return null;
+  return {
+    title: cleanString(input.title),
+    sku,
+    cost: lastMoney(cleanString(input.priceText)),
+    available: /in stock|available/i.test(cleanString(input.stockText)),
+    url: productUrl,
+    image: cleanString(input.image) || undefined,
+  };
+}
+
+export function wooCommerceVariationRecord(
+  encodedVariations: string,
+  wantedSku: string,
+  productTitle: string,
+  productUrl: string,
+): Record<string, unknown> | null {
+  let variations: unknown;
+  try {
+    variations = JSON.parse(encodedVariations);
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(variations)) return null;
+  const variant = variations.find((candidate) =>
+    isRecord(candidate) && cleanString(candidate.sku).toUpperCase() === wantedSku.toUpperCase(),
+  );
+  if (!isRecord(variant)) return null;
+  const attributes = isRecord(variant.attributes)
+    ? Object.values(variant.attributes).map(cleanString).filter(Boolean).join(" / ")
+    : "";
+  const image = isRecord(variant.image) ? cleanString(variant.image.src) : "";
+  return {
+    title: attributes ? `${productTitle} (${attributes})` : productTitle,
+    sku: cleanString(variant.sku),
+    cost: parseFiniteNumber(variant.display_price),
+    available: Boolean(variant.is_in_stock),
+    url: productUrl,
+    image,
+  };
+}
+
+export function protectedShopifyRecord(
+  body: unknown,
+  wantedSku: string,
+  origin: string,
+): Record<string, unknown> | null {
+  const products = isRecord(body) && Array.isArray(body.products) ? body.products : [];
+  for (const product of products) {
+    if (!isRecord(product) || !Array.isArray(product.variants)) continue;
+    const variant = product.variants.find((candidate) =>
+      isRecord(candidate) && cleanString(candidate.sku).toUpperCase() === wantedSku.toUpperCase(),
+    );
+    if (!isRecord(variant)) continue;
+    const title = cleanString(product.title);
+    const variantTitle = cleanString(variant.title);
+    // Shopify's products JSON represents money as decimal currency strings
+    // (for example, "34.50"), not integer cents.
+    const price = parseFiniteNumber(variant.price);
+    const compareAt = parseFiniteNumber(variant.compare_at_price);
+    const onSale = price !== undefined && compareAt !== undefined && compareAt > price;
+    const handle = cleanString(product.handle);
+    return {
+      title: variantTitle && variantTitle !== "Default Title" ? `${title} (${variantTitle})` : title,
+      brand: cleanString(product.vendor),
+      sku: cleanString(variant.sku),
+      available: Boolean(variant.available),
+      msrp: onSale ? compareAt : price,
+      sale_price: onSale ? price : undefined,
+      url: handle ? `${origin}/products/${encodeURIComponent(handle)}` : undefined,
+      image: isRecord(product.image) ? cleanString(product.image.src) : undefined,
+    };
+  }
+  return null;
+}
+
+function lastMoney(value: string): number | undefined {
+  const prices = [...value.matchAll(/\$\s*([0-9]+(?:\.[0-9]{1,2})?)/g)]
+    .map((match) => Number(match[1]))
+    .filter(Number.isFinite);
+  return prices.at(-1);
+}
+
+function parseFiniteNumber(value: unknown): number | undefined {
+  if (value === null || value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function cleanString(value: unknown): string {
+  return String(value ?? "").trim();
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 async function visibleLocatorCount(page: import("playwright").Page, selector: string): Promise<number> {

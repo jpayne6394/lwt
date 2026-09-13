@@ -10,9 +10,12 @@ import {
   isCookieDomainAllowed,
   loginCheckFailureMessage,
   parseSessionCookieHeader,
+  protectedShopifyRecord,
   sessionCookiesForHosts,
   WebsiteSupplierAdapter,
   waitForLoginOutcome,
+  wooCommerceSimpleRecord,
+  wooCommerceVariationRecord,
 } from "../src/suppliers/website-adapter.ts";
 import type { SupplierConfig } from "../src/suppliers/types.ts";
 
@@ -146,6 +149,96 @@ test("captured cookies may belong to an approved host or its parent domain only"
   assert.equal(isCookieDomainAllowed(".desbio.com", ["portal.desbio.com"]), true);
   assert.equal(isCookieDomainAllowed("portal.desbio.com", ["portal.desbio.com"]), true);
   assert.equal(isCookieDomainAllowed("example.com", ["portal.desbio.com"]), false);
+});
+
+test("WooCommerce exact variation reads keep wholesale price and stock evidence", () => {
+  const record = wooCommerceVariationRecord(
+    JSON.stringify([
+      {
+        sku: "RN136",
+        display_price: 93.98,
+        is_in_stock: true,
+        attributes: { attribute_pa_flavor: "Orange 8 oz" },
+        image: { src: "https://www.researchednutritionals.com/rn136.jpg" },
+      },
+      { sku: "RN178", display_price: 74.98, is_in_stock: false },
+    ]),
+    "rn136",
+    "Tri-Fortify Liposomal Glutathione",
+    "https://www.researchednutritionals.com/product/tri-fortify-liposomal-glutathione/",
+  );
+
+  assert.deepEqual(record, {
+    title: "Tri-Fortify Liposomal Glutathione (Orange 8 oz)",
+    sku: "RN136",
+    cost: 93.98,
+    available: true,
+    url: "https://www.researchednutritionals.com/product/tri-fortify-liposomal-glutathione/",
+    image: "https://www.researchednutritionals.com/rn136.jpg",
+  });
+  assert.equal(wooCommerceVariationRecord("not-json", "RN136", "Product", "https://example.test"), null);
+});
+
+test("WooCommerce exact simple-product reads use the final displayed price", () => {
+  assert.deepEqual(
+    wooCommerceSimpleRecord(
+      {
+        sku: "hA2cg",
+        title: "hA2cg Evolution",
+        priceText: "$39.50 $34.50",
+        stockText: "In Stock",
+        image: "https://desbio.com/ha2cg.jpg",
+      },
+      "HA2CG",
+      "https://desbio.com/product/ha2cg-evolution-2/",
+    ),
+    {
+      title: "hA2cg Evolution",
+      sku: "hA2cg",
+      cost: 34.5,
+      available: true,
+      url: "https://desbio.com/product/ha2cg-evolution-2/",
+      image: "https://desbio.com/ha2cg.jpg",
+    },
+  );
+  assert.equal(
+    wooCommerceSimpleRecord({ sku: "other", title: "Wrong", priceText: "$1", stockText: "In Stock" }, "HA2CG", "https://desbio.com/product/wrong/"),
+    null,
+  );
+});
+
+test("protected Shopify exact reads preserve decimal prices as MSRP and sale price", () => {
+  const record = protectedShopifyRecord(
+    {
+      products: [{
+        title: "Professional Formula",
+        vendor: "Physicians' Standard",
+        handle: "professional-formula",
+        image: { src: "https://www.physiciansstandard.com/formula.jpg" },
+        variants: [{
+          title: "Default Title",
+          sku: "PS-100",
+          available: true,
+          price: "42.50",
+          compare_at_price: "49.99",
+        }],
+      }],
+    },
+    "ps-100",
+    "https://www.physiciansstandard.com",
+  );
+
+  assert.deepEqual(record, {
+    title: "Professional Formula",
+    brand: "Physicians' Standard",
+    sku: "PS-100",
+    available: true,
+    msrp: 49.99,
+    sale_price: 42.5,
+    url: "https://www.physiciansstandard.com/products/professional-formula",
+    image: "https://www.physiciansstandard.com/formula.jpg",
+  });
+  assert.equal(protectedShopifyRecord({ products: [] }, "PS-100", "https://www.physiciansstandard.com"), null);
 });
 
 test("an expired session refreshes once with saved credentials and the replacement is reused", async () => {
