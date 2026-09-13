@@ -55,6 +55,9 @@ export function classifyLoginOutcome(pageText: string, passwordFieldCount: numbe
 
 type LoginStateReader = () => Promise<{ pageText: string; passwordFieldCount: number }>;
 
+const EXACT_LOOKUP_NAVIGATION_TIMEOUT_MS = 12_000;
+const EXACT_LOOKUP_ACCOUNT_MARKER_TIMEOUT_MS = 10_000;
+
 export async function waitForLoginOutcome(
   readState: LoginStateReader,
   options: {
@@ -401,9 +404,17 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     }
 
     await this.#signInWithCredentials(page);
-    await page.goto(this.#safeUrl(initialCatalogUrl ?? config.productsUrl, "catalog"), { waitUntil: "domcontentloaded" });
+    const isExactLookup = Boolean(initialCatalogUrl);
+    await page.goto(this.#safeUrl(initialCatalogUrl ?? config.productsUrl, "catalog"), {
+      waitUntil: isExactLookup ? "commit" : "domcontentloaded",
+      ...(isExactLookup ? { timeout: EXACT_LOOKUP_NAVIGATION_TIMEOUT_MS } : {}),
+    });
     assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "catalog response");
-    const accountMarkerVisible = await waitForVisible(page, config.authenticatedSelector);
+    const accountMarkerVisible = await waitForVisible(
+      page,
+      config.authenticatedSelector,
+      isExactLookup ? EXACT_LOOKUP_ACCOUNT_MARKER_TIMEOUT_MS : undefined,
+    );
     if (!accountMarkerVisible) {
       throw new SupplierAdapterError(
         this.supplier.id,
@@ -438,12 +449,20 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     try {
       await browserContext.addCookies(cookies);
       phase = "catalog_navigation";
-      await page.goto(catalogUrl, { waitUntil: "domcontentloaded" });
+      const isExactLookup = Boolean(initialCatalogUrl);
+      await page.goto(catalogUrl, {
+        waitUntil: isExactLookup ? "commit" : "domcontentloaded",
+        ...(isExactLookup ? { timeout: EXACT_LOOKUP_NAVIGATION_TIMEOUT_MS } : {}),
+      });
       phase = "catalog_response";
       assertSafeSupplierUrl(page.url(), allowedHosts, this.supplier.id, "catalog response");
 
       phase = "account_marker";
-      const accountMarkerVisible = await waitForVisible(page, config.authenticatedSelector);
+      const accountMarkerVisible = await waitForVisible(
+        page,
+        config.authenticatedSelector,
+        isExactLookup ? EXACT_LOOKUP_ACCOUNT_MARKER_TIMEOUT_MS : undefined,
+      );
       if (accountMarkerVisible) return;
 
       phase = "page_classification";

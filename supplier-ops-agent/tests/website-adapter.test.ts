@@ -156,6 +156,7 @@ test("reusable session diagnostics isolate a slow catalog navigation without exp
 
 test("an exact WooCommerce lookup authenticates on the SKU search page without a redundant catalog load", async () => {
   const navigations: string[] = [];
+  const navigationOptions: unknown[] = [];
   let currentUrl = "about:blank";
   const textBySelector: Record<string, string> = {
     "h1.product_title": "hA2cg Evolution",
@@ -175,7 +176,11 @@ test("an exact WooCommerce lookup authenticates on the SKU search page without a
     }),
   });
   const page = {
-    goto: async (url: string) => { currentUrl = url; navigations.push(url); },
+    goto: async (url: string, options: unknown) => {
+      currentUrl = url;
+      navigations.push(url);
+      navigationOptions.push(options);
+    },
     url: () => currentUrl,
     locator,
     $$eval: async () => [],
@@ -210,6 +215,7 @@ test("an exact WooCommerce lookup authenticates on the SKU search page without a
   assert.equal(product?.sku, "HA2CG");
   assert.equal(navigations.length, 1);
   assert.equal(navigations[0], "https://portal.desbio.com/?s=HA2CG&post_type=product");
+  assert.deepEqual(navigationOptions[0], { waitUntil: "commit", timeout: 12_000 });
 });
 
 test("a blocked credential field is reported as human verification when a CAPTCHA is present", async () => {
