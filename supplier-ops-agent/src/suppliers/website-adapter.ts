@@ -319,30 +319,42 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
 
   async #signInWithCredentials(page: import("playwright").Page) {
     const config = this.#config;
-    await page.goto(this.#safeUrl(config.loginUrl, "sign-in"), { waitUntil: "domcontentloaded" });
-    assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "sign-in response");
-    await page.fill(config.selectors!.username, config.username!);
-    await page.fill(config.selectors!.password, config.password!);
-    // Do not let Playwright's implicit navigation wait consume the entire
-    // request window. The outcome poll below safely owns the bounded wait.
-    await page.click(config.selectors!.submit, { noWaitAfter: true });
+    let phase: LoginCheckPhase = "login_page";
+    try {
+      await page.goto(this.#safeUrl(config.loginUrl, "sign-in"), { waitUntil: "domcontentloaded" });
+      assertSafeSupplierUrl(page.url(), this.#allowedHosts(), this.supplier.id, "sign-in response");
+      phase = "username_field";
+      await page.fill(config.selectors!.username, config.username!);
+      phase = "password_field";
+      await page.fill(config.selectors!.password, config.password!);
+      phase = "submit";
+      // Do not let Playwright's implicit navigation wait consume the entire
+      // request window. The outcome poll below safely owns the bounded wait.
+      await page.click(config.selectors!.submit, { noWaitAfter: true });
 
-    const outcome = await waitForLoginOutcome(async () => ({
-      pageText: await page.locator("body").innerText().catch(() => ""),
-      passwordFieldCount: await visibleLocatorCount(page, config.selectors!.password),
-    }));
-    if (outcome === "two_factor_required") {
-      throw new SupplierAdapterError(this.supplier.id, "two_factor_required", `${this.supplier.name} requires 2FA`);
-    }
-    if (outcome === "verification_required") {
-      throw new SupplierAdapterError(
-        this.supplier.id,
-        "verification_required",
-        `${this.supplier.name} requires one browser verification before automated reads can continue`,
-      );
-    }
-    if (outcome !== "connected") {
-      throw new SupplierAdapterError(this.supplier.id, "login_failed", `${this.supplier.name} rejected the saved account`);
+      phase = "response_check";
+      const outcome = await waitForLoginOutcome(async () => ({
+        pageText: await page.locator("body").innerText().catch(() => ""),
+        passwordFieldCount: await visibleLocatorCount(page, config.selectors!.password),
+      }));
+      if (outcome === "two_factor_required") {
+        throw new SupplierAdapterError(this.supplier.id, "two_factor_required", `${this.supplier.name} requires 2FA`);
+      }
+      if (outcome === "verification_required") {
+        throw new SupplierAdapterError(
+          this.supplier.id,
+          "verification_required",
+          `${this.supplier.name} requires one browser verification before automated reads can continue`,
+        );
+      }
+      if (outcome !== "connected") {
+        throw new SupplierAdapterError(this.supplier.id, "login_failed", `${this.supplier.name} rejected the saved account`);
+      }
+    } catch (error) {
+      if (!(error instanceof SupplierAdapterError)) {
+        console.warn(`[supplier-login] supplier=${this.supplier.id} phase=${phase} result=failed kind=${automationFailureKind(error)}`);
+      }
+      throw error;
     }
   }
 
@@ -511,6 +523,12 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
   #allowedHosts(): string[] {
     return allowedSupplierHosts(this.#config);
   }
+}
+
+function automationFailureKind(error: unknown): "timeout" | "browser_closed" | "unexpected" {
+  if (error instanceof Error && /timeout/i.test(error.name)) return "timeout";
+  if (error instanceof Error && /closed|destroyed|detached/i.test(error.message)) return "browser_closed";
+  return "unexpected";
 }
 
 export function allowedSupplierHosts(config: Pick<WebsiteAdapterConfig, "allowedHosts" | "loginUrl" | "productsUrl">): string[] {

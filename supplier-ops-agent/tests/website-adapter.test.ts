@@ -79,6 +79,44 @@ test("protected lookup reports browser startup failures inside its diagnostic bo
   ]);
 });
 
+test("credential login diagnostics identify the exact safe sub-phase", async () => {
+  const timeout = new Error("operation timed out");
+  timeout.name = "TimeoutError";
+  const harness = createSupplierBrowserHarness({ clickError: timeout });
+  const warnings: string[] = [];
+  const originalWarn = console.warn;
+  console.warn = (message?: unknown) => { warnings.push(String(message)); };
+
+  try {
+    const adapter = new WebsiteSupplierAdapter(
+      desbio,
+      {
+        loginUrl: "https://portal.desbio.com/login",
+        productsUrl: "https://portal.desbio.com/products",
+        username: "orders@example.test",
+        password: "private-value",
+        allowedHosts: ["portal.desbio.com"],
+        authenticatedSelector: "[data-account-menu]",
+        selectors: {
+          username: "#email",
+          password: "#password",
+          submit: "button[type=submit]",
+        },
+      },
+      { launchBrowser: harness.launchBrowser },
+    );
+
+    await assert.rejects(() => adapter.lookupProduct("HA2CG"), /operation timed out/);
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  assert.deepEqual(warnings, [
+    "[supplier-login] supplier=desbio phase=submit result=failed kind=timeout",
+    "[supplier-lookup] supplier=desbio phase=authentication result=failed kind=unexpected",
+  ]);
+});
+
 test("connection checks expose only a safe failing phase", () => {
   assert.equal(
     loginCheckFailureMessage("Emerson Ecologics", "browser_start"),
@@ -383,7 +421,7 @@ test("a supplier verification code is reported distinctly after automatic creden
 });
 
 function createSupplierBrowserHarness(
-  options: { outcomeAfterSubmit?: "connected" | "two_factor_required" } = {},
+  options: { outcomeAfterSubmit?: "connected" | "two_factor_required"; clickError?: Error } = {},
 ) {
   let credentialSubmissions = 0;
   let submitted = false;
@@ -414,6 +452,7 @@ function createSupplierBrowserHarness(
           click: async (_selector: string, clickOptions: unknown) => {
             credentialSubmissions += 1;
             credentialSubmitOptions.push(clickOptions);
+            if (options.clickError) throw options.clickError;
             submitted = true;
             authenticated = options.outcomeAfterSubmit !== "two_factor_required";
           },
