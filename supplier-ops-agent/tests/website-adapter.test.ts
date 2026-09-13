@@ -21,6 +21,7 @@ import {
   waitForLoginOutcome,
   wooCommerceSimpleRecord,
   wooCommerceRecordFromHtml,
+  wooCommerceProductLinksFromHtml,
   wooCommerceVariationRecord,
 } from "../src/suppliers/website-adapter.ts";
 import type { SupplierConfig } from "../src/suppliers/types.ts";
@@ -325,6 +326,63 @@ test("an exact protected WooCommerce lookup reads authenticated HTML without lau
   ]);
 });
 
+test("an authenticated WooCommerce search follows the exact product link without launching a browser", async () => {
+  let browserLaunches = 0;
+  const requestedUrls: string[] = [];
+  const searchHtml = `
+    <html><body class="logged-in search-results">
+      <li class="product"><a href="https://unapproved.example/product/HA2CG/">Wrong host</a></li>
+      <li class="product"><a href="/product/unrelated/">Unrelated</a></li>
+      <li class="product"><a href="/product/ha2cg-evolution-2/">hA2cg Evolution</a></li>
+    </body></html>
+  `;
+  const detailHtml = `
+    <html><body class="logged-in single-product">
+      <h1 class="product_title entry-title">hA2cg Evolution</h1>
+      <span class="sku">HA2CG</span>
+      <p class="price"><span class="woocommerce-Price-amount amount"><bdi><span class="woocommerce-Price-currencySymbol">$</span>34.50</bdi></span></p>
+      <p class="stock in-stock">In stock</p>
+    </body></html>
+  `;
+  const adapter = new WebsiteSupplierAdapter(
+    desbio,
+    {
+      productsUrl: "https://desbio.com/shop/",
+      sessionCookieHeader: "session=fresh",
+      allowedHosts: ["desbio.com"],
+      authenticatedSelector: "body.logged-in",
+      selectors: {
+        username: "#username",
+        password: "#password",
+        submit: "button[name=login]",
+      },
+    },
+    {
+      fetchImpl: async (url) => {
+        requestedUrls.push(String(url));
+        const html = String(url).includes("ha2cg-evolution-2") ? detailHtml : searchHtml;
+        return new Response(html, { status: 200, headers: { "content-type": "text/html" } });
+      },
+      launchBrowser: async () => {
+        browserLaunches += 1;
+        throw new Error("browser should not launch for a healthy reusable session");
+      },
+    },
+  );
+
+  const product = await adapter.lookupProduct("HA2CG", { now: new Date("2026-09-13T12:00:00.000Z") });
+
+  assert.equal(product?.sku, "HA2CG");
+  assert.equal(product?.title, "hA2cg Evolution");
+  assert.equal(product?.cost, 34.5);
+  assert.equal(product?.stockStatus, "in_stock");
+  assert.equal(browserLaunches, 0);
+  assert.deepEqual(requestedUrls, [
+    "https://desbio.com/?s=HA2CG&post_type=product",
+    "https://desbio.com/product/ha2cg-evolution-2/",
+  ]);
+});
+
 test("authenticated WooCommerce HTML parsing preserves exact variant evidence", () => {
   const html = `<body class="logged-in"><h1 class="product_title">Product</h1><form data-product_variations="[{&quot;attributes&quot;:{&quot;attribute_pa_size&quot;:&quot;8-oz&quot;},&quot;sku&quot;:&quot;RN136&quot;,&quot;display_price&quot;:93.98,&quot;is_in_stock&quot;:true}]"></form></body>`;
 
@@ -624,6 +682,16 @@ test("WooCommerce searches prioritize links containing the exact SKU hint", () =
       "https://desbio.com/product/ha2cg-evolution-2/",
       "https://desbio.com/product/unrelated/",
     ],
+  );
+});
+
+test("WooCommerce search HTML extracts absolute product links without inline markup", () => {
+  assert.deepEqual(
+    wooCommerceProductLinksFromHtml(
+      '<li><a href="/product/ha2cg-evolution-2/"><span>hA2cg</span> Evolution</a></li>',
+      "https://desbio.com/?s=HA2CG&post_type=product",
+    ),
+    [{ url: "https://desbio.com/product/ha2cg-evolution-2/", text: "hA2cg Evolution" }],
   );
 });
 

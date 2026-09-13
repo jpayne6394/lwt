@@ -566,9 +566,32 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
   }
 
   async #lookupWordPressProductFromSession(wanted: string): Promise<Record<string, unknown> | null> {
-    const signal = AbortSignal.timeout(EXACT_LOOKUP_HTTP_TIMEOUT_MS);
+    const searchPage = await this.#fetchAuthenticatedWordPressHtml(this.#wordPressSearchUrl(wanted));
+    const direct = wooCommerceRecordFromHtml(searchPage.html, wanted, searchPage.responseUrl);
+    if (direct) return direct;
+
+    const productLinks = wooCommerceProductLinksFromHtml(searchPage.html, searchPage.responseUrl);
+    for (const productUrl of prioritizeWooProductLinks(productLinks, wanted).slice(0, 8)) {
+      let safeProductUrl: string;
+      try {
+        safeProductUrl = this.#safeUrl(productUrl, "product detail");
+      } catch {
+        continue;
+      }
+      const detailPage = await this.#fetchAuthenticatedWordPressHtml(
+        safeProductUrl,
+      );
+      const record = wooCommerceRecordFromHtml(detailPage.html, wanted, detailPage.responseUrl);
+      if (record) return record;
+    }
+    return null;
+  }
+
+  async #fetchAuthenticatedWordPressHtml(
+    initialUrl: string,
+  ): Promise<{ html: string; responseUrl: string }> {
     const allowedHosts = this.#allowedHosts();
-    let responseUrl = this.#wordPressSearchUrl(wanted);
+    let responseUrl = initialUrl;
     let response: Response | undefined;
     for (let redirectCount = 0; redirectCount <= 5; redirectCount += 1) {
       assertSafeSupplierUrl(responseUrl, allowedHosts, this.supplier.id, "catalog response");
@@ -579,7 +602,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
           cookie: this.#sessionCookieHeader!,
           "user-agent": "Mozilla/5.0 Supplier Ops Agent",
         },
-        signal,
+        signal: AbortSignal.timeout(EXACT_LOOKUP_HTTP_TIMEOUT_MS),
       });
       if (response.status < 300 || response.status >= 400) break;
       const location = response.headers.get("location");
@@ -611,7 +634,7 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
         `${this.supplier.name} session expired and needs one browser reconnection`,
       );
     }
-    return wooCommerceRecordFromHtml(html, wanted, response.url || responseUrl);
+    return { html, responseUrl: response.url || responseUrl };
   }
 
   async #lookupProtectedShopifyProduct(
@@ -854,6 +877,32 @@ export function wooCommerceRecordFromHtml(
   );
 }
 
+export function wooCommerceProductLinksFromHtml(
+  html: string,
+  baseUrl: string,
+): Array<{ url: string; text: string }> {
+  const links: Array<{ url: string; text: string }> = [];
+  const anchorPattern = /<a\b([^>]*)>([\s\S]*?)<\/a>/gi;
+  for (const match of html.matchAll(anchorPattern)) {
+    const href = decodeHtmlAttribute(firstHtmlAttribute(match[1] ?? "", "href"));
+    if (!href) continue;
+    let url: URL;
+    try {
+      url = new URL(href, baseUrl);
+    } catch {
+      continue;
+    }
+    if (!/\/product\//i.test(url.pathname)) continue;
+    links.push({
+      url: url.toString(),
+      text: cleanString(
+        decodeHtmlAttribute((match[2] ?? "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " "),
+      ),
+    });
+  }
+  return links;
+}
+
 function htmlBodyHasClass(html: string, className: string): boolean {
   const bodyTag = html.match(/<body\b[^>]*>/i)?.[0] ?? "";
   const classes = firstHtmlAttribute(bodyTag, "class").split(/\s+/);
@@ -867,11 +916,19 @@ function firstHtmlAttribute(html: string, attribute: string): string {
 }
 
 function textFromHtmlElementWithClass(html: string, className: string): string {
-  const escaped = className.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = html.match(
-    new RegExp(`<([a-z0-9]+)\\b[^>]*class\\s*=\\s*(?:"[^"]*\\b${escaped}\\b[^"]*"|'[^']*\\b${escaped}\\b[^']*')[^>]*>([\\s\\S]*?)<\\/\\1>`, "i"),
-  );
-  return cleanString(decodeHtmlAttribute((match?.[2] ?? "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " "));
+  const openingTagPattern = /<([a-z0-9]+)\b[^>]*>/gi;
+  for (const match of html.matchAll(openingTagPattern)) {
+    const classes = firstHtmlAttribute(match[0], "class").split(/\s+/).filter(Boolean);
+    if (!classes.includes(className)) continue;
+    const tagName = match[1];
+    const contentStart = (match.index ?? 0) + match[0].length;
+    const closingTag = new RegExp(`<\\/${tagName}\\s*>`, "i");
+    const closingMatch = closingTag.exec(html.slice(contentStart));
+    if (!closingMatch) continue;
+    const content = html.slice(contentStart, contentStart + closingMatch.index);
+    return cleanString(decodeHtmlAttribute(content.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " "));
+  }
+  return "";
 }
 
 function decodeHtmlAttribute(value: string): string {
