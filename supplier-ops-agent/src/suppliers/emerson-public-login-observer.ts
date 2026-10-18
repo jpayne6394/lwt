@@ -48,11 +48,13 @@ function publicImage(base64: unknown): PublicImage | undefined {
 }
 
 export function emersonPublicLoginRequestAllowed(value: string, method: string, mainNavigation: boolean): boolean {
-  let url: URL;
-  try { url = new URL(value); } catch { return false; }
-  if (url.protocol !== "https:" || !["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())
-    || /\/(?:account|cart|checkout|orders?|payments?|pay|logout)(?:\/|$)/i.test(url.pathname)) return false;
-  return !mainNavigation || (!url.username && !url.password && ["emersonecologics.com", "www.emersonecologics.com"].includes(url.hostname)
+  let url: URL, path: string;
+  try { url = new URL(value); path = decodeURIComponent(url.pathname); } catch { return false; }
+  const verb = method.toUpperCase(), read = ["GET", "HEAD", "OPTIONS"].includes(verb);
+  if (url.protocol !== "https:" || url.username || url.password || !["GET", "HEAD", "OPTIONS", "POST"].includes(verb)
+    || /(?:^|[\/_.-])(?:accounts?|carts?|checkouts?|orders?|payments?|pay|logout|signout)(?:[\/_.-]|$)/i.test(path)
+    || (!read && /(?:^|[\/_.-])(?:auth(?:enticate|entication|orize|orization)?|oauth2?|log[-_]?in|sign[-_]?(?:in|up)|tokens?|sessions?)(?:[\/_.-]|$)/i.test(path))) return false;
+  return !mainNavigation || (verb === "GET" && ["emersonecologics.com", "www.emersonecologics.com"].includes(url.hostname)
     && /^\/login\/?$/.test(url.pathname));
 }
 
@@ -82,7 +84,7 @@ export async function observePublicEmersonLogin(options: { launchBrowser?: () =>
     if (!emersonPublicLoginRequestAllowed(page.url(), "GET", true) || unexpectedNavigation) return unavailable("unexpected_navigation");
     reason = "observation_timeout";
     await page.getByRole("button", { name: /^Sign\s*in$/i }).waitFor({ state: "visible", timeout: 10_000 }).catch(() => undefined);
-    await page.waitForTimeout(5_000); // Observe late public consent UI without causing any interaction.
+    await page.waitForTimeout(45_000); // Observe late public consent UI without causing any interaction.
     if (!emersonPublicLoginRequestAllowed(page.url(), "GET", true) || unexpectedNavigation) return unavailable("unexpected_navigation");
     reason = "screenshot_unavailable";
     session = await bounded(context.newCDPSession(page));
@@ -94,15 +96,13 @@ export async function observePublicEmersonLogin(options: { launchBrowser?: () =>
       screenshot = publicImage(capture.data);
       if (!screenshot) screenshotErrorCategory = capture.data.length > PUBLIC_LOGIN_IMAGE_LIMIT ? "image_too_large" : "invalid_image";
     } catch (error) { screenshotErrorCategory = screenshotError(error); }
-    if (!screenshot) {
-      // Only public role/name captions leave this fresh anonymous context; AX values/properties/IDs do not.
-      try { accessibility = publicCaptions((await bounded(session.send("Accessibility.getFullAXTree"))).nodes); } catch { /* Closed failure below. */ }
-    }
+    // Capture public captions even with a good image; AX values/properties/IDs never leave this anonymous context.
+    try { accessibility = publicCaptions((await bounded(session.send("Accessibility.getFullAXTree"))).nodes); } catch { /* Image can still provide evidence. */ }
     if (!emersonPublicLoginRequestAllowed(page.url(), "GET", true) || unexpectedNavigation) return unavailable("unexpected_navigation");
     if (!screenshot && !accessibility?.length) return unavailable(screenshotErrorCategory === "image_too_large" ? "image_too_large" : "screenshot_unavailable", screenshotErrorCategory);
     return projectPublicLoginObservation({ protocolVersion: PROTOCOL, observedAt: new Date().toISOString(), status: "observed", pageKind: "login",
       blockedWriteRequestCount, blockedSensitiveRequestCount,
-      ...(screenshot ? { screenshot } : { accessibility, screenshotErrorCategory }), ...NO_AUTHORITY });
+      ...(screenshot ? { screenshot } : { screenshotErrorCategory }), ...(accessibility?.length ? { accessibility } : {}), ...NO_AUTHORITY });
   } catch (error) { return unavailable(unexpectedNavigation ? "unexpected_navigation" : reason,
     reason === "screenshot_unavailable" ? screenshotErrorCategory ?? screenshotError(error) : undefined); }
   finally {
