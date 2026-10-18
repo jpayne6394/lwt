@@ -1,4 +1,4 @@
-import type { Browser } from "playwright";
+import type { Browser, CDPSession } from "playwright";
 import { launchSupplierBrowser } from "./browser-launcher.ts";
 
 const LOGIN = "https://www.emersonecologics.com/login";
@@ -7,15 +7,45 @@ const WIDTH = 960, HEIGHT = 720;
 export const PUBLIC_LOGIN_IMAGE_LIMIT = 400 * 1024; // Encoded bytes, not just decoded PNG size.
 const PNG = Buffer.from("89504e470d0a1a0a", "hex");
 type Reason = "browser_unavailable" | "navigation_unavailable" | "unexpected_navigation" | "observation_timeout" | "screenshot_unavailable" | "image_too_large";
+type ScreenshotErrorCategory = "timeout" | "browser_closed" | "protocol_error" | "image_too_large" | "invalid_image" | "other";
+type PublicCaption = { role: string; name: string };
+type PublicImage = { mimeType: "image/png"; base64: string; bytes: number; width: 960; height: 720 };
+const SCREENSHOT_ERRORS: ScreenshotErrorCategory[] = ["timeout", "browser_closed", "protocol_error", "image_too_large", "invalid_image", "other"];
 const NO_AUTHORITY = { credentialsUsed: false, cookiesInjected: false, interactionPerformed: false, accountAccessed: false,
   orderSubmitted: false, paymentSubmitted: false } as const;
-export type EmersonPublicLoginObservation = { protocolVersion: typeof PROTOCOL; observedAt: string } & typeof NO_AUTHORITY & (
+export type EmersonPublicLoginObservation = { protocolVersion: typeof PROTOCOL; observedAt: string;
+  screenshotErrorCategory?: ScreenshotErrorCategory } & typeof NO_AUTHORITY & (
   { status: "unavailable"; reason: Reason } | { status: "observed"; pageKind: "login";
     blockedWriteRequestCount: number; blockedSensitiveRequestCount: number;
-    screenshot: { mimeType: "image/png"; base64: string; bytes: number; width: 960; height: 720 } }
+    screenshot?: PublicImage; accessibility?: PublicCaption[] }
 );
-const unavailable = (reason: Reason): EmersonPublicLoginObservation => ({ protocolVersion: PROTOCOL, observedAt: new Date().toISOString(),
-  status: "unavailable", reason, ...NO_AUTHORITY });
+const unavailable = (reason: Reason, screenshotErrorCategory?: ScreenshotErrorCategory): EmersonPublicLoginObservation => ({ protocolVersion: PROTOCOL, observedAt: new Date().toISOString(),
+  status: "unavailable", reason, ...(screenshotErrorCategory ? { screenshotErrorCategory } : {}), ...NO_AUTHORITY });
+
+async function bounded<T>(operation: Promise<T>, timeout = 15_000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try { return await Promise.race([operation, new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(Object.assign(new Error("public observation deadline"), { name: "TimeoutError" })), timeout);
+  })]); } finally { clearTimeout(timer); }
+}
+function screenshotError(error: unknown): ScreenshotErrorCategory {
+  const name = error instanceof Error ? error.name : "", message = error instanceof Error ? error.message : "";
+  if (name === "TimeoutError") return "timeout";
+  if (name === "TargetClosedError" || /(?:target|browser|session|connection).*(?:closed|crashed|disconnected)/i.test(message)) return "browser_closed";
+  return name === "ProtocolError" || /protocol error/i.test(message) ? "protocol_error" : "other";
+}
+function publicCaptions(value: unknown): PublicCaption[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(node => node && !node.ignored && typeof node.role?.value === "string" && typeof node.name?.value === "string")
+    .map(node => ({ role: node.role.value, name: node.name.value.trim().replace(/\s+/g, " ").slice(0, 200) }))
+    .filter(node => /^[A-Za-z][A-Za-z0-9 ]{0,39}$/.test(node.role) && node.name).slice(0, 80);
+}
+function publicImage(base64: unknown): PublicImage | undefined {
+  if (typeof base64 !== "string" || base64.length > PUBLIC_LOGIN_IMAGE_LIMIT || !/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) return;
+  const png = Buffer.from(base64, "base64");
+  if (png.length < 24 || !png.subarray(0, 8).equals(PNG) || png.readUInt32BE(16) !== WIDTH || png.readUInt32BE(20) !== HEIGHT || png.toString("base64") !== base64) return;
+  return { mimeType: "image/png", base64, bytes: png.length, width: WIDTH, height: HEIGHT };
+}
 
 export function emersonPublicLoginRequestAllowed(value: string, method: string, mainNavigation: boolean): boolean {
   let url: URL;
@@ -32,6 +62,7 @@ export async function observePublicEmersonLogin(options: { launchBrowser?: () =>
   try { browser = await (options.launchBrowser ?? launchSupplierBrowser)(); }
   catch { return unavailable("browser_unavailable"); }
   let reason: Reason = "navigation_unavailable", unexpectedNavigation = false;
+  let session: CDPSession | undefined, screenshotErrorCategory: ScreenshotErrorCategory | undefined;
   let blockedWriteRequestCount = 0, blockedSensitiveRequestCount = 0;
   try {
     const context = await browser.newContext({ viewport: { width: WIDTH, height: HEIGHT }, deviceScaleFactor: 1,
@@ -54,30 +85,49 @@ export async function observePublicEmersonLogin(options: { launchBrowser?: () =>
     await page.waitForTimeout(5_000); // Observe late public consent UI without causing any interaction.
     if (!emersonPublicLoginRequestAllowed(page.url(), "GET", true) || unexpectedNavigation) return unavailable("unexpected_navigation");
     reason = "screenshot_unavailable";
-    const png = await page.screenshot({ type: "png", fullPage: false, animations: "disabled", scale: "css", timeout: 15_000 });
+    session = await bounded(context.newCDPSession(page));
+    let screenshot: PublicImage | undefined, accessibility: PublicCaption[] | undefined;
+    try {
+      // Browser-protocol capture avoids Playwright's page/font/animation readiness work.
+      const capture = await bounded(session.send("Page.captureScreenshot", { format: "png", fromSurface: true,
+        captureBeyondViewport: false, clip: { x: 0, y: 0, width: WIDTH, height: HEIGHT, scale: 1 } }));
+      screenshot = publicImage(capture.data);
+      if (!screenshot) screenshotErrorCategory = capture.data.length > PUBLIC_LOGIN_IMAGE_LIMIT ? "image_too_large" : "invalid_image";
+    } catch (error) { screenshotErrorCategory = screenshotError(error); }
+    if (!screenshot) {
+      // Only public role/name captions leave this fresh anonymous context; AX values/properties/IDs do not.
+      try { accessibility = publicCaptions((await bounded(session.send("Accessibility.getFullAXTree"))).nodes); } catch { /* Closed failure below. */ }
+    }
     if (!emersonPublicLoginRequestAllowed(page.url(), "GET", true) || unexpectedNavigation) return unavailable("unexpected_navigation");
-    const base64 = png.toString("base64");
-    if (base64.length > PUBLIC_LOGIN_IMAGE_LIMIT) return unavailable("image_too_large");
+    if (!screenshot && !accessibility?.length) return unavailable(screenshotErrorCategory === "image_too_large" ? "image_too_large" : "screenshot_unavailable", screenshotErrorCategory);
     return projectPublicLoginObservation({ protocolVersion: PROTOCOL, observedAt: new Date().toISOString(), status: "observed", pageKind: "login",
       blockedWriteRequestCount, blockedSensitiveRequestCount,
-      screenshot: { mimeType: "image/png", base64, bytes: png.length, width: WIDTH, height: HEIGHT }, ...NO_AUTHORITY });
-  } catch { return unavailable(unexpectedNavigation ? "unexpected_navigation" : reason); }
-  finally { await browser.close().catch(() => undefined); }
+      ...(screenshot ? { screenshot } : { accessibility, screenshotErrorCategory }), ...NO_AUTHORITY });
+  } catch (error) { return unavailable(unexpectedNavigation ? "unexpected_navigation" : reason,
+    reason === "screenshot_unavailable" ? screenshotErrorCategory ?? screenshotError(error) : undefined); }
+  finally {
+    if (session) await bounded(session.detach(), 2_000).catch(() => undefined);
+    await browser.close().catch(() => undefined);
+  }
 }
 
 /** Explicit bounded projection. No raw provider error, URL, cookie, field value, or extra helper field can leave the route. */
 export function projectPublicLoginObservation(value: EmersonPublicLoginObservation): EmersonPublicLoginObservation {
   const r = value, reasons: Reason[] = ["browser_unavailable", "navigation_unavailable", "unexpected_navigation", "observation_timeout", "screenshot_unavailable", "image_too_large"];
   if (r.protocolVersion !== PROTOCOL || !Number.isFinite(Date.parse(r.observedAt)) || Object.entries(NO_AUTHORITY).some(([key]) => r[key as keyof typeof NO_AUTHORITY] !== false)) return unavailable("observation_timeout");
-  const base = { protocolVersion: PROTOCOL, observedAt: r.observedAt, ...NO_AUTHORITY };
+  const category = r.screenshotErrorCategory;
+  if (category !== undefined && !SCREENSHOT_ERRORS.includes(category)) return unavailable("screenshot_unavailable");
+  const base = { protocolVersion: PROTOCOL, observedAt: r.observedAt, ...(category ? { screenshotErrorCategory: category } : {}), ...NO_AUTHORITY };
   if (r.status === "unavailable") return { ...base, status: "unavailable", reason: reasons.includes(r.reason) ? r.reason : "observation_timeout" };
-  const image = r.screenshot;
   const count = (n: number, max: number) => Number.isSafeInteger(n) && n >= 0 && n <= max;
-  if (r.status !== "observed" || r.pageKind !== "login" || !image || image.mimeType !== "image/png" || image.width !== WIDTH || image.height !== HEIGHT
-    || typeof image.base64 !== "string" || image.base64.length > PUBLIC_LOGIN_IMAGE_LIMIT || !/^[A-Za-z0-9+/]+={0,2}$/.test(image.base64)) return unavailable("screenshot_unavailable");
-  const png = Buffer.from(image.base64, "base64");
-  if (png.length !== image.bytes || png.length < 24 || !png.subarray(0, 8).equals(PNG) || png.readUInt32BE(16) !== WIDTH || png.readUInt32BE(20) !== HEIGHT
-    || png.toString("base64") !== image.base64 || !count(r.blockedWriteRequestCount, 999) || !count(r.blockedSensitiveRequestCount, 999)) return unavailable("observation_timeout");
-  return { ...base, status: "observed", pageKind: "login", screenshot: { mimeType: "image/png", base64: image.base64, bytes: png.length, width: WIDTH, height: HEIGHT },
+  if (r.status !== "observed" || r.pageKind !== "login" || !count(r.blockedWriteRequestCount, 999) || !count(r.blockedSensitiveRequestCount, 999)) return unavailable("observation_timeout");
+  const image = r.screenshot, screenshot = image && publicImage(image.base64);
+  if (image && (!screenshot || image.mimeType !== "image/png" || image.width !== WIDTH || image.height !== HEIGHT || image.bytes !== screenshot.bytes)) return unavailable("screenshot_unavailable");
+  const accessibility = r.accessibility;
+  if (accessibility !== undefined && (!Array.isArray(accessibility) || accessibility.length > 80 || accessibility.some(node =>
+    !node || typeof node.role !== "string" || !/^[A-Za-z][A-Za-z0-9 ]{0,39}$/.test(node.role) || typeof node.name !== "string" || !node.name || node.name.length > 200))) return unavailable("screenshot_unavailable");
+  if (!screenshot && !accessibility?.length) return unavailable("screenshot_unavailable", category);
+  return { ...base, status: "observed", pageKind: "login", ...(screenshot ? { screenshot } : {}),
+    ...(accessibility?.length ? { accessibility: accessibility.map(({ role, name }) => ({ role, name })) } : {}),
     blockedWriteRequestCount: r.blockedWriteRequestCount, blockedSensitiveRequestCount: r.blockedSensitiveRequestCount };
 }

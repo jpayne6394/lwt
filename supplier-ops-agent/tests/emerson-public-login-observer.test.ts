@@ -16,7 +16,7 @@ const fixture: EmersonPublicLoginObservation = { protocolVersion: "emerson_publi
   screenshot: { mimeType: "image/png", base64: image().toString("base64"), bytes: 24, width: 960, height: 720 },
   credentialsUsed: false, cookiesInjected: false, interactionPerformed: false, accountAccessed: false, orderSubmitted: false, paymentSubmitted: false };
 
-function browserHarness(options: { redirected?: string; screenshotFailure?: boolean; oversize?: boolean } = {}) {
+function browserHarness(options: { redirected?: string; screenshotFailure?: boolean; screenshotError?: Error; oversize?: boolean; axFailure?: boolean; axNodes?: unknown[] } = {}) {
   const events: string[] = [];
   const page = { goto: async (url: string, settings: unknown) => { assert.equal(url, "https://www.emersonecologics.com/login");
       assert.deepEqual(settings, { waitUntil: "domcontentloaded", timeout: 20_000 }); events.push("public-login"); },
@@ -24,24 +24,36 @@ function browserHarness(options: { redirected?: string; screenshotFailure?: bool
     getByRole: (role: string, settings: { name: RegExp }) => { assert.equal(role, "button"); assert(settings.name.test("Sign in"));
       return { waitFor: async () => { events.push("observe-visible-form"); } }; },
     waitForTimeout: async (ms: number) => { assert.equal(ms, 5_000); events.push("observe-late-public-ui"); },
-    screenshot: async (settings: unknown) => { assert.deepEqual(settings, { type: "png", fullPage: false, animations: "disabled", scale: "css", timeout: 15_000 });
-      events.push("screenshot"); if (options.screenshotFailure) throw new Error("private credential provider message");
-      return image(options.oversize ? PUBLIC_LOGIN_IMAGE_LIMIT : 24); },
-    // No evaluate, click, fill, press, cookie or storage APIs exist in this harness.
+    // No screenshot, evaluate, click, fill, press, cookie or storage APIs exist in this harness.
   };
   const browser = { newContext: async (settings: unknown) => {
     assert.deepEqual(settings, { viewport: { width: 960, height: 720 }, deviceScaleFactor: 1, serviceWorkers: "block", acceptDownloads: false });
     events.push("fresh-anonymous-context");
-    return { route: async (pattern: string) => { assert.equal(pattern, "**/*"); events.push("read-only-guard"); }, newPage: async () => page };
+    return { route: async (pattern: string) => { assert.equal(pattern, "**/*"); events.push("read-only-guard"); }, newPage: async () => page,
+      newCDPSession: async (target: unknown) => { assert.equal(target, page); events.push("cdp-session"); return {
+        send: async (command: string, settings?: unknown) => {
+          if (command === "Page.captureScreenshot") {
+            assert.deepEqual(settings, { format: "png", fromSurface: true, captureBeyondViewport: false, clip: { x: 0, y: 0, width: 960, height: 720, scale: 1 } });
+            events.push("protocol-screenshot");
+            if (options.screenshotError) throw options.screenshotError;
+            if (options.screenshotFailure) throw new Error("private credential provider message");
+            return { data: image(options.oversize ? PUBLIC_LOGIN_IMAGE_LIMIT : 24).toString("base64") };
+          }
+          assert.equal(command, "Accessibility.getFullAXTree"); assert.equal(settings, undefined); events.push("protocol-accessibility");
+          if (options.axFailure) throw new Error("private accessibility provider message");
+          return { nodes: options.axNodes ?? [{ role: { value: "button" }, name: { value: "Reject optional cookies" }, value: { value: "private input value" } }] };
+        }, detach: async () => { events.push("detached"); }
+      }; }
+    };
   }, close: async () => { events.push("closed"); } } as unknown as Browser;
   return { events, launch: async () => browser };
 }
 
-test("fixed public observation uses a fresh context and screenshot only, never credentials, DOM evaluation or interaction", async () => {
+test("fixed public observation uses only browser-protocol screenshot in a fresh context, never credentials, DOM evaluation or interaction", async () => {
   const harness = browserHarness(), result = await observePublicEmersonLogin({ launchBrowser: harness.launch });
   assert.equal(result.status, "observed"); assert.equal(result.credentialsUsed, false); assert.equal(result.cookiesInjected, false);
   assert.equal(result.interactionPerformed, false); assert.equal(result.accountAccessed, false); assert.equal(result.orderSubmitted, false); assert.equal(result.paymentSubmitted, false);
-  assert.deepEqual(harness.events, ["fresh-anonymous-context", "read-only-guard", "public-login", "observe-visible-form", "observe-late-public-ui", "screenshot", "closed"]);
+  assert.deepEqual(harness.events, ["fresh-anonymous-context", "read-only-guard", "public-login", "observe-visible-form", "observe-late-public-ui", "cdp-session", "protocol-screenshot", "detached", "closed"]);
 });
 test("public observation blocks account navigation and all network writes, with bounded closed failures", async () => {
   assert.equal(emersonPublicLoginRequestAllowed("https://www.emersonecologics.com/login", "GET", true), true);
@@ -49,17 +61,51 @@ test("public observation blocks account navigation and all network writes, with 
   for (const [url, method, main] of [["https://evil.test/login", "GET", true], ["https://www.emersonecologics.com/account", "GET", true],
     ["https://www.emersonecologics.com/login", "POST", false], ["https://www.emersonecologics.com/checkout", "GET", false],
     ["http://www.emersonecologics.com/login", "GET", true]] as const) assert.equal(emersonPublicLoginRequestAllowed(url, method, main), false);
-  for (const options of [{ redirected: "https://www.emersonecologics.com/account" }, { screenshotFailure: true }, { oversize: true }]) {
+  for (const options of [{ redirected: "https://www.emersonecologics.com/account" }, { screenshotFailure: true, axFailure: true }, { oversize: true, axFailure: true }]) {
     const harness = browserHarness(options), result = await observePublicEmersonLogin({ launchBrowser: harness.launch });
     assert.equal(result.status, "unavailable"); assert.equal(harness.events.at(-1), "closed");
     assert.doesNotMatch(JSON.stringify(result), /private|credential provider|https:|base64/);
+  }
+});
+
+test("failed screenshot falls back to at most 80 public role/name captions, never input values, properties or node IDs", async () => {
+  const axNodes = [{ role: { value: "textbox" }, name: { value: "Email" }, value: { value: "private-input-sentinel" }, properties: [{ value: "private-property-sentinel" }], nodeId: "private-node-sentinel" },
+    { ignored: true, role: { value: "button" }, name: { value: "ignored-sentinel" } },
+    ...Array.from({ length: 100 }, (_, index) => ({ role: { value: "button" }, name: { value: `${index} ${"x".repeat(300)}` } }))];
+  const harness = browserHarness({ screenshotFailure: true, axNodes }), result = await observePublicEmersonLogin({ launchBrowser: harness.launch });
+  assert.equal(result.status, "observed"); if (result.status !== "observed") assert.fail();
+  assert.equal(result.screenshot, undefined); assert.equal(result.screenshotErrorCategory, "other"); assert.equal(result.accessibility?.length, 80);
+  assert.deepEqual(result.accessibility?.[0], { role: "textbox", name: "Email" });
+  assert(result.accessibility?.every(node => node.name.length <= 200));
+  assert.doesNotMatch(JSON.stringify(result), /private-|sentinel|nodeId|properties/);
+  assert.deepEqual(harness.events.slice(-3), ["protocol-accessibility", "detached", "closed"]);
+});
+
+test("protocol failures return only closed screenshot categories and still detach and close", async () => {
+  for (const [error, category] of [
+    [Object.assign(new Error("private timeout detail"), { name: "TimeoutError" }), "timeout"],
+    [Object.assign(new Error("private crash detail"), { name: "TargetClosedError" }), "browser_closed"],
+    [Object.assign(new Error("private protocol detail"), { name: "ProtocolError" }), "protocol_error"],
+    [Object.assign(new Error("private arbitrary detail"), { name: "SecretErrorName" }), "other"]
+  ] as const) {
+    const harness = browserHarness({ screenshotError: error, axFailure: true }), result = await observePublicEmersonLogin({ launchBrowser: harness.launch });
+    assert.equal(result.status, "unavailable"); assert.equal(result.screenshotErrorCategory, category);
+    assert.doesNotMatch(JSON.stringify(result), /private|SecretErrorName|detail/);
+    assert.deepEqual(harness.events.slice(-2), ["detached", "closed"]);
   }
 });
 test("bounded projection strips extra helper data and rejects malformed or oversized images and authority claims", () => {
   assert.doesNotMatch(JSON.stringify(projectPublicLoginObservation({ ...fixture, secret: "private" } as EmersonPublicLoginObservation)), /private|secret/);
   assert.equal(projectPublicLoginObservation({ ...fixture, credentialsUsed: true } as unknown as EmersonPublicLoginObservation).status, "unavailable");
   if (fixture.status !== "observed") assert.fail();
+  assert(fixture.screenshot);
   assert.equal(projectPublicLoginObservation({ ...fixture, screenshot: { ...fixture.screenshot, base64: "x".repeat(PUBLIC_LOGIN_IMAGE_LIMIT + 1) } }).status, "unavailable");
+  const fallback = { ...fixture, screenshot: undefined, screenshotErrorCategory: "timeout" as const,
+    accessibility: [{ role: "button", name: "Reject all", value: "private" }] };
+  assert.doesNotMatch(JSON.stringify(projectPublicLoginObservation(fallback)), /private|value/);
+  assert.equal(projectPublicLoginObservation({ ...fallback, screenshotErrorCategory: "raw private error" } as unknown as EmersonPublicLoginObservation).status, "unavailable");
+  assert.equal(projectPublicLoginObservation({ ...fallback, accessibility: Array.from({ length: 81 }, () => ({ role: "button", name: "Reject all" })) }).status, "unavailable");
+  assert.equal(projectPublicLoginObservation({ ...fallback, accessibility: [{ role: "button", name: "x".repeat(201) }] }).status, "unavailable");
 });
 
 const token = "p".repeat(48), read = "r".repeat(48), run = "u".repeat(48);
