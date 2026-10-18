@@ -415,14 +415,20 @@ export async function signInEmersonWithCredentials(input: {
       const formChallenge = await challenge();
       if (formChallenge) throw new SupplierAdapterError(input.supplierId, formChallenge, "Emerson account verification is required");
       progress("consent_dialog");
-      await resolveEmersonCookieDialog(accountPage, input.supplierId);
+      let cookieChoiceMade = await resolveEmersonCookieDialog(accountPage, input.supplierId);
       const preparationDeadline = Date.now() + 45_000;
       const preparationTimeout = (limit: number) => {
         const remaining = preparationDeadline - Date.now();
         if (remaining <= 0) throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in form did not stabilize", "login_form_unavailable");
         return Math.min(limit, remaining);
       };
+      const resolveLateCookie = async () => {
+        const dismissed = await resolveEmersonCookieDialog(accountPage, input.supplierId, !cookieChoiceMade, preparationTimeout(10_000));
+        cookieChoiceMade ||= dismissed;
+        return dismissed;
+      };
       const reacquireEditableFields = async () => {
+        let blockedDialogInspected = false;
         for (let observation = 0; observation < 180 && Date.now() < preparationDeadline; observation += 1) {
           assertAccountUrl();
           [email, password] = await Promise.all([
@@ -435,6 +441,10 @@ export async function signInEmersonWithCredentials(input: {
           if (pendingChallenge) throw new SupplierAdapterError(input.supplierId, pendingChallenge, "Emerson account verification is required");
           assertAccountUrl();
           if (editable.every(value => value === true)) return;
+          if (!blockedDialogInspected && editable.some(value => value === false)) {
+            blockedDialogInspected = true;
+            if (await resolveLateCookie()) continue;
+          }
           await new Promise(resolve => setTimeout(resolve, 250));
         }
         throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in fields are not editable", "login_form_unavailable");
@@ -452,12 +462,14 @@ export async function signInEmersonWithCredentials(input: {
       let recoveryUsed = false, credentialsReady = false, refillEmail = true;
       for (let preparation = 0; preparation < 2; preparation += 1) {
         await reacquireEditableFields();
+        if (await resolveLateCookie()) await reacquireEditableFields();
         if (refillEmail) {
           const timeout = preparationTimeout(10_000);
           operation = "fill_email"; progress("fill_email");
           await email.fill(input.username, { timeout });
         }
         await reacquireEditableFields(); // Hydration can replace an ID-based field with its semantic equivalent.
+        if (await resolveLateCookie()) await reacquireEditableFields();
         let values = await readValues();
         if (values[0] === input.username && (values[1] === "" || values[1] === input.password)) {
           const timeout = preparationTimeout(10_000);
@@ -478,7 +490,7 @@ export async function signInEmersonWithCredentials(input: {
         assertAccountUrl();
         const recoveryChallenge = await challenge();
         if (recoveryChallenge) throw new SupplierAdapterError(input.supplierId, recoveryChallenge, "Emerson account verification is required");
-        await resolveEmersonCookieDialog(accountPage, input.supplierId);
+        await resolveLateCookie();
         recoveryUsed = true; refillEmail = values[0] === "";
       }
       if (!credentialsReady) throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in fields did not retain the supplied account", "login_form_unavailable");
@@ -504,6 +516,7 @@ export async function signInEmersonWithCredentials(input: {
       }
       // Normal keyboard activation focuses this observed button. Submit once; never retry a prior pointer action.
       await reacquireEditableFields();
+      if (await resolveLateCookie()) await reacquireEditableFields();
       const finalValues = await readValues();
       if (finalValues[0] !== input.username || finalValues[1] !== input.password) {
         throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in fields changed before submission", "login_form_unavailable");
@@ -570,8 +583,9 @@ export async function signInEmersonWithCredentials(input: {
 }
 
 type EmersonDialogCategory = "none" | "login_form" | "cookie_privacy" | "legal_terms" | "two_factor_required" | "verification_required" | "unknown" | "unavailable";
-type EmersonCookieButtonClass = "none" | "reject_all" | "reject_optional" | "necessary_only" | "accept_necessary";
+type EmersonCookieButtonClass = "none" | "reject" | "reject_all" | "reject_optional" | "necessary_only" | "accept_necessary";
 const EMERSON_COOKIE_CHOICES: Array<{ buttonClass: EmersonCookieButtonClass; name: string }> = [
+  { buttonClass: "reject", name: "Reject" },
   { buttonClass: "reject_all", name: "Reject all" }, { buttonClass: "reject_optional", name: "Reject optional cookies" },
   { buttonClass: "necessary_only", name: "Use necessary cookies only" }, { buttonClass: "accept_necessary", name: "Accept necessary cookies" },
 ];
@@ -584,7 +598,7 @@ const EMERSON_DIALOG_PATTERNS: Array<{ category: EmersonDialogCategory; pattern:
 export function emersonLoginDialogCategory(text: string): EmersonDialogCategory {
   return EMERSON_DIALOG_PATTERNS.find(rule => new RegExp(rule.pattern, "i").test(text))?.category ?? "unknown";
 }
-async function inspectEmersonLoginDialog(page: import("playwright").Page): Promise<{
+async function inspectEmersonLoginDialog(page: import("playwright").Page, timeout = 10_000): Promise<{
   category: EmersonDialogCategory; buttonClass: EmersonCookieButtonClass; visibleDialog: boolean;
   dialog?: import("playwright").Locator; button?: import("playwright").Locator;
 }> {
@@ -605,30 +619,37 @@ async function inspectEmersonLoginDialog(page: import("playwright").Page): Promi
       if (buttons.length === 1) { buttonClass = choice.buttonClass; break; }
     }
     return { category, buttonClass, visibleDialog: true };
-  }, { patterns: EMERSON_DIALOG_PATTERNS, choices: EMERSON_COOKIE_CHOICES }, { timeout: 10_000 });
+  }, { patterns: EMERSON_DIALOG_PATTERNS, choices: EMERSON_COOKIE_CHOICES }, { timeout });
   const choice = EMERSON_COOKIE_CHOICES.find(value => value.buttonClass === observation.buttonClass);
   if (!choice) return observation;
   const dialog = page.getByRole("dialog").filter({ hasNot: page.locator("#email") });
   return { ...observation, dialog, button: dialog.getByRole("button", { name: new RegExp(`^${choice.name}$`, "i") }) };
 }
-async function resolveEmersonCookieDialog(page: import("playwright").Page, supplierId: string): Promise<void> {
-  const state = await inspectEmersonLoginDialog(page);
-  if (state.category === "none" || state.category === "login_form") return;
+async function resolveEmersonCookieDialog(page: import("playwright").Page, supplierId: string, allowChoice = true, timeout = 10_000): Promise<boolean> {
+  const deadline = Date.now() + timeout;
+  const remainingTimeout = () => {
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) throw new SupplierAdapterError(supplierId, "login_failed", "Emerson privacy choice did not complete", "login_form_unavailable");
+    return remaining;
+  };
+  const state = await inspectEmersonLoginDialog(page, remainingTimeout());
+  if (state.category === "none" || state.category === "login_form") return false;
   // Only fixed categories are logged. Dialog text and accessible names never leave the browser.
   console.info("[supplier-auth-dialog]", JSON.stringify({ category: state.category, buttonClass: state.buttonClass }));
   if (state.category === "two_factor_required" || state.category === "verification_required") {
     throw new SupplierAdapterError(supplierId, state.category, "Emerson account verification is required",
       state.category === "two_factor_required" ? "mfa_required" : "challenge_required");
   }
-  if (state.category !== "cookie_privacy" || !state.button || !state.dialog) {
+  if (state.category !== "cookie_privacy" || !state.button || !state.dialog || !allowChoice) {
     throw new SupplierAdapterError(supplierId, "login_failed", "Emerson has an unresolved separate dialog", "login_form_unavailable");
   }
   assertSafeEmersonUrl(page.url(), supplierId);
   const challenge = await activeEmersonChallenge(page);
   if (challenge) throw new SupplierAdapterError(supplierId, challenge, "Emerson account verification is required");
-  await state.button.click({ timeout: 10_000, noWaitAfter: true });
-  await state.dialog.waitFor({ state: "hidden", timeout: 10_000 });
+  await state.button.click({ timeout: remainingTimeout(), noWaitAfter: true });
+  await state.dialog.waitFor({ state: "hidden", timeout: remainingTimeout() });
   assertSafeEmersonUrl(page.url(), supplierId);
+  return true;
 }
 
 async function visibleEmersonLoginField(page: import("playwright").Page, label: RegExp, legacyId: string, timeout = 10_000) {
