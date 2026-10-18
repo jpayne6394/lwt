@@ -314,7 +314,7 @@ async function launchEmersonBrowser(supplierId: string, launchBrowser: typeof la
   catch { throw new SupplierAdapterError(supplierId, "login_failed", "Emerson account browser could not start", "browser_launch_failed"); }
 }
 
-type EmersonLoginOperation = "readiness" | "fill_email" | "fill_password" | "click_sign_in";
+type EmersonLoginOperation = "readiness" | "fill_email" | "fill_password" | "press_sign_in";
 type EmersonLoginFailureCategory = "pointer_intercepted" | "timeout" | "element_detached" | "element_not_editable" | "page_closed" | "other";
 type EmersonLoginControls = { email: import("playwright").Locator; password: import("playwright").Locator; signIn: import("playwright").Locator };
 
@@ -367,8 +367,15 @@ export async function signInEmersonWithCredentials(input: {
       operation = "fill_password";
       await password.fill(input.password, { timeout: 10_000 });
       assertAccountUrl();
-      operation = "click_sign_in";
-      await signIn.click({ noWaitAfter: true, timeout: 10_000 });
+      operation = "press_sign_in";
+      const submissionChallenge = await challenge();
+      if (submissionChallenge) throw new SupplierAdapterError(input.supplierId, submissionChallenge, "Emerson account verification is required");
+      if (!(await signIn.isVisible().catch(() => false)) || !(await signIn.isEnabled({ timeout: 1_000 }).catch(() => false))) {
+        throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in button is not ready", "login_form_unavailable");
+      }
+      // Normal keyboard activation focuses this observed button. Submit once; never retry a prior pointer action.
+      assertAccountUrl();
+      await signIn.press("Enter", { noWaitAfter: true, timeout: 10_000 });
       phase = "login_confirmation_missing";
       const verifyAccount = createEmersonAccountVerifier(accountPage, input.supplierId);
       let accountVerified = false;
