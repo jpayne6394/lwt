@@ -1,4 +1,5 @@
 import type { SupplierProduct } from "../domain/types.ts";
+import type { SupplierCartPrepareCommand, SupplierCartPrepareReceipt } from "./cart-preparation.ts";
 
 export type SupplierMode = "feed" | "website";
 
@@ -41,6 +42,8 @@ export type SupplierAdapter = {
   verifyLogin?(): Promise<SupplierConnectionCheck>;
   /** Proves an account-only marker, not merely a readable public catalog. */
   verifyAuthentication?(): Promise<SupplierConnectionCheck>;
+  /** Prepares an exact supplier cart and shipping only. Never orders or pays. */
+  prepareCart?(command: SupplierCartPrepareCommand): Promise<SupplierCartPrepareReceipt>;
 };
 
 export type SupplierConnectionCheck = {

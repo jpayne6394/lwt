@@ -8,6 +8,7 @@ import type {
   SupplierAuthIssue,
 } from "./types.ts";
 import { isSupplierAuthIssue, SupplierAdapterError } from "./types.ts";
+import { cartPrepareReceipt, type SupplierCartPrepareCommand, type SupplierCartPrepareReceipt } from "./cart-preparation.ts";
 
 export type EmersonCatalogAdapterConfig = {
   catalogUrls?: string[];
@@ -18,6 +19,7 @@ export type EmersonCatalogAdapterConfig = {
   renderCatalogImpl?: EmersonRenderedCatalogReader;
   authenticateSessionImpl?: EmersonCredentialAuthenticator;
   nowImpl?: () => number;
+  prepareCartImpl?: (command: SupplierCartPrepareCommand, cookie: string) => Promise<SupplierCartPrepareReceipt>;
 };
 
 export type EmersonRenderedCatalogReader = (
@@ -57,6 +59,7 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
   #renewalFailure?: { kind: SupplierAdapterError["kind"]; authIssue: SupplierAuthIssue; retryAt: number };
   readonly #fetch: typeof fetch;
   readonly #renderCatalog: EmersonRenderedCatalogReader;
+  readonly #prepareCart: (command: SupplierCartPrepareCommand, cookie: string) => Promise<SupplierCartPrepareReceipt>;
 
   constructor(supplier: SupplierConfig, config: EmersonCatalogAdapterConfig = {}) {
     this.supplier = supplier;
@@ -68,6 +71,29 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     this.#now = config.nowImpl ?? Date.now;
     this.#fetch = config.fetchImpl ?? fetch;
     this.#renderCatalog = config.renderCatalogImpl ?? readRenderedEmersonCatalog;
+    this.#prepareCart = config.prepareCartImpl ?? (async (command, cookie) => {
+      const { prepareEmersonCart } = await import("./emerson-cart-adapter.ts");
+      return prepareEmersonCart(command, cookie);
+    });
+  }
+
+  async prepareCart(command: SupplierCartPrepareCommand): Promise<SupplierCartPrepareReceipt> {
+    if (command.supplierKey !== this.supplier.id) return cartPrepareReceipt(command, "blocked", "unsupported_supplier");
+    if (!this.#cookieHeader && !this.#canAuthenticate()) return cartPrepareReceipt(command, "blocked", "auth_required");
+    try {
+      // The cart reader must close its browser before throwing positive pre-mutation session expiry.
+      // Then the existing once-only renewal can launch separately without nesting browser leases.
+      return await this.#withSessionRenewal((cookie) => this.#prepareCart(command, cookie));
+    } catch (error) {
+      if (error instanceof SupplierAdapterError) {
+        if (error.kind === "two_factor_required") return cartPrepareReceipt(command, "blocked", "two_factor_required");
+        if (error instanceof EmersonSessionExpiredError) return cartPrepareReceipt(command, "blocked", "auth_required");
+        if (error.kind === "verification_required") return cartPrepareReceipt(command, "blocked", "verification_required");
+        if (["browser_launch_failed", "browser_context_failed", "supplier_page_unavailable"].includes(error.authIssue ?? "")) return cartPrepareReceipt(command, "blocked", "worker_unavailable");
+        if (error.authIssue === "credentials_rejected" || error.kind === "not_configured") return cartPrepareReceipt(command, "blocked", "auth_required");
+      }
+      return cartPrepareReceipt(command, "unknown", "outcome_unknown");
+    }
   }
 
   async verifyLogin(): Promise<SupplierConnectionCheck> {
@@ -470,7 +496,7 @@ export function emersonChallengeCode(text: string, visibleChallenge = false): "t
   return null;
 }
 
-async function activeEmersonChallenge(page: import("playwright").Page) {
+export async function activeEmersonChallenge(page: import("playwright").Page) {
   const text = await page.locator("body").innerText({ timeout: 2_000 }).catch(() => "");
   let visibleChallenge = false;
   for (const frame of await page.locator('iframe[title*="challenge" i], iframe[title*="verification" i]').all()) {
@@ -602,7 +628,7 @@ export function renderedEmersonRecords(links: Element[]): Record<string, unknown
   });
 }
 
-function emersonSessionCookies(cookieHeader: string) {
+export function emersonSessionCookies(cookieHeader: string) {
   const hosts = ["emersonecologics.com", "www.emersonecologics.com"];
   return hosts.flatMap((host) =>
     cookieHeader

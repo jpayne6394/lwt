@@ -21,6 +21,7 @@ export type RuntimeConfig = {
   internalDashboardAuthRequired: boolean;
   supplierRunToken?: string;
   supplierReadToken?: string;
+  supplierCartPrepareToken?: string;
   sourceRevision?: string;
   contentTopicsPath: string;
   contentRadarSourcesPath: string;
@@ -66,6 +67,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): RuntimeConfig 
     ),
     supplierRunToken: env.SUPPLIER_OPS_RUN_TOKEN,
     supplierReadToken: env.SUPPLIER_OPS_READ_TOKEN,
+    supplierCartPrepareToken: env.SUPPLIER_CART_PREPARE_TOKEN,
     sourceRevision: /^[a-f0-9]{40}$/i.test(env.RENDER_GIT_COMMIT ?? "") ? env.RENDER_GIT_COMMIT : undefined,
     contentTopicsPath: env.CONTENT_TOPICS_PATH ?? "config/content_topics.json",
     contentRadarSourcesPath: env.CONTENT_RADAR_SOURCES_PATH ?? "config/content-radar-sources.json",

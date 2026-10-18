@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { URL } from "node:url";
 
@@ -13,6 +13,8 @@ import { isSupplierAuthIssue, type SupplierAuthIssue, type SupplierConnectionChe
 import type { SupplierProduct } from "../domain/types.ts";
 import type { SupplierAuthConfiguration } from "../suppliers/auth-diagnostics.ts";
 import { renderAdminPage } from "./admin-ui.ts";
+import { parseSupplierCartPrepareCommand, cartPrepareReceipt, safeCartPrepareReceipt,
+  type SupplierCartPrepareCommand, type SupplierCartPrepareReceipt } from "../suppliers/cart-preparation.ts";
 
 export type ServerContext = {
   repository: SupplierOpsRepository;
@@ -28,6 +30,8 @@ export type ServerContext = {
   internalDashboardAuthRequired?: boolean;
   supplierRunToken?: string;
   supplierReadToken?: string;
+  supplierCartPrepareToken?: string;
+  prepareSupplierCart?: (command: SupplierCartPrepareCommand) => Promise<SupplierCartPrepareReceipt | null>;
   sourceRevision?: string;
   checkSupplierAuthentication?: (supplierKey: string) => Promise<{
     configuration: SupplierAuthConfiguration;
@@ -44,15 +48,42 @@ export type StartServerOptions = {
 };
 
 export function startServer(context: ServerContext, options: StartServerOptions) {
+  const preparations = new Map<string, Promise<{ fingerprint: string; receipt: SupplierCartPrepareReceipt }>>();
+  let preparing = false;
+  const prepareOnce = async (command: SupplierCartPrepareCommand): Promise<SupplierCartPrepareReceipt> => {
+    const canonical = (value: unknown): unknown => Array.isArray(value) ? value.map(canonical)
+      : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, canonical(item)])) : value;
+    const requestHash = createHash("sha256").update(JSON.stringify(canonical(command))).digest("hex");
+    const existing = preparations.get(command.commandId);
+    if (existing) {
+      const previous = await existing;
+      return previous.fingerprint === requestHash ? previous.receipt : cartPrepareReceipt(command, "blocked", "source_changed");
+    }
+    // No eviction: a process may refuse new work, never forget a mutation and replay it.
+    if (preparing || preparations.size >= 1000) return cartPrepareReceipt(command, "blocked", "worker_unavailable");
+    preparing = true;
+    const pending = (async () => {
+      let receipt: SupplierCartPrepareReceipt;
+      try {
+        const result = await context.prepareSupplierCart?.(command);
+        receipt = result ? safeCartPrepareReceipt(result, command) : cartPrepareReceipt(command, "blocked", "unsupported_supplier");
+      } catch { receipt = cartPrepareReceipt(command, "unknown", "outcome_unknown"); }
+      finally { preparing = false; }
+      return { fingerprint: requestHash, receipt };
+    })();
+    preparations.set(command.commandId, pending);
+    return (await pending).receipt;
+  };
   const server = createServer((request, response) => {
-    void handleRequest(context, request, response);
+    void handleRequest(context, request, response, prepareOnce);
   });
 
   server.listen(options.port, options.host ?? "0.0.0.0");
   return server;
 }
 
-async function handleRequest(context: ServerContext, request: IncomingMessage, response: ServerResponse): Promise<void> {
+async function handleRequest(context: ServerContext, request: IncomingMessage, response: ServerResponse,
+  prepareOnce: (command: SupplierCartPrepareCommand) => Promise<SupplierCartPrepareReceipt>): Promise<void> {
   const url = new URL(request.url ?? "/", "http://localhost");
   if (url.pathname === "/intelligence" || url.pathname.startsWith("/api/intelligence")) {
     const authStatus = intelligenceAuthStatus(request, context);
@@ -75,6 +106,28 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
       ok: true,
       sourceRevision: /^[a-f0-9]{40}$/i.test(context.sourceRevision ?? "") ? context.sourceRevision : null,
     });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/suppliers/cart-prepare") {
+    response.setHeader("Cache-Control", "no-store");
+    const token = context.supplierCartPrepareToken;
+    if (!token || token.length < 32 || token.length > 4096 || /[\r\n]/.test(token)
+      || token === context.supplierReadToken || token === context.supplierRunToken) {
+      sendJson(response, 503, { error: "supplier_cart_prepare_setup_required" }); return;
+    }
+    if (!request.headers.authorization?.startsWith("Bearer ") || !safeSecretMatch(request.headers.authorization.slice(7), token)) {
+      sendJson(response, 401, { error: "supplier_cart_prepare_unauthorized" }); return;
+    }
+    if (!/^application\/json(?:;.*)?$/i.test(String(request.headers["content-type"] ?? "").trim())) {
+      sendJson(response, 415, { error: "supplier_cart_prepare_content_type_required" }); return;
+    }
+    if (url.search || !context.prepareSupplierCart) { sendJson(response, 503, { error: "supplier_cart_prepare_unavailable" }); return; }
+    try {
+      const command = parseSupplierCartPrepareCommand(await readJsonBody(request, 32768));
+      if (!command) { sendJson(response, 400, { error: "supplier_cart_prepare_arguments_invalid" }); return; }
+      sendJson(response, 200, await prepareOnce(command));
+    } catch { sendJson(response, 400, { error: "supplier_cart_prepare_arguments_invalid" }); }
     return;
   }
 
@@ -154,7 +207,9 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
       // Explicit safe projection: provider errors and unknown diagnostic strings never leave the server.
       sendJson(response, 200, { ok: true, configuration: result.configuration, status: result.status,
         accountAuthenticated: result.accountAuthenticated, checkedAt: result.checkedAt,
-        ...(isSupplierAuthIssue(result.authIssue) ? { authIssue: result.authIssue } : {}), remoteCartPreparationSupported: false,
+        ...(isSupplierAuthIssue(result.authIssue) ? { authIssue: result.authIssue } : {}), remoteCartPreparationSupported: Boolean(context.prepareSupplierCart
+          && supplierKey === "emerson-ecologics" && context.supplierCartPrepareToken && context.supplierCartPrepareToken.length >= 32
+          && context.supplierCartPrepareToken !== context.supplierReadToken && context.supplierCartPrepareToken !== context.supplierRunToken),
         orderSubmissionSupported: false, paymentSupported: false });
     } catch {
       // Never return supplier messages or raw errors: they may contain account/session data.
