@@ -121,9 +121,30 @@ test("failed read-back of a fresh session also pauses subsequent credential rene
     authenticateSessionImpl: async () => { logins += 1; return "session=renewed"; },
     renderCatalogImpl: async () => { throw new EmersonSessionExpiredError(emerson.id); },
   });
-  assert.equal((await adapter.verifyAuthentication()).status, "verification_required");
-  assert.equal((await adapter.verifyAuthentication()).status, "verification_required");
+  for (let call = 0; call < 2; call += 1) {
+    const result = await adapter.verifyAuthentication();
+    assert.equal(result.status, "verification_required");
+    assert.equal(result.authIssue, "renewed_session_unverified");
+  }
   assert.equal(logins, 1);
+});
+
+test("controlled renewal failure reason survives sanitization and the cooldown without another submission", async () => {
+  for (const authIssue of ["browser_launch_failed", "login_form_unavailable", "credentials_rejected", "login_confirmation_missing"] as const) {
+    let submissions = 0;
+    const adapter = new EmersonCatalogSupplierAdapter(emerson, { cookieHeader: "session=expired", username: "private-user", password: "private-password",
+      authenticateSessionImpl: async () => {
+        submissions += 1; throw new SupplierAdapterError(emerson.id, "login_failed", "private-provider-password", authIssue);
+      },
+      renderCatalogImpl: async () => { throw new EmersonSessionExpiredError(emerson.id); },
+    });
+    for (let call = 0; call < 2; call += 1) {
+      const result = await adapter.verifyAuthentication();
+      assert.equal(result.authIssue, authIssue);
+      assert.doesNotMatch(JSON.stringify(result), /private/);
+    }
+    assert.equal(submissions, 1);
+  }
 });
 
 test("failed freshly renewed Emerson sessions are not retried in a silent loop", async () => {

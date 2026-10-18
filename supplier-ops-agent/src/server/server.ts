@@ -9,7 +9,7 @@ import type { IntelligenceRunType } from "../agents/intelligenceTypes.ts";
 import type { AgentMemoryService } from "../memory/memory-service.ts";
 import type { SupplierOpsRepository } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
-import type { SupplierConnectionCheck } from "../suppliers/types.ts";
+import { isSupplierAuthIssue, type SupplierAuthIssue, type SupplierConnectionCheck } from "../suppliers/types.ts";
 import type { SupplierProduct } from "../domain/types.ts";
 import type { SupplierAuthConfiguration } from "../suppliers/auth-diagnostics.ts";
 import { renderAdminPage } from "./admin-ui.ts";
@@ -34,6 +34,7 @@ export type ServerContext = {
     status: SupplierConnectionCheck["status"];
     accountAuthenticated: boolean;
     checkedAt: string;
+    authIssue?: SupplierAuthIssue;
   } | null>;
 };
 
@@ -150,7 +151,10 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
         return;
       }
       response.setHeader("Cache-Control", "no-store");
-      sendJson(response, 200, { ok: true, ...result, remoteCartPreparationSupported: false,
+      // Explicit safe projection: provider errors and unknown diagnostic strings never leave the server.
+      sendJson(response, 200, { ok: true, configuration: result.configuration, status: result.status,
+        accountAuthenticated: result.accountAuthenticated, checkedAt: result.checkedAt,
+        ...(isSupplierAuthIssue(result.authIssue) ? { authIssue: result.authIssue } : {}), remoteCartPreparationSupported: false,
         orderSubmissionSupported: false, paymentSupported: false });
     } catch {
       // Never return supplier messages or raw errors: they may contain account/session data.

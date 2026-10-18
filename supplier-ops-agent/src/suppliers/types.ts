@@ -2,6 +2,18 @@ import type { SupplierProduct } from "../domain/types.ts";
 
 export type SupplierMode = "feed" | "website";
 
+/** Closed diagnostic vocabulary: never substitute provider text or account data. */
+export const SUPPLIER_AUTH_ISSUES = [
+  "browser_launch_failed", "browser_context_failed", "supplier_page_unavailable",
+  "existing_session_unverified", "login_form_unavailable", "credentials_rejected",
+  "login_confirmation_missing", "challenge_required", "mfa_required",
+  "renewed_session_unverified", "session_not_configured",
+] as const;
+export type SupplierAuthIssue = typeof SUPPLIER_AUTH_ISSUES[number];
+export function isSupplierAuthIssue(value: unknown): value is SupplierAuthIssue {
+  return typeof value === "string" && (SUPPLIER_AUTH_ISSUES as readonly string[]).includes(value);
+}
+
 export type SupplierConfig = {
   id: string;
   name: string;
@@ -42,6 +54,7 @@ export type SupplierConnectionCheck = {
     | "not_configured"
     | "unsupported";
   message: string;
+  authIssue?: SupplierAuthIssue;
 };
 
 export class SupplierAdapterError extends Error {
@@ -52,12 +65,14 @@ export class SupplierAdapterError extends Error {
     | "two_factor_required"
     | "parse_failed"
     | "not_configured";
+  readonly authIssue?: SupplierAuthIssue;
 
-  constructor(supplierId: string, kind: SupplierAdapterError["kind"], message: string) {
+  constructor(supplierId: string, kind: SupplierAdapterError["kind"], message: string, authIssue?: SupplierAuthIssue) {
     super(message);
     this.name = "SupplierAdapterError";
     this.supplierId = supplierId;
     this.kind = kind;
+    this.authIssue = isSupplierAuthIssue(authIssue) ? authIssue : undefined;
   }
 }
 
