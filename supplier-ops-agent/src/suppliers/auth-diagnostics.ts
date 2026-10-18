@@ -37,8 +37,9 @@ export function describeSupplierAuthConfiguration(
   if (defaultPublicCatalogConfig(supplier.id)) {
     return { ...base, mode: "public_catalog", automaticReauthenticationSupported: false, refreshedSessionPersistence: "not_applicable" };
   }
-  if (supplier.id === "emerson-ecologics" && env.SUPPLIER_COOKIE_EMERSON_ECOLOGICS) {
-    return { ...base, mode: "supplier_account", automaticReauthenticationSupported: false, refreshedSessionPersistence: "not_supported" };
+  if (supplier.id === "emerson-ecologics" && (env.SUPPLIER_COOKIE_EMERSON_ECOLOGICS || (usernameConfigured && passwordConfigured))) {
+    return { ...base, mode: "supplier_account", automaticReauthenticationSupported: usernameConfigured && passwordConfigured,
+      refreshedSessionPersistence: usernameConfigured && passwordConfigured ? "process_memory_only" : "not_supported" };
   }
   const automaticReauthenticationSupported = usernameConfigured && passwordConfigured
     && configured(website.loginUrl) && configured(website.productsUrl) && configured(website.authenticatedSelector)

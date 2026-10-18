@@ -4,10 +4,13 @@ import test from "node:test";
 import {
   assertSafeEmersonUrl,
   EmersonCatalogSupplierAdapter,
+  EmersonSessionExpiredError,
+  emersonChallengeCode,
   parseEmersonCatalogUrls,
   requiresSignIn,
 } from "../src/suppliers/emerson-catalog-adapter.ts";
 import type { SupplierConfig } from "../src/suppliers/types.ts";
+import { SupplierAdapterError } from "../src/suppliers/types.ts";
 
 const emerson: SupplierConfig = {
   id: "emerson-ecologics",
@@ -16,6 +19,164 @@ const emerson: SupplierConfig = {
   brands: ["Pure Encapsulations"],
   notes: "",
 };
+
+test("normal Emerson reCAPTCHA legal footer is not an active verification challenge", () => {
+  assert.equal(emersonChallengeCode("This page is protected by reCAPTCHA, and subject to Google Privacy Policy and Terms of Service."), null);
+  assert.equal(emersonChallengeCode("Please verify you are human"), "verification_required");
+  assert.equal(emersonChallengeCode("Email Password", true), "verification_required");
+  assert.equal(emersonChallengeCode("Enter verification code"), "two_factor_required");
+});
+
+test("expired Emerson cookie renews once with saved credentials and reuses the refreshed session", async () => {
+  let logins = 0;
+  const cookies: string[] = [];
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, {
+    cookieHeader: "session=expired", username: "private-account", password: "private-password",
+    authenticateSessionImpl: async (input) => {
+      assert.equal(input.username, "private-account"); assert.equal(input.password, "private-password");
+      logins += 1; return "session=renewed";
+    },
+    renderCatalogImpl: async (url, cookie) => {
+      cookies.push(cookie);
+      if (cookie === "session=expired") throw new EmersonSessionExpiredError(emerson.id);
+      return { responseUrl: url, records: [] };
+    },
+  });
+  assert.equal((await adapter.verifyAuthentication()).status, "connected");
+  assert.equal((await adapter.verifyAuthentication()).status, "connected");
+  assert.equal(logins, 1);
+  assert.deepEqual(cookies, ["session=expired", "session=renewed", "session=renewed"]);
+});
+
+test("missing Emerson cookie uses the saved account once, without starting a catalog sync", async () => {
+  let logins = 0;
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, { username: "private-account", password: "private-password",
+    authenticateSessionImpl: async () => { logins += 1; return "session=renewed"; },
+    renderCatalogImpl: async (url, cookie) => { assert.equal(cookie, "session=renewed"); return { responseUrl: url, records: [] }; },
+    fetchImpl: async () => { throw new Error("no full catalog HTTP sync"); },
+  });
+  assert.equal((await adapter.verifyAuthentication()).status, "connected");
+  assert.equal(logins, 1);
+});
+
+test("Emerson MFA and active CAPTCHA stop without attempting stored-credential renewal", async () => {
+  for (const kind of ["two_factor_required", "verification_required"] as const) {
+    let logins = 0;
+    const adapter = new EmersonCatalogSupplierAdapter(emerson, { cookieHeader: "session=present", username: "private-account", password: "private-password",
+      authenticateSessionImpl: async () => { logins += 1; throw new Error("must not attempt login"); },
+      renderCatalogImpl: async () => { throw new SupplierAdapterError(emerson.id, kind, "private-page-context"); },
+    });
+    const result = await adapter.verifyAuthentication();
+    assert.equal(result.status, kind); assert.equal(logins, 0);
+    assert.doesNotMatch(JSON.stringify(result), /private/);
+  }
+});
+
+test("HTTP 200 MFA or active CAPTCHA takes precedence over an expired password form", async () => {
+  for (const [body, kind] of [["Enter verification code", "two_factor_required"], ["Complete the CAPTCHA", "verification_required"]] as const) {
+    let logins = 0;
+    const adapter = new EmersonCatalogSupplierAdapter(emerson, { cookieHeader: "session=present", username: "private-account", password: "private-password",
+      fetchImpl: async () => new Response(`<input type="password"><p>${body}</p>`, { status: 200 }),
+      authenticateSessionImpl: async () => { logins += 1; throw new Error("must not attempt login"); },
+    });
+    await assert.rejects(adapter.lookupProduct("PUR-MG9"), (error: unknown) => error instanceof SupplierAdapterError && error.kind === kind);
+    assert.equal(logins, 0);
+  }
+});
+
+test("normal reCAPTCHA footer and script strings do not manufacture an HTTP challenge", async () => {
+  let logins = 0;
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, { cookieHeader: "session=expired", username: "private-account", password: "private-password",
+    authenticateSessionImpl: async () => { logins += 1; return "session=renewed"; },
+    fetchImpl: async (_url, init) => new Headers(init?.headers).get("cookie") === "session=renewed"
+      ? new Response(authenticatedCatalogHtml(), { status: 200 })
+      : new Response('<input type="password"><script>const text="Enter verification code";</script><p>This page is protected by reCAPTCHA.</p>', { status: 200 }),
+  });
+  assert.equal((await adapter.lookupProduct("PUR-MG9"))?.sku, "PUR-MG9");
+  assert.equal(logins, 1);
+});
+
+test("failed renewal is status-cached for five minutes, preventing sequential login lockout loops", async () => {
+  for (const kind of ["login_failed", "two_factor_required", "verification_required"] as const) {
+    let now = 1_000, logins = 0;
+    const adapter = new EmersonCatalogSupplierAdapter(emerson, { cookieHeader: "session=expired", username: "private-account", password: "private-password",
+      nowImpl: () => now,
+      authenticateSessionImpl: async () => { logins += 1; throw new SupplierAdapterError(emerson.id, kind, "private-provider-context"); },
+      renderCatalogImpl: async () => { throw new EmersonSessionExpiredError(emerson.id); },
+    });
+    for (let call = 0; call < 2; call += 1) {
+      const result = await adapter.verifyAuthentication();
+      assert.equal(result.status, kind); assert.doesNotMatch(JSON.stringify(result), /private/);
+    }
+    assert.equal(logins, 1);
+    now += 5 * 60_000 + 1;
+    assert.equal((await adapter.verifyAuthentication()).status, kind);
+    assert.equal(logins, 2);
+  }
+});
+
+test("failed read-back of a fresh session also pauses subsequent credential renewal", async () => {
+  let logins = 0;
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, { cookieHeader: "session=expired", username: "private-account", password: "private-password",
+    authenticateSessionImpl: async () => { logins += 1; return "session=renewed"; },
+    renderCatalogImpl: async () => { throw new EmersonSessionExpiredError(emerson.id); },
+  });
+  assert.equal((await adapter.verifyAuthentication()).status, "verification_required");
+  assert.equal((await adapter.verifyAuthentication()).status, "verification_required");
+  assert.equal(logins, 1);
+});
+
+test("failed freshly renewed Emerson sessions are not retried in a silent loop", async () => {
+  let logins = 0;
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, { cookieHeader: "session=expired", username: "private-account", password: "private-password",
+    authenticateSessionImpl: async () => { logins += 1; return "session=renewed"; },
+    renderCatalogImpl: async () => { throw new EmersonSessionExpiredError(emerson.id); },
+  });
+  assert.equal((await adapter.verifyAuthentication()).status, "verification_required");
+  assert.equal(logins, 1);
+});
+
+test("concurrent Emerson reads share one normal credential renewal", async () => {
+  let logins = 0;
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, { cookieHeader: "session=expired", username: "private-account", password: "private-password",
+    authenticateSessionImpl: async () => { logins += 1; await new Promise((resolve) => setImmediate(resolve)); return "session=renewed"; },
+    renderCatalogImpl: async (url, cookie) => {
+      if (cookie === "session=expired") throw new EmersonSessionExpiredError(emerson.id);
+      return { responseUrl: url, records: [] };
+    },
+  });
+  assert.deepEqual((await Promise.all([adapter.verifyAuthentication(), adapter.verifyAuthentication()])).map((result) => result.status), ["connected", "connected"]);
+  assert.equal(logins, 1);
+});
+
+test("Emerson exact lookup preserves its original SKU after one expired-session renewal", async () => {
+  const urls: string[] = [];
+  let logins = 0;
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, { cookieHeader: "session=expired", username: "private-account", password: "private-password",
+    authenticateSessionImpl: async () => { logins += 1; return "session=renewed"; },
+    fetchImpl: async (url, init) => {
+      urls.push(String(url));
+      const fresh = new Headers(init?.headers).get("cookie") === "session=renewed";
+      return new Response(fresh ? authenticatedCatalogHtml() : '<input type="password">', { status: 200 });
+    },
+  });
+  assert.equal((await adapter.lookupProduct("PUR-MG9"))?.sku, "PUR-MG9");
+  assert.equal(logins, 1); assert.equal(urls.length, 2);
+  assert.deepEqual(urls, [urls[0], urls[0]]); assert.equal(new URL(urls[0]).searchParams.get("query"), '"PUR-MG9"');
+});
+
+test("Emerson 403 blocks and third-party or purchase URLs never trigger a credential retry", async () => {
+  let logins = 0;
+  const adapter = new EmersonCatalogSupplierAdapter(emerson, { cookieHeader: "session=present", username: "private-account", password: "private-password",
+    authenticateSessionImpl: async () => { logins += 1; throw new Error("must not attempt login"); },
+    fetchImpl: async () => new Response("Forbidden", { status: 403 }),
+  });
+  await assert.rejects(adapter.lookupProduct("PUR-MG9"), (error: unknown) => error instanceof SupplierAdapterError && error.kind === "verification_required");
+  assert.equal(logins, 0);
+  for (const url of ["https://other.emersonecologics.com/login", "https://www.emersonecologics.com/checkout", "https://www.emersonecologics.com/cart", "https://www.emersonecologics.com/orders", "https://user:private@www.emersonecologics.com/login"]) {
+    assert.throws(() => assertSafeEmersonUrl(url, emerson.id));
+  }
+});
 
 test("Emerson session adapter maps authenticated catalog state and sends the cookie only to Emerson", async () => {
   let sentCookie = "";
