@@ -11,10 +11,10 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
   contextFailure?: Error; navigationFailure?: Error; emptyCookies?: boolean; closeFailure?: Error;
   currentProfile?: boolean; accountLink?: boolean; signOutLink?: boolean; signedIn?: boolean; stayOnLogin?: boolean;
   semanticLabels?: boolean; legacyFields?: boolean; emailMissing?: boolean; passwordMissing?: boolean; signInMissing?: boolean; profileText?: string;
-  failureAt?: "fill_email" | "fill_password" | "click_sign_in"; emailEnabled?: boolean; emailEditable?: boolean;
-  passwordEnabled?: boolean; passwordEditable?: boolean; signInEnabled?: boolean } = {}) {
+  failureAt?: "fill_email" | "fill_password" | "press_sign_in"; emailEnabled?: boolean; emailEditable?: boolean;
+  passwordEnabled?: boolean; passwordEditable?: boolean; signInEnabled?: boolean; beforeSubmitChallenge?: string } = {}) {
   const events: string[] = [];
-  let submitted = Boolean(options.signedIn), menuOpened = false;
+  let submitted = Boolean(options.signedIn), menuOpened = false, passwordFilled = false;
   let url = options.signedIn ? "https://www.emersonecologics.com/shop" : "about:blank";
   const visible = (selector: string) => {
     if (selector === "body") return true;
@@ -35,13 +35,15 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
       assert.equal(value, email ? input.username : input.password);
       events.push(`fill:${selector}`);
       if (options.failure && (options.failureAt ?? "fill_email") === (email ? "fill_email" : "fill_password")) throw options.failure;
+      if (!email) passwordFilled = true;
     },
     count: async () => visible(selector) ? 1 : 0,
     isVisible: async () => visible(selector),
     isEnabled: async () => /email$/i.test(selector) ? options.emailEnabled !== false : options.passwordEnabled !== false,
     isEditable: async () => /email$/i.test(selector) ? options.emailEditable !== false : options.passwordEditable !== false,
     waitFor: async () => { if (!visible(selector)) throw new Error("observed field not visible"); },
-    innerText: async () => submitted ? options.afterText ?? "Account" : options.beforeText ?? "This page is protected by reCAPTCHA, and subject to Google Privacy Policy and Terms of Service.",
+    innerText: async () => submitted ? options.afterText ?? "Account" : passwordFilled && options.beforeSubmitChallenge
+      ? options.beforeSubmitChallenge : options.beforeText ?? "This page is protected by reCAPTCHA, and subject to Google Privacy Policy and Terms of Service.",
     first: () => ({ isVisible: async () => visible(selector), waitFor: async () => { if (!visible(selector)) throw new Error("not visible"); } }),
     all: async () => options.challengeFrame ? [{ isVisible: async () => true }] : [],
   });
@@ -68,8 +70,10 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
       return { count: async () => options.signInMissing ? 0 : 1, isVisible: async () => !options.signInMissing,
         isEnabled: async () => options.signInEnabled !== false,
         waitFor: async () => { if (options.signInMissing) throw new Error("sign-in button missing"); },
-        click: async () => {
-          events.push("click:Sign in"); if (options.failure && options.failureAt === "click_sign_in") throw options.failure;
+        click: async () => { assert.fail("pointer submission must not be attempted"); },
+        press: async (key: string, settings: unknown) => {
+          assert.equal(key, "Enter"); assert.deepEqual(settings, { noWaitAfter: true, timeout: 10_000 });
+          events.push("press:Enter:Sign in"); if (options.failure && options.failureAt === "press_sign_in") throw options.failure;
           submitted = true; url = options.stayOnLogin ? "https://www.emersonecologics.com/login" : "https://www.emersonecologics.com/shop";
         } };
     },
@@ -93,7 +97,7 @@ test("routine Emerson login uses only the observed form and returns the verified
   const harness = browserHarness();
   assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
   assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:#email", "fill:#password",
-    "click:Sign in", "read-verified-session", "browser-closed"]);
+    "press:Enter:Sign in", "read-verified-session", "browser-closed"]);
   assert.doesNotMatch(JSON.stringify(harness.events), /private|cart|checkout|payment|order/);
 });
 
@@ -101,7 +105,23 @@ test("semantic Email*/Password* labels work when the legacy field IDs are absent
   const harness = browserHarness({ semanticLabels: true, legacyFields: false });
   assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
   assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:label:Email", "fill:label:Password",
-    "click:Sign in", "read-verified-session", "browser-closed"]);
+    "press:Enter:Sign in", "read-verified-session", "browser-closed"]);
+});
+
+test("a disabled sign-in button cannot receive Enter even when visible and both fields filled", async (context) => {
+  context.mock.method(console, "warn", () => undefined);
+  const harness = browserHarness({ signInEnabled: false });
+  await assert.rejects(signInEmersonWithCredentials(input, harness.launch),
+    (error: unknown) => error instanceof SupplierAdapterError && error.authIssue === "login_form_unavailable");
+  assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:#email", "fill:#password", "browser-closed"]);
+});
+
+test("a challenge appearing during form entry stops before the single initial keyboard submission", async (context) => {
+  context.mock.method(console, "warn", () => undefined);
+  const harness = browserHarness({ beforeSubmitChallenge: "Verify you are human" });
+  await assert.rejects(signInEmersonWithCredentials(input, harness.launch),
+    (error: unknown) => error instanceof SupplierAdapterError && error.kind === "verification_required");
+  assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:#email", "fill:#password", "browser-closed"]);
 });
 
 test("both fields and the observed sign-in button must be ready before any credential is filled", async (context) => {
@@ -142,9 +162,9 @@ test("original action failures retain exact controlled operation and category be
   for (const [failureAt, error, category] of [
     ["fill_email", failure("Element is not editable"), "element_not_editable"],
     ["fill_password", failure("locator.fill timed out", "TimeoutError"), "timeout"],
-    ["click_sign_in", failure("another element intercepts pointer events", "TimeoutError"), "pointer_intercepted"],
+    ["press_sign_in", failure("another element intercepts pointer events", "TimeoutError"), "pointer_intercepted"],
     ["fill_password", failure("Element is detached from the DOM", "TimeoutError"), "element_detached"],
-    ["click_sign_in", failure("Target page, context or browser has been closed"), "page_closed"],
+    ["press_sign_in", failure("Target page, context or browser has been closed"), "page_closed"],
     ["fill_email", failure("unexpected provider message"), "other"],
   ] as const) {
     logs.length = 0;
@@ -158,7 +178,7 @@ test("original action failures retain exact controlled operation and category be
     assert.equal(data.emailEnabled, true); assert.equal(data.emailEditable, true);
     assert.equal(data.passwordEnabled, true); assert.equal(data.passwordEditable, true); assert.equal(data.signInEnabled, true);
     assert.doesNotMatch(JSON.stringify(logs), /private|https:|locator\.fill|intercepts pointer/);
-    assert.equal(harness.events.filter((event) => event === "click:Sign in").length, failureAt === "click_sign_in" ? 1 : 0);
+    assert.equal(harness.events.filter((event) => event === "press:Enter:Sign in").length, failureAt === "press_sign_in" ? 1 : 0);
   }
 });
 
@@ -166,13 +186,13 @@ test("failed action diagnostics report enabled/editable state without reading cr
   const logs: unknown[][] = [];
   context.mock.method(console, "warn", (...args: unknown[]) => { logs.push(args); });
   const failure = Object.assign(new Error("private-provider timeout"), { name: "TimeoutError" });
-  const harness = browserHarness({ failure, failureAt: "click_sign_in", emailEnabled: true, emailEditable: false,
-    passwordEnabled: false, passwordEditable: false, signInEnabled: false });
+  const harness = browserHarness({ failure, failureAt: "press_sign_in", emailEnabled: true, emailEditable: false,
+    passwordEnabled: false, passwordEditable: false, signInEnabled: true });
   await assert.rejects(signInEmersonWithCredentials(input, harness.launch));
   const data = logs[0][1] as Record<string, unknown>;
-  assert.equal(data.operation, "click_sign_in"); assert.equal(data.failureCategory, "timeout");
+  assert.equal(data.operation, "press_sign_in"); assert.equal(data.failureCategory, "timeout");
   assert.equal(data.emailEnabled, true); assert.equal(data.emailEditable, false);
-  assert.equal(data.passwordEnabled, false); assert.equal(data.passwordEditable, false); assert.equal(data.signInEnabled, false);
+  assert.equal(data.passwordEnabled, false); assert.equal(data.passwordEditable, false); assert.equal(data.signInEnabled, true);
   assert.doesNotMatch(JSON.stringify(logs), /private|value|password=/);
 });
 
@@ -180,7 +200,7 @@ test("current Emerson profile menu proves the renewed account using both exact a
   const harness = browserHarness({ currentProfile: true });
   assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
   assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:#email", "fill:#password",
-    "click:Sign in", "click:profile-menu", "read-verified-session", "browser-closed"]);
+    "press:Enter:Sign in", "click:profile-menu", "read-verified-session", "browser-closed"]);
 });
 
 test("reusable-session reader uses the same current profile-menu account proof", async () => {
@@ -241,7 +261,7 @@ test("supplier MFA after normal sign-in is handed off without reading a session 
   const harness = browserHarness({ afterText: "Enter verification code", accountMarker: false });
   await assert.rejects(signInEmersonWithCredentials(input, harness.launch),
     (error: unknown) => error instanceof SupplierAdapterError && error.kind === "two_factor_required");
-  assert.equal(harness.events.filter((event) => event === "click:Sign in").length, 1);
+  assert.equal(harness.events.filter((event) => event === "press:Enter:Sign in").length, 1);
   assert.equal(harness.events.includes("read-verified-session"), false);
   assert.equal(harness.events.at(-1), "browser-closed");
 });
@@ -296,7 +316,7 @@ test("a missing post-login account marker does not falsely claim credentials wer
   await assert.rejects(signInEmersonWithCredentials(input, harness.launch), (error: unknown) => {
     assert(error instanceof SupplierAdapterError); assert.equal(error.authIssue, "login_confirmation_missing"); return true;
   });
-  assert.equal(harness.events.filter((event) => event === "click:Sign in").length, 1);
+  assert.equal(harness.events.filter((event) => event === "press:Enter:Sign in").length, 1);
   assert.equal(harness.events.includes("read-verified-session"), false);
 });
 
