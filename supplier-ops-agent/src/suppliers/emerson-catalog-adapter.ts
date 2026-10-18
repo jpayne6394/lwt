@@ -11,8 +11,12 @@ import { SupplierAdapterError } from "./types.ts";
 export type EmersonCatalogAdapterConfig = {
   catalogUrls?: string[];
   cookieHeader?: string;
+  username?: string;
+  password?: string;
   fetchImpl?: typeof fetch;
   renderCatalogImpl?: EmersonRenderedCatalogReader;
+  authenticateSessionImpl?: EmersonCredentialAuthenticator;
+  nowImpl?: () => number;
 };
 
 export type EmersonRenderedCatalogReader = (
@@ -21,18 +25,35 @@ export type EmersonRenderedCatalogReader = (
   supplierId: string,
 ) => Promise<{ responseUrl: string; records: Record<string, unknown>[] }>;
 
+export type EmersonCredentialAuthenticator = (input: {
+  username: string; password: string; supplierId: string;
+}) => Promise<string>;
+
+/** An expired login is retryable; an actual verification challenge is not. */
+export class EmersonSessionExpiredError extends SupplierAdapterError {
+  constructor(supplierId: string) {
+    super(supplierId, "verification_required", "Emerson account session expired");
+  }
+}
+
 type ApolloState = Record<string, Record<string, unknown>>;
 
 const DEFAULT_CATALOG_URL = "https://emersonecologics.com/shop";
 
 /**
- * Uses a session created by a real, user-completed Emerson login. This avoids
- * replaying the password form (and its CAPTCHA) on every read-only run.
+ * Reuses a verified supplier session. An expired session can be renewed once
+ * with server-held credentials; supplier MFA/CAPTCHA always requires a handoff.
  */
 export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
   readonly supplier: SupplierConfig;
   readonly #catalogUrls: string[];
-  readonly #cookieHeader?: string;
+  #cookieHeader?: string;
+  readonly #username?: string;
+  readonly #password?: string;
+  readonly #authenticateSession: EmersonCredentialAuthenticator;
+  readonly #now: () => number;
+  #refreshPending?: Promise<void>;
+  #renewalFailure?: { kind: SupplierAdapterError["kind"]; retryAt: number };
   readonly #fetch: typeof fetch;
   readonly #renderCatalog: EmersonRenderedCatalogReader;
 
@@ -40,12 +61,16 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     this.supplier = supplier;
     this.#catalogUrls = config.catalogUrls?.length ? config.catalogUrls : [DEFAULT_CATALOG_URL];
     this.#cookieHeader = cleanString(config.cookieHeader) || undefined;
+    this.#username = cleanString(config.username) || undefined;
+    this.#password = config.password?.trim() ? config.password : undefined;
+    this.#authenticateSession = config.authenticateSessionImpl ?? signInEmersonWithCredentials;
+    this.#now = config.nowImpl ?? Date.now;
     this.#fetch = config.fetchImpl ?? fetch;
     this.#renderCatalog = config.renderCatalogImpl ?? readRenderedEmersonCatalog;
   }
 
   async verifyLogin(): Promise<SupplierConnectionCheck> {
-    if (!this.#cookieHeader) {
+    if (!this.#cookieHeader && !this.#canAuthenticate()) {
       return this.#check("not_configured", `${this.supplier.name} needs a one-time browser session connection.`);
     }
 
@@ -67,10 +92,10 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
   }
 
   async verifyAuthentication(): Promise<SupplierConnectionCheck> {
-    if (!this.#cookieHeader) return this.#check("not_configured", "Emerson account session is not configured.");
+    if (!this.#cookieHeader && !this.#canAuthenticate()) return this.#check("not_configured", "Emerson account session is not configured.");
     try {
       // Unlike catalog parsing, the rendered reader requires the account-only marker.
-      await this.#renderCatalog(this.#catalogUrls[0], this.#cookieHeader, this.supplier.id);
+      await this.#withSessionRenewal((cookie) => this.#renderCatalog(this.#catalogUrls[0], cookie, this.supplier.id));
       return this.#check("connected", "Emerson account-only marker verified.");
     } catch (error) {
       if (error instanceof SupplierAdapterError && error.kind === "two_factor_required") {
@@ -84,7 +109,7 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
   }
 
   async fetchProducts(context: SupplierAdapterContext = {}) {
-    if (!this.#cookieHeader) {
+    if (!this.#cookieHeader && !this.#canAuthenticate()) {
       throw new SupplierAdapterError(
         this.supplier.id,
         "not_configured",
@@ -119,7 +144,7 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
   }
 
   async lookupProduct(supplierSku: string, context: SupplierAdapterContext = {}) {
-    if (!this.#cookieHeader) {
+    if (!this.#cookieHeader && !this.#canAuthenticate()) {
       throw new SupplierAdapterError(
         this.supplier.id,
         "not_configured",
@@ -154,7 +179,8 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
       },
     });
 
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) throw new EmersonSessionExpiredError(this.supplier.id);
+    if (response.status === 403) {
       throw new SupplierAdapterError(
         this.supplier.id,
         "verification_required",
@@ -172,13 +198,19 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
   }
 
   async #readCatalogRecords(catalogUrl: string, expectedSku?: string): Promise<Record<string, unknown>[]> {
+    return this.#withSessionRenewal(() => this.#readCatalogRecordsWithSession(catalogUrl, expectedSku));
+  }
+
+  async #readCatalogRecordsWithSession(catalogUrl: string, expectedSku?: string): Promise<Record<string, unknown>[]> {
     const { html, responseUrl } = await this.#readCatalog(catalogUrl);
+    // A real verification challenge is not an expired password form. Ignore scripts
+    // and styles so bundled UI strings cannot manufacture a human handoff.
+    const visibleText = html.replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, " ")
+      .replace(/<[^>]+>/g, " ").replace(/&nbsp;|&#160;/gi, " ");
+    const challenge = emersonChallengeCode(visibleText);
+    if (challenge) throw new SupplierAdapterError(this.supplier.id, challenge, "Emerson account verification is required");
     if (requiresSignIn(html, responseUrl)) {
-      throw new SupplierAdapterError(
-        this.supplier.id,
-        "verification_required",
-        `${this.supplier.name} session expired and needs one browser reconnection`,
-      );
+      throw new EmersonSessionExpiredError(this.supplier.id);
     }
 
     if (hasApolloState(html)) {
@@ -191,13 +223,58 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
 
     const rendered = await this.#renderCatalog(catalogUrl, this.#cookieHeader!, this.supplier.id);
     if (requiresSignIn("", rendered.responseUrl)) {
-      throw new SupplierAdapterError(
-        this.supplier.id,
-        "verification_required",
-        `${this.supplier.name} session expired and needs one browser reconnection`,
-      );
+      throw new EmersonSessionExpiredError(this.supplier.id);
     }
     return rendered.records;
+  }
+
+  #canAuthenticate(): boolean { return Boolean(this.#username && this.#password); }
+
+  async #withSessionRenewal<T>(read: (cookie: string) => Promise<T>): Promise<T> {
+    const hadSession = Boolean(this.#cookieHeader);
+    if (!hadSession) await this.#refreshSession();
+    const attemptedCookie = this.#cookieHeader!;
+    try { return await read(attemptedCookie); }
+    catch (error) {
+      // No loop: challenges and failed fresh sessions never cause more login attempts.
+      if (!hadSession) this.#rememberRenewalFailure(error);
+      if (!hadSession || !(error instanceof EmersonSessionExpiredError) || !this.#canAuthenticate()) throw error;
+      if (this.#cookieHeader === attemptedCookie) await this.#refreshSession();
+      try { return await read(this.#cookieHeader!); }
+      catch (freshError) { this.#rememberRenewalFailure(freshError); throw freshError; }
+    }
+  }
+
+  async #refreshSession(): Promise<void> {
+    if (!this.#canAuthenticate()) throw new EmersonSessionExpiredError(this.supplier.id);
+    if (this.#renewalFailure && this.#renewalFailure.retryAt > this.#now()) {
+      throw new SupplierAdapterError(this.supplier.id, this.#renewalFailure.kind,
+        "Emerson saved-account renewal is temporarily paused after the previous unsuccessful attempt");
+    }
+    if (!this.#refreshPending) {
+      this.#refreshPending = (async () => {
+        try {
+          const cookie = await this.#authenticateSession({ username: this.#username!, password: this.#password!, supplierId: this.supplier.id });
+          if (!cookie || /[\r\n]/.test(cookie) || cookie.length > 64_000) {
+            throw new SupplierAdapterError(this.supplier.id, "login_failed", "Emerson authenticated session was not available");
+          }
+          this.#cookieHeader = cookie;
+          this.#renewalFailure = undefined;
+        } catch (error) {
+          this.#rememberRenewalFailure(error);
+          throw new SupplierAdapterError(this.supplier.id, this.#renewalFailure!.kind,
+            "Emerson saved-account renewal could not be completed");
+        }
+      })();
+    }
+    try { await this.#refreshPending; }
+    finally { this.#refreshPending = undefined; }
+  }
+
+  #rememberRenewalFailure(error: unknown) {
+    const kind = error instanceof SupplierAdapterError && ["login_failed", "verification_required", "two_factor_required"].includes(error.kind)
+      ? error.kind : "login_failed";
+    this.#renewalFailure = { kind, retryAt: this.#now() + 5 * 60_000 };
   }
 
   #check(status: SupplierConnectionCheck["status"], message: string): SupplierConnectionCheck {
@@ -205,13 +282,84 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
   }
 }
 
-async function readRenderedEmersonCatalog(
+export async function signInEmersonWithCredentials(input: {
+  username: string; password: string; supplierId: string;
+}, launchBrowser: typeof launchSupplierBrowser = launchSupplierBrowser): Promise<string> {
+  const browser = await launchBrowser();
+  try {
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    const assertAccountUrl = () => assertSafeEmersonUrl(page.url(), input.supplierId);
+    const challenge = () => activeEmersonChallenge(page);
+    try {
+      // These controls were observed on the supplier's actual current sign-in page.
+      await page.goto("https://www.emersonecologics.com/login", { waitUntil: "domcontentloaded", timeout: 20_000 });
+      assertAccountUrl();
+      const initialChallenge = await challenge();
+      if (initialChallenge) throw new SupplierAdapterError(input.supplierId, initialChallenge, "Emerson account verification is required");
+      await page.locator("#email").fill(input.username, { timeout: 10_000 });
+      await page.locator("#password").fill(input.password, { timeout: 10_000 });
+      assertAccountUrl();
+      await page.getByRole("button", { name: "Sign in", exact: true }).click({ noWaitAfter: true, timeout: 10_000 });
+      let accountVerified = false;
+      // Bounded observation only. Never retry the credential submission.
+      const observationDeadline = Date.now() + 15_000;
+      for (let observation = 0; observation < 60 && Date.now() < observationDeadline; observation += 1) {
+        assertAccountUrl();
+        const activeChallenge = await challenge();
+        if (activeChallenge) throw new SupplierAdapterError(input.supplierId, activeChallenge, "Emerson account verification is required");
+        const accountVisible = await page.locator('[aria-label="Account Dropdown"]').first().isVisible().catch(() => false);
+        if (accountVisible) { accountVerified = true; break; }
+        const text = await page.locator("body").innerText({ timeout: 2_000 }).catch(() => "");
+        if (/invalid (?:email|username|password|credentials)|incorrect (?:email|password)|sign in failed|login failed/i.test(text)) {
+          throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson rejected the saved account");
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      assertAccountUrl();
+      const activeChallenge = await challenge();
+      if (activeChallenge) throw new SupplierAdapterError(input.supplierId, activeChallenge, "Emerson account verification is required");
+      if (!accountVerified || !(await page.locator('[aria-label="Account Dropdown"]').first().isVisible().catch(() => false))) {
+        throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson did not verify the saved account");
+      }
+      const cookies = await context.cookies(["https://emersonecologics.com/", "https://www.emersonecologics.com/"]);
+      const header = cookies.filter((cookie) => ["emersonecologics.com", "www.emersonecologics.com"].includes(cookie.domain.replace(/^\./, "").toLowerCase()))
+        .map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
+      if (!header) throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson did not provide an authenticated session");
+      return header;
+    } catch (error) {
+      if (error instanceof SupplierAdapterError) throw error;
+      const activeChallenge = await challenge().catch(() => null);
+      throw new SupplierAdapterError(input.supplierId, activeChallenge ?? "login_failed", "Emerson saved account sign-in could not be completed");
+    }
+  } finally { await browser.close(); }
+}
+
+export function emersonChallengeCode(text: string, visibleChallenge = false): "two_factor_required" | "verification_required" | null {
+  if (/\b(two.factor|2fa|mfa|verification code|authenticator code|one.time (?:code|passcode))\b/i.test(text)) return "two_factor_required";
+  if (visibleChallenge || /complete (?:the )?captcha|captcha (?:challenge|required)|verify (?:that )?you are human|i.m not a robot|unusual traffic/i.test(text)) return "verification_required";
+  return null;
+}
+
+async function activeEmersonChallenge(page: import("playwright").Page) {
+  const text = await page.locator("body").innerText({ timeout: 2_000 }).catch(() => "");
+  let visibleChallenge = false;
+  for (const frame of await page.locator('iframe[title*="challenge" i], iframe[title*="verification" i]').all()) {
+    if (await frame.isVisible().catch(() => false)) visibleChallenge = true;
+  }
+  const checkboxes = page.frameLocator('iframe[title="reCAPTCHA"]').getByRole("checkbox");
+  if (await checkboxes.isVisible().catch(() => false)) visibleChallenge = true;
+  return emersonChallengeCode(text, visibleChallenge);
+}
+
+export async function readRenderedEmersonCatalog(
   catalogUrl: string,
   cookieHeader: string,
   supplierId: string,
+  launchBrowser: typeof launchSupplierBrowser = launchSupplierBrowser,
 ): Promise<{ responseUrl: string; records: Record<string, unknown>[] }> {
   assertSafeEmersonUrl(catalogUrl, supplierId);
-  const browser = await launchSupplierBrowser();
+  const browser = await launchBrowser();
   try {
     const browserContext = await browser.newContext();
     await browserContext.addCookies(emersonSessionCookies(cookieHeader));
@@ -224,18 +372,15 @@ async function readRenderedEmersonCatalog(
     if (!(await accountMarker.isVisible().catch(() => false))) {
       const pageText = await page.locator("body").innerText().catch(() => "");
       const passwordVisible = await page.locator('input[type="password"]').first().isVisible().catch(() => false);
-      if (/\b(two.factor|2fa|mfa|verification code|authenticator code|one.time (?:code|passcode))\b/i.test(pageText)) {
-        throw new SupplierAdapterError(supplierId, "two_factor_required", "Emerson account verification code is required");
+      const challenge = await activeEmersonChallenge(page);
+      if (challenge) throw new SupplierAdapterError(supplierId, challenge, "Emerson account verification is required");
+      let signInVisible = false;
+      for (const link of await page.locator('a[href="/login"]').all()) {
+        if (await link.isVisible().catch(() => false)
+          && /^\s*sign in\s*$/i.test(await link.innerText({ timeout: 2_000 }).catch(() => ""))) signInVisible = true;
       }
-      if (/captcha|verify (?:that )?you are human|i.m not a robot|unusual traffic/i.test(pageText)) {
-        throw new SupplierAdapterError(supplierId, "verification_required", "Emerson browser verification is required");
-      }
-      if (passwordVisible || requiresSignIn(pageText, page.url())) {
-        throw new SupplierAdapterError(
-          supplierId,
-          "verification_required",
-          "Emerson Ecologics session expired and needs one browser reconnection",
-        );
+      if (passwordVisible || signInVisible || requiresSignIn(pageText, page.url())) {
+        throw new EmersonSessionExpiredError(supplierId);
       }
       throw new SupplierAdapterError(supplierId, "parse_failed", "Emerson account marker was not present");
     }
@@ -335,7 +480,9 @@ export function assertSafeEmersonUrl(value: string, supplierId: string): void {
   } catch {
     throw new SupplierAdapterError(supplierId, "not_configured", "Emerson catalog URL is invalid");
   }
-  if (url.protocol !== "https:" || !/(^|\.)emersonecologics\.com$/i.test(url.hostname)) {
+  if (url.protocol !== "https:" || Boolean(url.username || url.password)
+    || !["emersonecologics.com", "www.emersonecologics.com"].includes(url.hostname.toLowerCase())
+    || /\/(?:cart|checkout|orders?|payment)(?:\/|$)/i.test(url.pathname)) {
     throw new SupplierAdapterError(
       supplierId,
       "not_configured",

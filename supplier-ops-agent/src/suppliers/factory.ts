@@ -19,22 +19,26 @@ export function createAdaptersFromEnv(suppliers: SupplierConfig[], env: NodeJS.P
       return new PublicCatalogSupplierAdapter(supplier, publicCatalogConfig);
     }
 
-    if (supplier.id === "emerson-ecologics" && env.SUPPLIER_COOKIE_EMERSON_ECOLOGICS) {
-      return new EmersonCatalogSupplierAdapter(supplier, {
-        cookieHeader: env.SUPPLIER_COOKIE_EMERSON_ECOLOGICS,
-        catalogUrls: parseEmersonCatalogUrls(env.SUPPLIER_CATALOG_URLS_EMERSON_ECOLOGICS),
-      });
-    }
-
     const websiteConfig = mergeWebsiteConfig(
       defaultWebsiteConfig(supplier.id),
       parseWebsiteConfig(env[`SUPPLIER_WEBSITE_CONFIG_${suffix}`]),
     );
+    const username = env[`SUPPLIER_USERNAME_${suffix}`] ?? websiteConfig.username;
+    const password = env[`SUPPLIER_PASSWORD_${suffix}`] ?? websiteConfig.password;
+    if (supplier.id === "emerson-ecologics" && (env.SUPPLIER_COOKIE_EMERSON_ECOLOGICS || (username && password))) {
+      return new EmersonCatalogSupplierAdapter(supplier, {
+        cookieHeader: env.SUPPLIER_COOKIE_EMERSON_ECOLOGICS,
+        catalogUrls: parseEmersonCatalogUrls(env.SUPPLIER_CATALOG_URLS_EMERSON_ECOLOGICS),
+        username,
+        password,
+      });
+    }
+
     return new WebsiteSupplierAdapter(supplier, {
       ...websiteConfig,
       sessionCookieHeader: env[`SUPPLIER_COOKIE_${suffix}`] ?? websiteConfig.sessionCookieHeader,
-      username: env[`SUPPLIER_USERNAME_${suffix}`] ?? websiteConfig.username,
-      password: env[`SUPPLIER_PASSWORD_${suffix}`] ?? websiteConfig.password,
+      username,
+      password,
     });
   });
 }

@@ -40,7 +40,7 @@ test("factory uses Emerson reusable-session adapter when a captured session exis
   assert.equal(adapter instanceof EmersonCatalogSupplierAdapter, true);
 });
 
-test("factory preserves credential login diagnostics until a reusable Emerson session is connected", () => {
+test("factory gives Emerson's exact reader the saved credentials even without a session", () => {
   const [adapter] = createAdaptersFromEnv([emerson], {
     SUPPLIER_USERNAME_EMERSON_ECOLOGICS: "orders@example.test",
     SUPPLIER_PASSWORD_EMERSON_ECOLOGICS: "private-value",
@@ -49,7 +49,7 @@ test("factory preserves credential login diagnostics until a reusable Emerson se
       selectors: { username: "#email", password: "#password", submit: "button[type=submit]" },
     }),
   } as NodeJS.ProcessEnv);
-  assert.equal(adapter instanceof WebsiteSupplierAdapter, true);
+  assert.equal(adapter instanceof EmersonCatalogSupplierAdapter, true);
 });
 
 test("factory supplies an isolated reusable session to every configured website supplier", async () => {

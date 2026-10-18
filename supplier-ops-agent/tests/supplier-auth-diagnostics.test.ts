@@ -11,15 +11,15 @@ const supplier: SupplierConfig = { id: "emerson-ecologics", name: "Emerson Ecolo
 const readToken = "r".repeat(40);
 const runToken = "u".repeat(40);
 
-test("diagnostics disclose presence only and truthfully identify Emerson's cookie-only path", () => {
+test("diagnostics disclose presence only and report Emerson's stored-credential renewal support", () => {
   const result = describeSupplierAuthConfiguration(supplier, {
     SUPPLIER_COOKIE_EMERSON_ECOLOGICS: "private-cookie-material",
     SUPPLIER_USERNAME_EMERSON_ECOLOGICS: "private-account@example.test",
     SUPPLIER_PASSWORD_EMERSON_ECOLOGICS: "private-password-material",
   });
   assert.deepEqual(result, { supplierKey: supplier.id, mode: "supplier_account", usernameConfigured: true,
-    passwordConfigured: true, sessionConfigured: true, automaticReauthenticationSupported: false,
-    refreshedSessionPersistence: "not_supported" });
+    passwordConfigured: true, sessionConfigured: true, automaticReauthenticationSupported: true,
+    refreshedSessionPersistence: "process_memory_only" });
   assert.doesNotMatch(JSON.stringify(result), /private|example\.test/);
 });
 
