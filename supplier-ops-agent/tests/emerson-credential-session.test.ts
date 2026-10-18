@@ -1,17 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { Browser } from "playwright";
-import { signInEmersonWithCredentials, readRenderedEmersonCatalog, EmersonSessionExpiredError } from "../src/suppliers/emerson-catalog-adapter.ts";
+import type { Browser, Page } from "playwright";
+import { signInEmersonWithCredentials, readRenderedEmersonCatalog, EmersonSessionExpiredError, createEmersonAccountVerifier } from "../src/suppliers/emerson-catalog-adapter.ts";
 import { SupplierAdapterError } from "../src/suppliers/types.ts";
 
 const input = { username: "private-account", password: "private-password", supplierId: "emerson-ecologics" };
 
 function browserHarness(options: { beforeText?: string; afterText?: string; redirect?: string;
   challengeFrame?: boolean; checkbox?: boolean; failure?: Error; accountMarker?: boolean;
-  contextFailure?: Error; navigationFailure?: Error; emptyCookies?: boolean; closeFailure?: Error } = {}) {
+  contextFailure?: Error; navigationFailure?: Error; emptyCookies?: boolean; closeFailure?: Error;
+  currentProfile?: boolean; accountLink?: boolean; signOutLink?: boolean; signedIn?: boolean; stayOnLogin?: boolean } = {}) {
   const events: string[] = [];
-  let submitted = false;
-  let url = "about:blank";
+  let submitted = Boolean(options.signedIn), menuOpened = false;
+  let url = options.signedIn ? "https://www.emersonecologics.com/shop" : "about:blank";
+  const visible = (selector: string) => {
+    if (selector === '[aria-label="Account Dropdown"]') return submitted && !options.currentProfile && options.accountMarker !== false;
+    if (selector === 'a[href="/account"]') return submitted && menuOpened && options.accountLink !== false;
+    if (selector === 'a[href="/logout?scope=emerson-logout"]') return submitted && menuOpened && options.signOutLink !== false;
+    return false;
+  };
   const page = {
     goto: async (target: string) => {
       events.push(`goto:${target}`); url = options.redirect ?? target;
@@ -26,19 +33,25 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
         if (options.failure) throw options.failure;
       },
       innerText: async () => submitted ? options.afterText ?? "Account" : options.beforeText ?? "This page is protected by reCAPTCHA, and subject to Google Privacy Policy and Terms of Service.",
-      first: () => ({ isVisible: async () => submitted && options.accountMarker !== false }),
+      first: () => ({ isVisible: async () => visible(selector), waitFor: async () => { if (!visible(selector)) throw new Error("not visible"); } }),
       all: async () => options.challengeFrame ? [{ isVisible: async () => true }] : [],
     }),
     frameLocator: () => ({ getByRole: () => ({ isVisible: async () => Boolean(options.checkbox) }) }),
     getByRole: (role: string, settings: { name: string; exact: boolean }) => {
+      if (settings.name === "Toggle profile account settings") return {
+        isVisible: async () => submitted && Boolean(options.currentProfile),
+        waitFor: async () => { if (!(submitted && options.currentProfile)) throw new Error("toggle absent"); },
+        click: async () => { assert(submitted && options.currentProfile); menuOpened = true; events.push("click:profile-menu"); },
+      };
       assert.equal(role, "button"); assert.deepEqual(settings, { name: "Sign in", exact: true });
-      return { click: async () => { submitted = true; events.push("click:Sign in"); } };
+      return { click: async () => { submitted = true; url = options.stayOnLogin ? "https://www.emersonecologics.com/login" : "https://www.emersonecologics.com/shop"; events.push("click:Sign in"); } };
     },
+    $$eval: async () => [],
   };
   const browser = {
     newContext: async () => {
       if (options.contextFailure) throw options.contextFailure;
-      return { newPage: async () => page, cookies: async (urls: string[]) => {
+      return { addCookies: async () => undefined, newPage: async () => page, cookies: async (urls: string[]) => {
       assert.deepEqual(urls, ["https://emersonecologics.com/", "https://www.emersonecologics.com/"]);
       events.push("read-verified-session");
       return options.emptyCookies ? [] : [{ domain: ".emersonecologics.com", name: "session", value: "private-renewed-cookie" },
@@ -46,7 +59,7 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
     } }; },
     close: async () => { events.push("browser-closed"); if (options.closeFailure) throw options.closeFailure; },
   } as unknown as Browser;
-  return { events, launch: async () => browser };
+  return { events, launch: async () => browser, page: page as unknown as Page };
 }
 
 test("routine Emerson login uses only the observed form and returns the verified supplier-scoped session", async () => {
@@ -55,6 +68,50 @@ test("routine Emerson login uses only the observed form and returns the verified
   assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:#email", "fill:#password",
     "click:Sign in", "read-verified-session", "browser-closed"]);
   assert.doesNotMatch(JSON.stringify(harness.events), /private|cart|checkout|payment|order/);
+});
+
+test("current Emerson profile menu proves the renewed account using both exact account and sign-out links", async () => {
+  const harness = browserHarness({ currentProfile: true });
+  assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
+  assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:#email", "fill:#password",
+    "click:Sign in", "click:profile-menu", "read-verified-session", "browser-closed"]);
+});
+
+test("reusable-session reader uses the same current profile-menu account proof", async () => {
+  const harness = browserHarness({ currentProfile: true, signedIn: true });
+  const result = await readRenderedEmersonCatalog("https://www.emersonecologics.com/shop", "private-cookie", input.supplierId, harness.launch);
+  assert.deepEqual(result, { responseUrl: "https://www.emersonecologics.com/shop", records: [] });
+  assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/shop", "click:profile-menu", "browser-closed"]);
+});
+
+test("a profile toggle without both current account links never authenticates or repeatedly toggles", async () => {
+  for (const missing of [{ accountLink: false }, { signOutLink: false }, { accountLink: false, signOutLink: false }]) {
+    const harness = browserHarness({ currentProfile: true, signedIn: true, ...missing });
+    const verifyAccount = createEmersonAccountVerifier(harness.page, input.supplierId);
+    assert.equal(await verifyAccount(), false);
+    assert.equal(await verifyAccount(), false);
+    assert.deepEqual(harness.events, ["click:profile-menu"]);
+  }
+});
+
+test("login pages cannot verify through stale header markers and no logout/account/order link is followed", async () => {
+  for (const currentProfile of [true, false]) {
+    const harness = browserHarness({ currentProfile, signedIn: true, redirect: "https://www.emersonecologics.com/login" });
+    await harness.page.goto("https://www.emersonecologics.com/login");
+    assert.equal(await createEmersonAccountVerifier(harness.page, input.supplierId)(), false);
+    assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login"]);
+  }
+});
+
+test("actual challenges still take precedence over current and legacy account markers", async () => {
+  for (const [afterText, kind] of [["Enter verification code", "two_factor_required"], ["Complete the CAPTCHA", "verification_required"]] as const) {
+    for (const currentProfile of [true, false]) {
+      const harness = browserHarness({ currentProfile, signedIn: true, afterText });
+      await assert.rejects(createEmersonAccountVerifier(harness.page, input.supplierId)(),
+        (error: unknown) => error instanceof SupplierAdapterError && error.kind === kind);
+      assert.deepEqual(harness.events, []);
+    }
+  }
 });
 
 test("visible supplier CAPTCHA task or checkbox stops before credentials or clicks", async () => {
@@ -149,6 +206,7 @@ function publicCatalogHarness(options: { visibleSignIn: boolean; pageText?: stri
         ? [{ isVisible: async () => options.visibleSignIn, innerText: async () => "Sign in" }] : [],
     }),
     frameLocator: () => ({ getByRole: () => ({ isVisible: async () => false }) }),
+    getByRole: () => ({ waitFor: async () => { throw new Error("current toggle absent"); }, isVisible: async () => false }),
   };
   const browser = { newContext: async () => ({ addCookies: async () => undefined, newPage: async () => page }),
     close: async () => { closed = true; } } as unknown as Browser;

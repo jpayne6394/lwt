@@ -339,6 +339,7 @@ export async function signInEmersonWithCredentials(input: {
       assertAccountUrl();
       await accountPage.getByRole("button", { name: "Sign in", exact: true }).click({ noWaitAfter: true, timeout: 10_000 });
       phase = "login_confirmation_missing";
+      const verifyAccount = createEmersonAccountVerifier(accountPage, input.supplierId);
       let accountVerified = false;
       // Bounded observation only. Never retry the credential submission.
       const observationDeadline = Date.now() + 15_000;
@@ -346,7 +347,7 @@ export async function signInEmersonWithCredentials(input: {
         assertAccountUrl();
         const activeChallenge = await challenge();
         if (activeChallenge) throw new SupplierAdapterError(input.supplierId, activeChallenge, "Emerson account verification is required");
-        const accountVisible = await accountPage.locator('[aria-label="Account Dropdown"]').first().isVisible().catch(() => false);
+        const accountVisible = await verifyAccount();
         if (accountVisible) { accountVerified = true; break; }
         const text = await accountPage.locator("body").innerText({ timeout: 2_000 }).catch(() => "");
         if (/invalid (?:email|username|password|credentials)|incorrect (?:email|username|password|credentials)|(?:email|username) and password (?:do not|don.t) match/i.test(text)) {
@@ -357,7 +358,7 @@ export async function signInEmersonWithCredentials(input: {
       assertAccountUrl();
       const activeChallenge = await challenge();
       if (activeChallenge) throw new SupplierAdapterError(input.supplierId, activeChallenge, "Emerson account verification is required");
-      if (!accountVerified || !(await accountPage.locator('[aria-label="Account Dropdown"]').first().isVisible().catch(() => false))) {
+      if (!accountVerified || !(await verifyAccount())) {
         throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson did not verify the saved account", "login_confirmation_missing");
       }
       phase = "renewed_session_unverified";
@@ -397,6 +398,36 @@ async function activeEmersonChallenge(page: import("playwright").Page) {
   return emersonChallengeCode(text, visibleChallenge);
 }
 
+/** Read-only account proof shared by login confirmation and reusable-session checks. */
+export function createEmersonAccountVerifier(page: import("playwright").Page, supplierId: string): () => Promise<boolean> {
+  let currentMenuOpened = false;
+  return async () => {
+    assertSafeEmersonUrl(page.url(), supplierId);
+    const challenge = await activeEmersonChallenge(page);
+    if (challenge) throw new SupplierAdapterError(supplierId, challenge, "Emerson account verification is required");
+    if (requiresSignIn("", page.url())) return false;
+    // Compatibility with the earlier observed authenticated header, not a generic profile icon.
+    if (await page.locator('[aria-label="Account Dropdown"]').first().isVisible().catch(() => false)) return true;
+    const toggle = page.getByRole("button", { name: "Toggle profile account settings", exact: true });
+    if (!(await toggle.isVisible().catch(() => false))) return false;
+    const account = page.locator('a[href="/account"]').first();
+    const signOut = page.locator('a[href="/logout?scope=emerson-logout"]').first();
+    const menuVerified = async () => await account.isVisible().catch(() => false) && await signOut.isVisible().catch(() => false);
+    if (await menuVerified()) return true;
+    if (currentMenuOpened) return false;
+    currentMenuOpened = true;
+    // Opening the observed profile menu is the only click; never follow its account/logout/order links.
+    await toggle.click({ noWaitAfter: true, timeout: 5_000 });
+    assertSafeEmersonUrl(page.url(), supplierId);
+    if (requiresSignIn("", page.url())) return false;
+    const menuChallenge = await activeEmersonChallenge(page);
+    if (menuChallenge) throw new SupplierAdapterError(supplierId, menuChallenge, "Emerson account verification is required");
+    await account.waitFor({ state: "visible", timeout: 2_000 }).catch(() => undefined);
+    await signOut.waitFor({ state: "visible", timeout: 2_000 }).catch(() => undefined);
+    return menuVerified();
+  };
+}
+
 export async function readRenderedEmersonCatalog(
   catalogUrl: string,
   cookieHeader: string,
@@ -417,9 +448,12 @@ export async function readRenderedEmersonCatalog(
     assertSafeEmersonUrl(catalogPage.url(), supplierId);
     phase = "existing_session_unverified";
 
-    const accountMarker = catalogPage.locator('[aria-label="Account Dropdown"]').first();
-    await accountMarker.waitFor({ state: "visible", timeout: 30_000 }).catch(() => undefined);
-    if (!(await accountMarker.isVisible().catch(() => false))) {
+    const verifyAccount = createEmersonAccountVerifier(catalogPage, supplierId);
+    await Promise.any([
+      catalogPage.locator('[aria-label="Account Dropdown"]').first().waitFor({ state: "visible", timeout: 30_000 }),
+      catalogPage.getByRole("button", { name: "Toggle profile account settings", exact: true }).waitFor({ state: "visible", timeout: 30_000 }),
+    ]).catch(() => undefined);
+    if (!(await verifyAccount())) {
       const pageText = await catalogPage.locator("body").innerText({ timeout: 2_000 }).catch(() => "");
       const passwordVisible = await catalogPage.locator('input[type="password"]').first().isVisible().catch(() => false);
       const challenge = await activeEmersonChallenge(catalogPage);
