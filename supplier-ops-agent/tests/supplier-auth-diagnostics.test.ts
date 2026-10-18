@@ -5,7 +5,7 @@ import { startServer, type ServerContext } from "../src/server/server.ts";
 import { MemoryRepository } from "../src/storage/memory-repository.ts";
 import { describeSupplierAuthConfiguration } from "../src/suppliers/auth-diagnostics.ts";
 import { EmersonCatalogSupplierAdapter } from "../src/suppliers/emerson-catalog-adapter.ts";
-import { SupplierAdapterError, type SupplierConfig } from "../src/suppliers/types.ts";
+import { SUPPLIER_AUTH_ISSUES, SupplierAdapterError, type SupplierConfig } from "../src/suppliers/types.ts";
 
 const supplier: SupplierConfig = { id: "emerson-ecologics", name: "Emerson Ecologics", mode: "website", brands: [], notes: "" };
 const readToken = "r".repeat(40);
@@ -53,7 +53,23 @@ test("Emerson authentication verifies the rendered account marker, not legacy pu
   });
   const result = await challenged.verifyAuthentication();
   assert.equal(result.status, "two_factor_required");
+  assert.equal(result.authIssue, "mfa_required");
   assert.doesNotMatch(JSON.stringify(result), /private/);
+});
+
+test("authentication reasons distinguish unconfigured, old-session and actual challenge states", async () => {
+  assert.equal((await new EmersonCatalogSupplierAdapter(supplier).verifyAuthentication()).authIssue, "session_not_configured");
+  for (const [failure, expected] of [
+    [new Error("private-cookie"), "existing_session_unverified"],
+    [new SupplierAdapterError(supplier.id, "verification_required", "private-page"), "challenge_required"],
+    [new SupplierAdapterError(supplier.id, "two_factor_required", "private-page"), "mfa_required"],
+  ] as const) {
+    const adapter = new EmersonCatalogSupplierAdapter(supplier, { cookieHeader: "private-cookie",
+      renderCatalogImpl: async () => { throw failure; } });
+    const result = await adapter.verifyAuthentication();
+    assert.equal(result.authIssue, expected);
+    assert.doesNotMatch(JSON.stringify(result), /private/);
+  }
 });
 
 async function withServer(context: Partial<ServerContext>, run: (url: string) => Promise<void>) {
@@ -104,4 +120,22 @@ test("public liveness never echoes an invalid revision or claims supplier authen
   await withServer({ sourceRevision: "private-invalid-value" }, async (url) => {
     assert.deepEqual(await (await fetch(`${url}/healthz`)).json(), { ok: true, sourceRevision: null });
   });
+});
+
+test("protected auth diagnostics expose only the closed reason enum and never arbitrary provider fields", async () => {
+  for (const authIssue of [...SUPPLIER_AUTH_ISSUES, "private-cookie https://private.invalid/account", 123, null]) {
+    await withServer({ checkSupplierAuthentication: async () => ({
+      configuration: describeSupplierAuthConfiguration(supplier, {}), status: "login_failed", accountAuthenticated: false,
+      checkedAt: "2026-10-18T12:00:00.000Z", authIssue, message: "private-provider-password", accountId: "private-account",
+    } as unknown as NonNullable<Awaited<ReturnType<NonNullable<ServerContext["checkSupplierAuthentication"]>>>>) }, async (url) => {
+      const response = await fetch(`${url}/api/suppliers/auth-check`, { method: "POST", headers: {
+        authorization: `Bearer ${readToken}`, "content-type": "application/json" }, body: JSON.stringify({ supplierKey: supplier.id }) });
+      const data = await response.json();
+      assert.equal(response.status, 200);
+      assert.equal(data.authIssue, typeof authIssue === "string" && (SUPPLIER_AUTH_ISSUES as readonly string[]).includes(authIssue) ? authIssue : undefined);
+      assert.doesNotMatch(JSON.stringify(data), /private|https:/);
+      assert.equal(data.message, undefined);
+      assert.equal(data.accountId, undefined);
+    });
+  }
 });

@@ -18,6 +18,7 @@ import { createAdaptersFromEnv } from "./suppliers/factory.ts";
 import { describeSupplierAuthConfiguration } from "./suppliers/auth-diagnostics.ts";
 import { createSupplierRegistry } from "./suppliers/registry.ts";
 import type { SupplierConnectionCheck } from "./suppliers/types.ts";
+import { isSupplierAuthIssue } from "./suppliers/types.ts";
 import { runSupplierSync } from "./worker/run-sync.ts";
 
 export async function createRuntime() {
@@ -108,7 +109,8 @@ export async function createRuntime() {
       : { status: "unsupported" as const };
     return { configuration, status: result.status,
       accountAuthenticated: configuration.mode === "supplier_account" && Boolean(adapter.verifyAuthentication) && result.status === "connected",
-      checkedAt: new Date().toISOString() };
+      checkedAt: new Date().toISOString(),
+      ...("authIssue" in result && isSupplierAuthIssue(result.authIssue) ? { authIssue: result.authIssue } : {}) };
   };
 
   const serverContext: ServerContext = {
