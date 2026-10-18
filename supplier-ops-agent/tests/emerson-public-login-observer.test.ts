@@ -23,7 +23,7 @@ function browserHarness(options: { redirected?: string; screenshotFailure?: bool
     url: () => options.redirected ?? "https://www.emersonecologics.com/login",
     getByRole: (role: string, settings: { name: RegExp }) => { assert.equal(role, "button"); assert(settings.name.test("Sign in"));
       return { waitFor: async () => { events.push("observe-visible-form"); } }; },
-    waitForTimeout: async (ms: number) => { assert.equal(ms, 5_000); events.push("observe-late-public-ui"); },
+    waitForTimeout: async (ms: number) => { assert.equal(ms, 45_000); events.push("observe-late-public-ui"); },
     // No screenshot, evaluate, click, fill, press, cookie or storage APIs exist in this harness.
   };
   const browser = { newContext: async (settings: unknown) => {
@@ -54,11 +54,26 @@ test("fixed public observation uses only browser-protocol screenshot in a fresh 
   const harness = browserHarness(), result = await observePublicEmersonLogin({ launchBrowser: harness.launch });
   assert.equal(result.status, "observed"); assert.equal(result.credentialsUsed, false); assert.equal(result.cookiesInjected, false);
   assert.equal(result.interactionPerformed, false); assert.equal(result.accountAccessed, false); assert.equal(result.orderSubmitted, false); assert.equal(result.paymentSubmitted, false);
-  assert.deepEqual(harness.events, ["fresh-anonymous-context", "read-only-guard", "public-login", "observe-visible-form", "observe-late-public-ui", "cdp-session", "protocol-screenshot", "detached", "closed"]);
+  if (result.status !== "observed") assert.fail();
+  assert(result.screenshot); assert.deepEqual(result.accessibility, [{ role: "button", name: "Reject optional cookies" }]);
+  assert.doesNotMatch(JSON.stringify(result), /private input value|properties|nodeId/);
+  assert.deepEqual(harness.events, ["fresh-anonymous-context", "read-only-guard", "public-login", "observe-visible-form", "observe-late-public-ui", "cdp-session", "protocol-screenshot", "protocol-accessibility", "detached", "closed"]);
 });
-test("public observation blocks account navigation and all network writes, with bounded closed failures", async () => {
+test("public observation permits anonymous bootstrap reads and ordinary public POSTs, never account/auth/purchasing writes", async () => {
   assert.equal(emersonPublicLoginRequestAllowed("https://www.emersonecologics.com/login", "GET", true), true);
   assert.equal(emersonPublicLoginRequestAllowed("https://cdn.example.test/public.css", "GET", false), true);
+  for (const [path, method] of [["/api/analytics/events", "POST"], ["/recaptcha/api2/reload", "POST"],
+    ["/api/auth/session", "GET"], ["/api/session", "GET"]]) {
+    assert.equal(emersonPublicLoginRequestAllowed(`https://www.emersonecologics.com${path}`, method, false), true);
+  }
+  for (const path of ["/api/account/profile", "/api/cart/items", "/api/checkout/shipping", "/api/orders", "/api/payments", "/api/logout", "/api/%61ccount/profile"]) {
+    for (const method of ["GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"]) assert.equal(emersonPublicLoginRequestAllowed(`https://www.emersonecologics.com${path}`, method, false), false);
+  }
+  for (const path of ["/api/auth/login", "/api/login", "/api/token", "/api/session", "/api/oauth/authorize", "/api/auth.session",
+    "/api/sign-in", "/api/sign_in", "/api/log-in", "/api/sign-up"]) {
+    for (const method of ["POST", "PUT", "DELETE"]) assert.equal(emersonPublicLoginRequestAllowed(`https://www.emersonecologics.com${path}`, method, false), false);
+  }
+  assert.equal(emersonPublicLoginRequestAllowed("https://www.emersonecologics.com/login", "HEAD", true), false);
   for (const [url, method, main] of [["https://evil.test/login", "GET", true], ["https://www.emersonecologics.com/account", "GET", true],
     ["https://www.emersonecologics.com/login", "POST", false], ["https://www.emersonecologics.com/checkout", "GET", false],
     ["http://www.emersonecologics.com/login", "GET", true]] as const) assert.equal(emersonPublicLoginRequestAllowed(url, method, main), false);
