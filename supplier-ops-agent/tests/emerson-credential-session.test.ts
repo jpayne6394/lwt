@@ -9,42 +9,61 @@ const input = { username: "private-account", password: "private-password", suppl
 function browserHarness(options: { beforeText?: string; afterText?: string; redirect?: string;
   challengeFrame?: boolean; checkbox?: boolean; failure?: Error; accountMarker?: boolean;
   contextFailure?: Error; navigationFailure?: Error; emptyCookies?: boolean; closeFailure?: Error;
-  currentProfile?: boolean; accountLink?: boolean; signOutLink?: boolean; signedIn?: boolean; stayOnLogin?: boolean } = {}) {
+  currentProfile?: boolean; accountLink?: boolean; signOutLink?: boolean; signedIn?: boolean; stayOnLogin?: boolean;
+  semanticLabels?: boolean; legacyFields?: boolean; emailMissing?: boolean; passwordMissing?: boolean; signInMissing?: boolean; profileText?: string } = {}) {
   const events: string[] = [];
   let submitted = Boolean(options.signedIn), menuOpened = false;
   let url = options.signedIn ? "https://www.emersonecologics.com/shop" : "about:blank";
   const visible = (selector: string) => {
+    if (selector === "body") return true;
+    if (selector === "#email") return options.legacyFields !== false && !options.emailMissing;
+    if (selector === "#password") return options.legacyFields !== false && !options.passwordMissing;
+    if (selector === "label:Email") return Boolean(options.semanticLabels) && !options.emailMissing;
+    if (selector === "label:Password") return Boolean(options.semanticLabels) && !options.passwordMissing;
     if (selector === '[aria-label="Account Dropdown"]') return submitted && !options.currentProfile && options.accountMarker !== false;
     if (selector === 'a[href="/account"]') return submitted && menuOpened && options.accountLink !== false;
     if (selector === 'a[href="/logout?scope=emerson-logout"]') return submitted && menuOpened && options.signOutLink !== false;
     return false;
   };
+  const locator = (selector: string) => ({
+    fill: async (value: string) => {
+      const email = selector === "#email" || selector === "label:Email";
+      assert(email || selector === "#password" || selector === "label:Password");
+      assert((visible("#email") || visible("label:Email")) && (visible("#password") || visible("label:Password")), "both fields must be ready before either fill");
+      assert.equal(value, email ? input.username : input.password);
+      events.push(`fill:${selector}`);
+      if (options.failure) throw options.failure;
+    },
+    count: async () => visible(selector) ? 1 : 0,
+    isVisible: async () => visible(selector),
+    waitFor: async () => { if (!visible(selector)) throw new Error("observed field not visible"); },
+    innerText: async () => submitted ? options.afterText ?? "Account" : options.beforeText ?? "This page is protected by reCAPTCHA, and subject to Google Privacy Policy and Terms of Service.",
+    first: () => ({ isVisible: async () => visible(selector), waitFor: async () => { if (!visible(selector)) throw new Error("not visible"); } }),
+    all: async () => options.challengeFrame ? [{ isVisible: async () => true }] : [],
+  });
   const page = {
     goto: async (target: string) => {
       events.push(`goto:${target}`); url = options.redirect ?? target;
       if (options.navigationFailure) throw options.navigationFailure;
     },
     url: () => url,
-    locator: (selector: string) => ({
-      fill: async (value: string) => {
-        assert(selector === "#email" || selector === "#password");
-        assert.equal(value, selector === "#email" ? input.username : input.password);
-        events.push(`fill:${selector}`);
-        if (options.failure) throw options.failure;
-      },
-      innerText: async () => submitted ? options.afterText ?? "Account" : options.beforeText ?? "This page is protected by reCAPTCHA, and subject to Google Privacy Policy and Terms of Service.",
-      first: () => ({ isVisible: async () => visible(selector), waitFor: async () => { if (!visible(selector)) throw new Error("not visible"); } }),
-      all: async () => options.challengeFrame ? [{ isVisible: async () => true }] : [],
-    }),
+    locator,
+    getByLabel: (label: RegExp) => {
+      if (label.test("Email *")) return locator("label:Email");
+      assert(label.test("Password*")); return locator("label:Password");
+    },
     frameLocator: () => ({ getByRole: () => ({ isVisible: async () => Boolean(options.checkbox) }) }),
-    getByRole: (role: string, settings: { name: string; exact: boolean }) => {
+    getByRole: (role: string, settings: { name: string | RegExp; exact?: boolean }) => {
       if (settings.name === "Toggle profile account settings") return {
         isVisible: async () => submitted && Boolean(options.currentProfile),
         waitFor: async () => { if (!(submitted && options.currentProfile)) throw new Error("toggle absent"); },
+        innerText: async () => options.profileText ?? "Account profile",
         click: async () => { assert(submitted && options.currentProfile); menuOpened = true; events.push("click:profile-menu"); },
       };
-      assert.equal(role, "button"); assert.deepEqual(settings, { name: "Sign in", exact: true });
-      return { click: async () => { submitted = true; url = options.stayOnLogin ? "https://www.emersonecologics.com/login" : "https://www.emersonecologics.com/shop"; events.push("click:Sign in"); } };
+      assert.equal(role, "button"); assert(settings.name instanceof RegExp && settings.name.test("Sign in") && settings.name.test("Signin") && !settings.name.test("Place order"));
+      return { count: async () => options.signInMissing ? 0 : 1, isVisible: async () => !options.signInMissing,
+        waitFor: async () => { if (options.signInMissing) throw new Error("sign-in button missing"); },
+        click: async () => { submitted = true; url = options.stayOnLogin ? "https://www.emersonecologics.com/login" : "https://www.emersonecologics.com/shop"; events.push("click:Sign in"); } };
     },
     $$eval: async () => [],
   };
@@ -70,6 +89,42 @@ test("routine Emerson login uses only the observed form and returns the verified
   assert.doesNotMatch(JSON.stringify(harness.events), /private|cart|checkout|payment|order/);
 });
 
+test("semantic Email*/Password* labels work when the legacy field IDs are absent", async () => {
+  const harness = browserHarness({ semanticLabels: true, legacyFields: false });
+  assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
+  assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:label:Email", "fill:label:Password",
+    "click:Sign in", "read-verified-session", "browser-closed"]);
+});
+
+test("both fields and the observed sign-in button must be ready before any credential is filled", async (context) => {
+  context.mock.method(console, "warn", () => undefined);
+  for (const missing of [{ emailMissing: true }, { passwordMissing: true }, { signInMissing: true }]) {
+    const harness = browserHarness({ semanticLabels: true, ...missing });
+    await assert.rejects(signInEmersonWithCredentials(input, harness.launch),
+      (error: unknown) => error instanceof SupplierAdapterError && error.authIssue === "login_form_unavailable");
+    assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "browser-closed"]);
+  }
+});
+
+test("failure-only form diagnostics log fixed structure and path classes, never private page text or query values", async (context) => {
+  const logs: unknown[][] = [];
+  context.mock.method(console, "warn", (...args: unknown[]) => { logs.push(args); });
+  const harness = browserHarness({ semanticLabels: true, legacyFields: false, passwordMissing: true,
+    redirect: "https://www.emersonecologics.com/login?account=private-account&token=private-cookie",
+    beforeText: "private-account private-password private-cookie" });
+  await assert.rejects(signInEmersonWithCredentials(input, harness.launch));
+  assert.equal(logs.length, 1);
+  assert.deepEqual(logs[0], ["[supplier-auth] Emerson sign-in failed", {
+    phase: "login_form_unavailable", errorKind: "login_failed", pageKind: "login", bodyLength: "private-account private-password private-cookie".length, bodyPresent: true,
+    emailLabelPresent: true, passwordLabelPresent: false, legacyEmailPresent: false, legacyPasswordPresent: false,
+    signInButtonPresent: true, emailFieldVisible: true, passwordFieldVisible: false, signInButtonVisible: true,
+  }]);
+  assert.doesNotMatch(JSON.stringify(logs), /private|https:|token=|account=/);
+  logs.length = 0;
+  await signInEmersonWithCredentials(input, browserHarness().launch);
+  assert.equal(logs.length, 0, "success must not emit failure diagnostics");
+});
+
 test("current Emerson profile menu proves the renewed account using both exact account and sign-out links", async () => {
   const harness = browserHarness({ currentProfile: true });
   assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
@@ -92,6 +147,14 @@ test("a profile toggle without both current account links never authenticates or
     assert.equal(await verifyAccount(), false);
     assert.deepEqual(harness.events, ["click:profile-menu"]);
   }
+});
+
+test("the observed undefined profile placeholder fails closed even when generic menu links exist", async () => {
+  const harness = browserHarness({ currentProfile: true, signedIn: true, profileText: "undefined\nundefined" });
+  const verifyAccount = createEmersonAccountVerifier(harness.page, input.supplierId);
+  assert.equal(await verifyAccount(), false);
+  assert.equal(await verifyAccount(), false);
+  assert.deepEqual(harness.events, []);
 });
 
 test("login pages cannot verify through stale header markers and no logout/account/order link is followed", async () => {

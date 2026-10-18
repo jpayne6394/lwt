@@ -334,10 +334,20 @@ export async function signInEmersonWithCredentials(input: {
       const initialChallenge = await challenge();
       if (initialChallenge) throw new SupplierAdapterError(input.supplierId, initialChallenge, "Emerson account verification is required");
       phase = "login_form_unavailable";
-      await accountPage.locator("#email").fill(input.username, { timeout: 10_000 });
-      await accountPage.locator("#password").fill(input.password, { timeout: 10_000 });
+      const [email, password] = await Promise.all([
+        visibleEmersonLoginField(accountPage, /^Email\s*\*?$/i, "#email"),
+        visibleEmersonLoginField(accountPage, /^Password\s*\*?$/i, "#password"),
+      ]);
+      const signIn = accountPage.getByRole("button", { name: /^Sign\s*in$/i });
+      await signIn.waitFor({ state: "visible", timeout: 10_000 });
       assertAccountUrl();
-      await accountPage.getByRole("button", { name: "Sign in", exact: true }).click({ noWaitAfter: true, timeout: 10_000 });
+      const formChallenge = await challenge();
+      if (formChallenge) throw new SupplierAdapterError(input.supplierId, formChallenge, "Emerson account verification is required");
+      // Both observed fields and the sign-in control must be visible before entering either credential.
+      await email.fill(input.username, { timeout: 10_000 });
+      await password.fill(input.password, { timeout: 10_000 });
+      assertAccountUrl();
+      await signIn.click({ noWaitAfter: true, timeout: 10_000 });
       phase = "login_confirmation_missing";
       const verifyAccount = createEmersonAccountVerifier(accountPage, input.supplierId);
       let accountVerified = false;
@@ -374,11 +384,48 @@ export async function signInEmersonWithCredentials(input: {
         activeChallenge === "two_factor_required" ? "mfa_required" : activeChallenge ? "challenge_required" : phase);
     }
   } catch (error) {
+    await logEmersonLoginFailure(page, phase, error instanceof SupplierAdapterError ? error.kind : "login_failed").catch(() => undefined);
     if (error instanceof SupplierAdapterError) throw error;
     const activeChallenge = page ? await activeEmersonChallenge(page).catch(() => null) : null;
     throw new SupplierAdapterError(input.supplierId, activeChallenge ?? "login_failed", "Emerson saved account sign-in could not be completed",
       activeChallenge === "two_factor_required" ? "mfa_required" : activeChallenge ? "challenge_required" : phase);
   } finally { await browser.close().catch(() => undefined); }
+}
+
+async function visibleEmersonLoginField(page: import("playwright").Page, label: RegExp, legacyId: string) {
+  const semantic = page.getByLabel(label), legacy = page.locator(legacyId);
+  await Promise.any([semantic.waitFor({ state: "visible", timeout: 10_000 }), legacy.waitFor({ state: "visible", timeout: 10_000 })]);
+  if (await legacy.isVisible().catch(() => false)) return legacy;
+  if (await semantic.isVisible().catch(() => false)) return semantic;
+  throw new SupplierAdapterError("emerson-ecologics", "login_failed", "Emerson observed sign-in field is not visible", "login_form_unavailable");
+}
+
+/** Failure-only structure diagnostics. Never log page text, field values, URLs, account IDs or provider errors. */
+async function logEmersonLoginFailure(page: import("playwright").Page | undefined, phase: SupplierAuthIssue, errorKind: SupplierAdapterError["kind"]) {
+  const present = async (locator: () => import("playwright").Locator) => {
+    try { return Boolean(page) && await locator().count() > 0; } catch { return false; }
+  };
+  const visible = async (locator: () => import("playwright").Locator) => {
+    try { return Boolean(page) && await locator().isVisible(); } catch { return false; }
+  };
+  let pageKind = "unavailable";
+  try {
+    const path = new URL(page!.url()).pathname;
+    pageKind = /^\/(?:emerson\/)?login\/?$/i.test(path) ? "login" : /^\/shop\/?$/i.test(path) ? "shop"
+      : /^\/products\/detail\//i.test(path) ? "product" : /^\/emerson\/?$/i.test(path) ? "emerson_entry" : "other";
+  } catch { /* No untrusted URL is logged. */ }
+  const bodyLength = page ? await page.locator("body").innerText({ timeout: 2_000 }).then((text) => text.length).catch(() => null) : null;
+  console.warn("[supplier-auth] Emerson sign-in failed", { phase, errorKind, pageKind, bodyLength,
+    bodyPresent: await present(() => page!.locator("body")),
+    emailLabelPresent: await present(() => page!.getByLabel(/^Email\s*\*?$/i)),
+    passwordLabelPresent: await present(() => page!.getByLabel(/^Password\s*\*?$/i)),
+    legacyEmailPresent: await present(() => page!.locator("#email")),
+    legacyPasswordPresent: await present(() => page!.locator("#password")),
+    signInButtonPresent: await present(() => page!.getByRole("button", { name: /^Sign\s*in$/i })),
+    emailFieldVisible: await visible(() => page!.getByLabel(/^Email\s*\*?$/i)) || await visible(() => page!.locator("#email")),
+    passwordFieldVisible: await visible(() => page!.getByLabel(/^Password\s*\*?$/i)) || await visible(() => page!.locator("#password")),
+    signInButtonVisible: await visible(() => page!.getByRole("button", { name: /^Sign\s*in$/i })),
+  });
 }
 
 export function emersonChallengeCode(text: string, visibleChallenge = false): "two_factor_required" | "verification_required" | null {
@@ -410,6 +457,8 @@ export function createEmersonAccountVerifier(page: import("playwright").Page, su
     if (await page.locator('[aria-label="Account Dropdown"]').first().isVisible().catch(() => false)) return true;
     const toggle = page.getByRole("button", { name: "Toggle profile account settings", exact: true });
     if (!(await toggle.isVisible().catch(() => false))) return false;
+    const profileText = await toggle.innerText({ timeout: 2_000 }).catch(() => "");
+    if (/\bundefined\b/i.test(profileText)) return false;
     const account = page.locator('a[href="/account"]').first();
     const signOut = page.locator('a[href="/logout?scope=emerson-logout"]').first();
     const menuVerified = async () => await account.isVisible().catch(() => false) && await signOut.isVisible().catch(() => false);
