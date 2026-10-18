@@ -127,6 +127,11 @@ export async function createRuntime() {
     internalDashboardAuthRequired: config.internalDashboardAuthRequired,
     supplierRunToken: config.supplierRunToken,
     supplierReadToken: config.supplierReadToken,
+    supplierCartPrepareToken: config.supplierCartPrepareToken,
+    prepareSupplierCart: async (command) => {
+      const adapter = adapters.find(candidate => candidate.supplier.id === command.supplierKey);
+      return adapter?.prepareCart ? adapter.prepareCart(command) : null;
+    },
     sourceRevision: config.sourceRevision,
     checkSupplierAuthentication,
   };
