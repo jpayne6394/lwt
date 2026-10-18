@@ -276,6 +276,13 @@ export class WebsiteSupplierAdapter implements SupplierAdapter {
     }
   }
 
+  async verifyAuthentication() {
+    if (!this.#config.authenticatedSelector) {
+      return this.#check("not_configured", "An account-only marker is required to verify supplier authentication.");
+    }
+    return this.verifyLogin();
+  }
+
   async lookupProduct(supplierSku: string, context: SupplierAdapterContext = {}) {
     const wanted = cleanString(supplierSku).toUpperCase();
     if (!/^[A-Z0-9][A-Z0-9._:/+ -]{0,119}$/.test(wanted)) {

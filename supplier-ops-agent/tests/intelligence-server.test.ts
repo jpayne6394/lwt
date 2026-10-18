@@ -267,7 +267,7 @@ test("connection check failures stay contained and keep the service healthy", as
 
     const health = await fetch(`${baseUrl}/healthz`);
     assert.equal(health.status, 200);
-    assert.deepEqual(await health.json(), { ok: true });
+    assert.deepEqual(await health.json(), { ok: true, sourceRevision: null });
   } finally {
     await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
   }

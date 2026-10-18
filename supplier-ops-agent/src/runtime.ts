@@ -15,6 +15,7 @@ import { MemoryRepository } from "./storage/memory-repository.ts";
 import { PostgresRepository } from "./storage/postgres-repository.ts";
 import type { SupplierOpsRepository } from "./storage/repository.ts";
 import { createAdaptersFromEnv } from "./suppliers/factory.ts";
+import { describeSupplierAuthConfiguration } from "./suppliers/auth-diagnostics.ts";
 import { createSupplierRegistry } from "./suppliers/registry.ts";
 import type { SupplierConnectionCheck } from "./suppliers/types.ts";
 import { runSupplierSync } from "./worker/run-sync.ts";
@@ -98,6 +99,17 @@ export async function createRuntime() {
     const wanted = normalizeSku(input.supplierSku);
     return products.find((product) => normalizeSku(product.sku) === wanted) ?? null;
   };
+  const checkSupplierAuthentication = async (supplierKey: string) => {
+    const adapter = adapters.find((candidate) => candidate.supplier.id === supplierKey);
+    if (!adapter) return null;
+    const configuration = describeSupplierAuthConfiguration(adapter.supplier);
+    const result = adapter.verifyAuthentication
+      ? await adapter.verifyAuthentication()
+      : { status: "unsupported" as const };
+    return { configuration, status: result.status,
+      accountAuthenticated: configuration.mode === "supplier_account" && Boolean(adapter.verifyAuthentication) && result.status === "connected",
+      checkedAt: new Date().toISOString() };
+  };
 
   const serverContext: ServerContext = {
     repository,
@@ -113,6 +125,8 @@ export async function createRuntime() {
     internalDashboardAuthRequired: config.internalDashboardAuthRequired,
     supplierRunToken: config.supplierRunToken,
     supplierReadToken: config.supplierReadToken,
+    sourceRevision: config.sourceRevision,
+    checkSupplierAuthentication,
   };
 
   return {

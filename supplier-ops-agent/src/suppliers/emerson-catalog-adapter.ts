@@ -66,6 +66,23 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
     }
   }
 
+  async verifyAuthentication(): Promise<SupplierConnectionCheck> {
+    if (!this.#cookieHeader) return this.#check("not_configured", "Emerson account session is not configured.");
+    try {
+      // Unlike catalog parsing, the rendered reader requires the account-only marker.
+      await this.#renderCatalog(this.#catalogUrls[0], this.#cookieHeader, this.supplier.id);
+      return this.#check("connected", "Emerson account-only marker verified.");
+    } catch (error) {
+      if (error instanceof SupplierAdapterError && error.kind === "two_factor_required") {
+        return this.#check("two_factor_required", "Emerson account verification code is required.");
+      }
+      if (error instanceof SupplierAdapterError && error.kind === "verification_required") {
+        return this.#check("verification_required", "Emerson account verification is required.");
+      }
+      return this.#check("login_failed", "Emerson authenticated account check failed.");
+    }
+  }
+
   async fetchProducts(context: SupplierAdapterContext = {}) {
     if (!this.#cookieHeader) {
       throw new SupplierAdapterError(
@@ -207,6 +224,12 @@ async function readRenderedEmersonCatalog(
     if (!(await accountMarker.isVisible().catch(() => false))) {
       const pageText = await page.locator("body").innerText().catch(() => "");
       const passwordVisible = await page.locator('input[type="password"]').first().isVisible().catch(() => false);
+      if (/\b(two.factor|2fa|mfa|verification code|authenticator code|one.time (?:code|passcode))\b/i.test(pageText)) {
+        throw new SupplierAdapterError(supplierId, "two_factor_required", "Emerson account verification code is required");
+      }
+      if (/captcha|verify (?:that )?you are human|i.m not a robot|unusual traffic/i.test(pageText)) {
+        throw new SupplierAdapterError(supplierId, "verification_required", "Emerson browser verification is required");
+      }
       if (passwordVisible || requiresSignIn(pageText, page.url())) {
         throw new SupplierAdapterError(
           supplierId,
