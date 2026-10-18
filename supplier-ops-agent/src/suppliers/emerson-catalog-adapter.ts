@@ -540,7 +540,7 @@ async function inspectEmersonLoginDialog(page: import("playwright").Page): Promi
       if (buttons.length === 1) { buttonClass = choice.buttonClass; break; }
     }
     return { category, buttonClass, visibleDialog: true };
-  }, { patterns: EMERSON_DIALOG_PATTERNS, choices: EMERSON_COOKIE_CHOICES }, { timeout: 2_000 });
+  }, { patterns: EMERSON_DIALOG_PATTERNS, choices: EMERSON_COOKIE_CHOICES }, { timeout: 10_000 });
   const choice = EMERSON_COOKIE_CHOICES.find(value => value.buttonClass === observation.buttonClass);
   if (!choice) return observation;
   const dialog = page.getByRole("dialog").filter({ hasNot: page.locator("#email") });

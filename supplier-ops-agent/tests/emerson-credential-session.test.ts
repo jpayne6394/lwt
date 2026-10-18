@@ -17,6 +17,7 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
   signInEnabledAfter?: number; signInReadinessTimeouts?: number; emailMatchesExpected?: boolean; nativeValid?: boolean; visibleDialog?: boolean;
   separateDialogText?: string; separateDialogButtons?: string[]; dialogAfterFormReady?: boolean } = {}) {
   const events: string[] = [];
+  const dialogInspectionTimeouts: number[] = [];
   let submitted = Boolean(options.signedIn), menuOpened = false, passwordFilled = false;
   let readinessChecks = 0;
   let separateDialogOpen = Boolean(options.separateDialogText) && !options.dialogAfterFormReady;
@@ -52,8 +53,9 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
       if (!visible(selector)) throw new Error("missing observed field");
       return /email$/i.test(selector) ? options.emailMatchesExpected === false ? "private-edited-account" : input.username : input.password;
     },
-    evaluate: async (_callback: unknown, argument?: { patterns: Array<{ category: string; pattern: string }>; choices: Array<{ buttonClass: string; name: string }> }) => {
+    evaluate: async (_callback: unknown, argument?: { patterns: Array<{ category: string; pattern: string }>; choices: Array<{ buttonClass: string; name: string }> }, settings?: { timeout: number }) => {
       if (selector === "body" && argument) {
+        dialogInspectionTimeouts.push(settings?.timeout ?? 0);
         const category = separateDialogOpen ? argument.patterns.find(rule => new RegExp(rule.pattern, "i").test(options.separateDialogText!))?.category ?? "unknown"
           : options.visibleDialog ? "login_form" : "none";
         const choice = category === "cookie_privacy" ? argument.choices.find(choice => options.separateDialogButtons?.some(name => name.toLowerCase() === choice.name.toLowerCase())) : undefined;
@@ -131,7 +133,7 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
     } }; },
     close: async () => { events.push("browser-closed"); if (options.closeFailure) throw options.closeFailure; },
   } as unknown as Browser;
-  return { events, launch: async () => browser, page: page as unknown as Page, readinessChecks: () => readinessChecks };
+  return { events, launch: async () => browser, page: page as unknown as Page, readinessChecks: () => readinessChecks, dialogInspectionTimeouts };
 }
 
 test("routine Emerson login uses only the observed form and returns the verified supplier-scoped session", async () => {
@@ -190,6 +192,14 @@ test("the observed email/password login-form dialog is not mistaken for a separa
   assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
   assert.equal(harness.events.includes("click:necessary-cookie-choice"), false);
   assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
+});
+
+test("the consent inspection allows ten seconds for element resolution without adding a login attempt", async () => {
+  const harness = browserHarness();
+  assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
+  assert.deepEqual(harness.dialogInspectionTimeouts, [10_000]);
+  assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
+  assert.equal(harness.events.filter(event => event.startsWith("fill:")).length, 2);
 });
 
 test("a disabled sign-in button cannot receive Enter even when visible and both fields filled", async (context) => {
