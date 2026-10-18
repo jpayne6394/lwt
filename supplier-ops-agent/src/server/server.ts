@@ -15,6 +15,7 @@ import type { SupplierAuthConfiguration } from "../suppliers/auth-diagnostics.ts
 import { renderAdminPage } from "./admin-ui.ts";
 import { parseSupplierCartPrepareCommand, cartPrepareReceipt, safeCartPrepareReceipt,
   type SupplierCartPrepareCommand, type SupplierCartPrepareReceipt } from "../suppliers/cart-preparation.ts";
+import { observePublicEmersonLogin, projectPublicLoginObservation, type EmersonPublicLoginObservation } from "../suppliers/emerson-public-login-observer.ts";
 
 export type ServerContext = {
   repository: SupplierOpsRepository;
@@ -31,6 +32,7 @@ export type ServerContext = {
   supplierRunToken?: string;
   supplierReadToken?: string;
   supplierCartPrepareToken?: string;
+  observePublicEmersonLogin?: () => Promise<EmersonPublicLoginObservation>;
   prepareSupplierCart?: (command: SupplierCartPrepareCommand) => Promise<SupplierCartPrepareReceipt | null>;
   sourceRevision?: string;
   checkSupplierAuthentication?: (supplierKey: string) => Promise<{
@@ -49,6 +51,13 @@ export type StartServerOptions = {
 
 export function startServer(context: ServerContext, options: StartServerOptions) {
   const preparations = new Map<string, Promise<{ fingerprint: string; receipt: SupplierCartPrepareReceipt }>>();
+  let lastPublicObservation = -Infinity, observingPublicLogin = false;
+  const observePublicLoginOnce = async (): Promise<EmersonPublicLoginObservation | null> => {
+    if (observingPublicLogin || Date.now() - lastPublicObservation < 60_000) return null;
+    lastPublicObservation = Date.now(); observingPublicLogin = true;
+    try { return projectPublicLoginObservation(await (context.observePublicEmersonLogin ?? observePublicEmersonLogin)()); }
+    finally { observingPublicLogin = false; }
+  };
   let preparing = false;
   const prepareOnce = async (command: SupplierCartPrepareCommand): Promise<SupplierCartPrepareReceipt> => {
     const canonical = (value: unknown): unknown => Array.isArray(value) ? value.map(canonical)
@@ -75,7 +84,7 @@ export function startServer(context: ServerContext, options: StartServerOptions)
     return (await pending).receipt;
   };
   const server = createServer((request, response) => {
-    void handleRequest(context, request, response, prepareOnce);
+    void handleRequest(context, request, response, prepareOnce, observePublicLoginOnce);
   });
 
   server.listen(options.port, options.host ?? "0.0.0.0");
@@ -83,7 +92,8 @@ export function startServer(context: ServerContext, options: StartServerOptions)
 }
 
 async function handleRequest(context: ServerContext, request: IncomingMessage, response: ServerResponse,
-  prepareOnce: (command: SupplierCartPrepareCommand) => Promise<SupplierCartPrepareReceipt>): Promise<void> {
+  prepareOnce: (command: SupplierCartPrepareCommand) => Promise<SupplierCartPrepareReceipt>,
+  observePublicLoginOnce: () => Promise<EmersonPublicLoginObservation | null>): Promise<void> {
   const url = new URL(request.url ?? "/", "http://localhost");
   if (url.pathname === "/intelligence" || url.pathname.startsWith("/api/intelligence")) {
     const authStatus = intelligenceAuthStatus(request, context);
@@ -106,6 +116,30 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
       ok: true,
       sourceRevision: /^[a-f0-9]{40}$/i.test(context.sourceRevision ?? "") ? context.sourceRevision : null,
     });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/suppliers/emerson-login-observation") {
+    response.setHeader("Cache-Control", "no-store");
+    const token = context.supplierCartPrepareToken;
+    if (!token || token.length < 32 || token.length > 4096 || /[\r\n]/.test(token) || token === context.supplierReadToken || token === context.supplierRunToken) {
+      sendJson(response, 503, { error: "public_login_observation_setup_required" }); return;
+    }
+    if (!request.headers.authorization?.startsWith("Bearer ") || !safeSecretMatch(request.headers.authorization.slice(7), token)) {
+      sendJson(response, 401, { error: "public_login_observation_unauthorized" }); return;
+    }
+    if (!/^application\/json(?:;.*)?$/i.test(String(request.headers["content-type"] ?? "").trim())) {
+      sendJson(response, 415, { error: "public_login_observation_content_type_required" }); return;
+    }
+    try {
+      const input = await readJsonBody(request, 256);
+      if (url.search || !input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).length) {
+        sendJson(response, 400, { error: "public_login_observation_arguments_invalid" }); return;
+      }
+      const result = await observePublicLoginOnce();
+      if (!result) { response.setHeader("Retry-After", "60"); sendJson(response, 429, { error: "public_login_observation_rate_limited" }); return; }
+      sendJson(response, 200, result);
+    } catch { sendJson(response, 503, { error: "public_login_observation_unavailable" }); }
     return;
   }
 
