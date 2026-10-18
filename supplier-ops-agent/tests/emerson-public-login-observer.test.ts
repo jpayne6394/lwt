@@ -16,7 +16,7 @@ const fixture: EmersonPublicLoginObservation = { protocolVersion: "emerson_publi
   screenshot: { mimeType: "image/png", base64: image().toString("base64"), bytes: 24, width: 960, height: 720 },
   credentialsUsed: false, cookiesInjected: false, interactionPerformed: false, accountAccessed: false, orderSubmitted: false, paymentSubmitted: false };
 
-function browserHarness(options: { redirected?: string; screenshotFailure?: boolean; screenshotError?: Error; oversize?: boolean; axFailure?: boolean; axNodes?: unknown[] } = {}) {
+function browserHarness(options: { redirected?: string; screenshotFailure?: boolean; screenshotError?: Error; screenshotPending?: () => void; oversize?: boolean; axFailure?: boolean; axNodes?: unknown[] } = {}) {
   const events: string[] = [];
   const page = { goto: async (url: string, settings: unknown) => { assert.equal(url, "https://www.emersonecologics.com/login");
       assert.deepEqual(settings, { waitUntil: "domcontentloaded", timeout: 20_000 }); events.push("public-login"); },
@@ -35,6 +35,7 @@ function browserHarness(options: { redirected?: string; screenshotFailure?: bool
           if (command === "Page.captureScreenshot") {
             assert.deepEqual(settings, { format: "png", fromSurface: true, captureBeyondViewport: false, clip: { x: 0, y: 0, width: 960, height: 720, scale: 1 } });
             events.push("protocol-screenshot");
+            if (options.screenshotPending) { options.screenshotPending(); return new Promise(() => undefined); }
             if (options.screenshotError) throw options.screenshotError;
             if (options.screenshotFailure) throw new Error("private credential provider message");
             return { data: image(options.oversize ? PUBLIC_LOGIN_IMAGE_LIMIT : 24).toString("base64") };
@@ -93,6 +94,17 @@ test("protocol failures return only closed screenshot categories and still detac
     assert.doesNotMatch(JSON.stringify(result), /private|SecretErrorName|detail/);
     assert.deepEqual(harness.events.slice(-2), ["detached", "closed"]);
   }
+});
+
+test("an unresolved CDP capture reaches its 15-second deadline and falls back without waiting for page JavaScript", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  let started!: () => void;
+  const ready = new Promise<void>(resolve => { started = resolve; });
+  const harness = browserHarness({ screenshotPending: started }), pending = observePublicEmersonLogin({ launchBrowser: harness.launch });
+  await ready; t.mock.timers.tick(15_000);
+  const result = await pending;
+  assert.equal(result.status, "observed"); assert.equal(result.screenshotErrorCategory, "timeout");
+  assert.deepEqual(harness.events.slice(-3), ["protocol-accessibility", "detached", "closed"]);
 });
 test("bounded projection strips extra helper data and rejects malformed or oversized images and authority claims", () => {
   assert.doesNotMatch(JSON.stringify(projectPublicLoginObservation({ ...fixture, secret: "private" } as EmersonPublicLoginObservation)), /private|secret/);
