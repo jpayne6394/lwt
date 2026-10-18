@@ -21,7 +21,7 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
   readFailureAfterEmail?: boolean; readFailuresAfterEmail?: number; changeStateAfterFailure?: boolean; fieldsUneditable?: boolean;
   initialReadinessDelayMs?: number; readinessDelayStarted?: () => void;
   dialogAfterEditableChecks?: number; dialogAfterEmail?: boolean; dialogBeforeFinalSubmit?: boolean; cookieBlocksEditing?: boolean;
-  clearValuesOnCookieDismiss?: boolean } = {}) {
+  clearValuesOnCookieDismiss?: boolean; dialogRead?: Promise<string> } = {}) {
   const events: string[] = [];
   const dialogInspectionTimeouts: number[] = [];
   let submitted = Boolean(options.signedIn), menuOpened = false, passwordFilled = false;
@@ -87,24 +87,38 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
       }
       return /email$/i.test(selector) ? options.emailMatchesExpected === false && failedAction ? "private-edited-account" : emailValue : passwordValue;
     },
-    evaluate: async (_callback: unknown, argument?: { patterns: Array<{ category: string; pattern: string }>; choices: Array<{ buttonClass: string; name: string }> }, settings?: { timeout: number }) => {
-      if (selector === "body" && argument) {
-        dialogInspectionTimeouts.push(settings?.timeout ?? 0);
-        const category = separateDialogOpen ? argument.patterns.find(rule => new RegExp(rule.pattern, "i").test(options.separateDialogText!))?.category ?? "unknown"
-          : options.visibleDialog ? "login_form" : "none";
-        const choice = category === "cookie_privacy" ? argument.choices.find(choice => options.separateDialogButtons?.some(name => name.toLowerCase() === choice.name.toLowerCase())) : undefined;
-        return { category, buttonClass: choice?.buttonClass ?? "none", visibleDialog: separateDialogOpen || Boolean(options.visibleDialog) };
-      }
-      if (!visible(selector)) throw new Error("missing observed field");
-      return { valid: options.nativeValid !== false, requiredMissing: false, typeMismatch: options.nativeValid === false, patternMismatch: false, formValid: options.nativeValid !== false };
-    },
+    evaluate: async () => assert.fail("authentication must not evaluate page-controlled main-world callbacks"),
     waitFor: async () => { if (!visible(selector)) throw new Error("observed field not visible"); },
     innerText: async () => submitted ? options.afterText ?? "Account" : options.challengeOnFinalRead && valueReadsAfterEmail >= 8 ? "Verify you are human"
       : reset && options.challengeAfterReset ? options.challengeAfterReset : passwordFilled && options.beforeSubmitChallenge
       ? options.beforeSubmitChallenge : options.beforeText ?? "This page is protected by reCAPTCHA, and subject to Google Privacy Policy and Terms of Service.",
     first: () => ({ isVisible: async () => visible(selector), waitFor: async () => { if (!visible(selector)) throw new Error("not visible"); } }),
-    all: async () => options.challengeFrame ? [{ isVisible: async () => true }] : [],
+    all: async () => selector === '[role="dialog"], dialog'
+      ? [...(options.visibleDialog ? [dialogLocator(true)] : []), ...(separateDialogOpen ? [dialogLocator(false)] : [])]
+      : options.challengeFrame ? [{ isVisible: async () => true }] : [],
   });
+  function dialogLocator(loginForm: boolean) {
+    return {
+      isVisible: async () => loginForm ? Boolean(options.visibleDialog) : separateDialogOpen,
+      locator: (selector: string) => { assert(["#email", "#password"].includes(selector)); return { count: async () => loginForm ? 1 : 0 }; },
+      innerText: async (settings: { timeout: number }) => {
+        assert(settings.timeout > 0 && settings.timeout <= 10_000); dialogInspectionTimeouts.push(settings.timeout);
+        if (options.dialogRead) return options.dialogRead;
+        return options.separateDialogText ?? "";
+      },
+      getByRole: (role: string, button: { name: RegExp }) => {
+        assert.equal(role, "button");
+        const matches = () => options.separateDialogButtons?.filter(name => button.name.test(name)) ?? [];
+        return { count: async () => separateDialogOpen ? matches().length : 0, isVisible: async () => separateDialogOpen && matches().length > 0,
+          click: async () => {
+            assert(separateDialogOpen); assert.equal(matches().length, 1); assert(!/^Accept all$/i.test(matches()[0]));
+            events.push("click:necessary-cookie-choice"); separateDialogOpen = false;
+            if (options.clearValuesOnCookieDismiss) { emailValue = ""; passwordValue = ""; }
+          } };
+      },
+      waitFor: async () => { assert.equal(separateDialogOpen, false); },
+    };
+  }
   const page = {
     goto: async (target: string) => {
       events.push(`goto:${target}`); url = options.redirect ?? target;
@@ -118,16 +132,6 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
     },
     frameLocator: () => ({ getByRole: () => ({ isVisible: async () => Boolean(options.checkbox) }) }),
     getByRole: (role: string, settings: { name?: string | RegExp; exact?: boolean } = {}) => {
-      if (role === "dialog") return { filter: () => ({
-        getByRole: (buttonRole: string, button: { name: RegExp }) => ({ click: async () => {
-          assert.equal(buttonRole, "button"); assert(separateDialogOpen);
-          const matches = options.separateDialogButtons?.filter(name => button.name.test(name)) ?? [];
-          assert.equal(matches.length, 1); assert(!/^Accept all$/i.test(matches[0]));
-          events.push("click:necessary-cookie-choice"); separateDialogOpen = false;
-          if (options.clearValuesOnCookieDismiss) { emailValue = ""; passwordValue = ""; }
-        } }),
-        waitFor: async () => { assert.equal(separateDialogOpen, false); },
-      }) };
       if (settings.name === "Toggle profile account settings") return {
         isVisible: async () => submitted && Boolean(options.currentProfile),
         waitFor: async () => { if (!(submitted && options.currentProfile)) throw new Error("toggle absent"); },
@@ -136,7 +140,7 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
       };
       assert.equal(role, "button"); assert(settings.name instanceof RegExp && settings.name.test("Sign in") && settings.name.test("Signin") && !settings.name.test("Place order"));
       return { count: async () => options.signInMissing ? 0 : 1, isVisible: async () => !options.signInMissing,
-        evaluate: async () => ({ focused: true, associatedWithForm: true, submitButton: true }),
+        evaluate: async () => assert.fail("failure diagnostics must not evaluate main-world callbacks"),
         isEnabled: async () => {
           if (passwordFilled) {
             readinessChecks++;
@@ -346,13 +350,34 @@ test("the observed email/password login-form dialog is not mistaken for a separa
   assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
 });
 
-test("the consent inspection allows ten seconds for element resolution without adding a login attempt", async () => {
+test("ordinary login and diagnostics require no main-world evaluate callback", async () => {
   const harness = browserHarness();
   assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
-  assert(harness.dialogInspectionTimeouts.length >= 4);
-  assert(harness.dialogInspectionTimeouts.every(timeout => timeout > 0 && timeout <= 10_000));
+  assert.deepEqual(harness.dialogInspectionTimeouts, []);
   assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
   assert.equal(harness.events.filter(event => event.startsWith("fill:")).length, 2);
+});
+
+test("an unresolved dialog inspection fails bounded as unknown, and a late result cannot click or enter credentials", async context => {
+  const logs: unknown[][] = [];
+  context.mock.method(console, "warn", (...args: unknown[]) => { logs.push(args); });
+  context.mock.method(console, "info", (...args: unknown[]) => { logs.push(args); });
+  context.mock.timers.enable({ apis: ["Date", "setTimeout"] });
+  let release!: (text: string) => void, settled = false;
+  const dialogRead = new Promise<string>(resolve => { release = resolve; });
+  const harness = browserHarness({ separateDialogText: "Why do we use cookies and other tracking technologies?",
+    separateDialogButtons: ["Reject", "Accept All"], dialogRead });
+  const pending = assert.rejects(signInEmersonWithCredentials(input, harness.launch),
+    (error: unknown) => error instanceof SupplierAdapterError && error.authIssue === "login_form_unavailable").then(() => { settled = true; });
+  for (let tick = 0; tick < 60 && !settled; tick++) { await new Promise(resolve => setImmediate(resolve)); context.mock.timers.tick(250); }
+  assert(settled, "inspection plus failure diagnostics must finish within their actual read deadlines"); await pending;
+  assert.equal(harness.events.at(-1), "browser-closed");
+  assert.equal(harness.events.some(event => /^(?:fill:|click:|press:)/.test(event)), false);
+  release("Why do we use cookies? private-untrusted-dialog-content");
+  await new Promise(resolve => setImmediate(resolve)); context.mock.timers.tick(10_000);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(harness.events.some(event => /^(?:fill:|click:|press:)/.test(event)), false);
+  assert.doesNotMatch(JSON.stringify(logs), /private-untrusted-dialog-content|private-account|private-password/);
 });
 
 test("a disabled sign-in button cannot receive Enter even when visible and both fields filled", async (context) => {
@@ -445,7 +470,7 @@ test("progress traces contain only closed stages and elapsed times, never creden
   assert.doesNotMatch(JSON.stringify(logs), /private|https|username|password=|cookie|token|Account/);
 });
 
-test("post-submit diagnostics expose equality/validation/overlay booleans and only a fixed page-error category", async (context) => {
+test("post-submit diagnostics expose equality/overlay observations without unbounded validity or focus evaluation", async (context) => {
   const logs: unknown[][] = [];
   context.mock.method(console, "info", () => undefined);
   context.mock.method(console, "warn", (...args: unknown[]) => { logs.push(args); });
@@ -455,8 +480,8 @@ test("post-submit diagnostics expose equality/validation/overlay booleans and on
   assert.equal(logs.length, 1);
   const record = logs[0][1] as Record<string, unknown>;
   assert.equal(record.emailMatchesExpected, false); assert.equal(record.passwordMatchesExpected, true);
-  assert.deepEqual(record.emailNativeValidity, { valid: false, requiredMissing: false, typeMismatch: true, patternMismatch: false, formValid: false });
-  assert.deepEqual(record.signInState, { focused: true, associatedWithForm: true, submitButton: true });
+  assert.equal(record.emailNativeValidity, null); assert.equal(record.passwordNativeValidity, null);
+  assert.equal(record.signInState, null);
   assert.equal(record.visibleDialog, true); assert.equal(record.pageErrorCategory, "generic_provider_error");
   assert.doesNotMatch(JSON.stringify(logs), /private|Something went wrong|https:/);
   for (const [text, category] of [["Invalid credentials private-password", "credentials_rejected"], ["Please enter a valid email address", "field_validation"],
