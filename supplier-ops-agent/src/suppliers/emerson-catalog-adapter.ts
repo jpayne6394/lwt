@@ -394,13 +394,27 @@ export async function signInEmersonWithCredentials(input: {
       await password.fill(input.password, { timeout: 10_000 });
       assertAccountUrl();
       operation = "press_sign_in";
-      const submissionChallenge = await challenge();
-      if (submissionChallenge) throw new SupplierAdapterError(input.supplierId, submissionChallenge, "Emerson account verification is required");
-      if (!(await signIn.isVisible().catch(() => false)) || !(await signIn.isEnabled({ timeout: 1_000 }).catch(() => false))) {
+      // React validation may briefly disable the button after either fill, especially on the small worker.
+      // Observe positive readiness only; no credential refill, submission retry, or forced activation.
+      const readinessDeadline = Date.now() + 15_000;
+      let submissionReady = false;
+      for (let observation = 0; observation < 60 && Date.now() < readinessDeadline; observation += 1) {
+        assertAccountUrl();
+        const pendingChallenge = await challenge();
+        if (pendingChallenge) throw new SupplierAdapterError(input.supplierId, pendingChallenge, "Emerson account verification is required");
+        if (await signIn.isVisible().catch(() => false) && await signIn.isEnabled({ timeout: 1_000 }).catch(() => false)) {
+          submissionReady = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      if (!submissionReady) {
         throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in button is not ready", "login_form_unavailable");
       }
       // Normal keyboard activation focuses this observed button. Submit once; never retry a prior pointer action.
       assertAccountUrl();
+      const submissionChallenge = await challenge();
+      if (submissionChallenge) throw new SupplierAdapterError(input.supplierId, submissionChallenge, "Emerson account verification is required");
       await signIn.press("Enter", { noWaitAfter: true, timeout: 10_000 });
       phase = "login_confirmation_missing";
       const verifyAccount = createEmersonAccountVerifier(accountPage, input.supplierId);
