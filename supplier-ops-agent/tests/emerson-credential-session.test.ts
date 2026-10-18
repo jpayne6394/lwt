@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { Browser, Page } from "playwright";
-import { signInEmersonWithCredentials, readRenderedEmersonCatalog, EmersonSessionExpiredError, createEmersonAccountVerifier } from "../src/suppliers/emerson-catalog-adapter.ts";
+import { signInEmersonWithCredentials, readRenderedEmersonCatalog, EmersonSessionExpiredError, createEmersonAccountVerifier,
+  EmersonCatalogSupplierAdapter, EMERSON_AUTH_PROGRESS_STAGES, emersonLoginPageErrorCategory } from "../src/suppliers/emerson-catalog-adapter.ts";
 import { SupplierAdapterError } from "../src/suppliers/types.ts";
 
 const input = { username: "private-account", password: "private-password", supplierId: "emerson-ecologics" };
@@ -13,7 +14,7 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
   semanticLabels?: boolean; legacyFields?: boolean; emailMissing?: boolean; passwordMissing?: boolean; signInMissing?: boolean; profileText?: string;
   failureAt?: "fill_email" | "fill_password" | "press_sign_in"; emailEnabled?: boolean; emailEditable?: boolean;
   passwordEnabled?: boolean; passwordEditable?: boolean; signInEnabled?: boolean; beforeSubmitChallenge?: string;
-  signInEnabledAfter?: number; signInReadinessTimeouts?: number } = {}) {
+  signInEnabledAfter?: number; signInReadinessTimeouts?: number; emailMatchesExpected?: boolean; nativeValid?: boolean; visibleDialog?: boolean } = {}) {
   const events: string[] = [];
   let submitted = Boolean(options.signedIn), menuOpened = false, passwordFilled = false;
   let readinessChecks = 0;
@@ -43,6 +44,14 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
     isVisible: async () => visible(selector),
     isEnabled: async () => /email$/i.test(selector) ? options.emailEnabled !== false : options.passwordEnabled !== false,
     isEditable: async () => /email$/i.test(selector) ? options.emailEditable !== false : options.passwordEditable !== false,
+    inputValue: async () => {
+      if (!visible(selector)) throw new Error("missing observed field");
+      return /email$/i.test(selector) ? options.emailMatchesExpected === false ? "private-edited-account" : input.username : input.password;
+    },
+    evaluate: async () => {
+      if (!visible(selector)) throw new Error("missing observed field");
+      return { valid: options.nativeValid !== false, requiredMissing: false, typeMismatch: options.nativeValid === false, patternMismatch: false, formValid: options.nativeValid !== false };
+    },
     waitFor: async () => { if (!visible(selector)) throw new Error("observed field not visible"); },
     innerText: async () => submitted ? options.afterText ?? "Account" : passwordFilled && options.beforeSubmitChallenge
       ? options.beforeSubmitChallenge : options.beforeText ?? "This page is protected by reCAPTCHA, and subject to Google Privacy Policy and Terms of Service.",
@@ -61,7 +70,8 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
       assert(label.test("Password*")); return locator("label:Password");
     },
     frameLocator: () => ({ getByRole: () => ({ isVisible: async () => Boolean(options.checkbox) }) }),
-    getByRole: (role: string, settings: { name: string | RegExp; exact?: boolean }) => {
+    getByRole: (role: string, settings: { name?: string | RegExp; exact?: boolean } = {}) => {
+      if (role === "dialog") return { first: () => ({ isVisible: async () => Boolean(options.visibleDialog) }) };
       if (settings.name === "Toggle profile account settings") return {
         isVisible: async () => submitted && Boolean(options.currentProfile),
         waitFor: async () => { if (!(submitted && options.currentProfile)) throw new Error("toggle absent"); },
@@ -70,6 +80,7 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
       };
       assert.equal(role, "button"); assert(settings.name instanceof RegExp && settings.name.test("Sign in") && settings.name.test("Signin") && !settings.name.test("Place order"));
       return { count: async () => options.signInMissing ? 0 : 1, isVisible: async () => !options.signInMissing,
+        evaluate: async () => ({ focused: true, associatedWithForm: true, submitButton: true }),
         isEnabled: async () => {
           if (passwordFilled) {
             readinessChecks++;
@@ -170,6 +181,8 @@ test("failure-only form diagnostics log fixed structure and path classes, never 
   assert.deepEqual(logs[0], ["[supplier-auth] Emerson sign-in failed", {
     phase: "login_form_unavailable", errorKind: "login_failed", operation: "readiness", failureCategory: "other",
     pageKind: "login", bodyLength: "private-account private-password private-cookie".length, bodyPresent: true,
+    emailMatchesExpected: null, passwordMatchesExpected: null, emailNativeValidity: null, passwordNativeValidity: null,
+    signInState: null, visibleDialog: false, pageErrorCategory: "none",
     emailLabelPresent: true, passwordLabelPresent: false, legacyEmailPresent: false, legacyPasswordPresent: false,
     signInButtonPresent: true, emailFieldVisible: true, passwordFieldVisible: false, signInButtonVisible: true,
     emailEnabled: false, emailEditable: false, passwordEnabled: false, passwordEditable: false, signInEnabled: false,
@@ -178,6 +191,50 @@ test("failure-only form diagnostics log fixed structure and path classes, never 
   logs.length = 0;
   await signInEmersonWithCredentials(input, browserHarness().launch);
   assert.equal(logs.length, 0, "success must not emit failure diagnostics");
+});
+
+test("progress traces contain only closed stages and elapsed times, never credential or provider content", async (context) => {
+  const logs: unknown[][] = [];
+  context.mock.method(console, "info", (...args: unknown[]) => { logs.push(args); });
+  const harness = browserHarness({ redirect: "https://www.emersonecologics.com/login?private-token=private-cookie" });
+  await signInEmersonWithCredentials(input, harness.launch);
+  await readRenderedEmersonCatalog("https://www.emersonecologics.com/shop?private-token=private-cookie", "session=private-cookie", input.supplierId, browserHarness({ signedIn: true }).launch);
+  const adapter = new EmersonCatalogSupplierAdapter({ id: input.supplierId, name: "Emerson", mode: "website", brands: [], notes: "" }, {
+    cookieHeader: "session=private-cookie", renderCatalogImpl: async (url) => ({ responseUrl: url, records: [] }),
+  });
+  assert.equal((await adapter.verifyAuthentication()).status, "connected");
+  const records = logs.map(args => {
+    assert.equal(args[0], "[supplier-auth-progress]"); assert.equal(args.length, 2); assert.equal(typeof args[1], "string");
+    const record = JSON.parse(args[1] as string);
+    assert.deepEqual(Object.keys(record).sort(), ["elapsedMs", "flow", "stage"]);
+    assert(["authentication", "session_probe", "saved_login"].includes(record.flow));
+    assert((EMERSON_AUTH_PROGRESS_STAGES as readonly string[]).includes(record.stage));
+    assert(Number.isSafeInteger(record.elapsedMs) && record.elapsedMs >= 0);
+    return record;
+  });
+  assert(records.some(record => record.flow === "saved_login" && record.stage === "press_sign_in"));
+  assert(records.some(record => record.flow === "session_probe" && record.stage === "browser_close"));
+  assert(records.some(record => record.flow === "authentication" && record.stage === "complete"));
+  assert.doesNotMatch(JSON.stringify(logs), /private|https|username|password=|cookie|token|Account/);
+});
+
+test("post-submit diagnostics expose equality/validation/overlay booleans and only a fixed page-error category", async (context) => {
+  const logs: unknown[][] = [];
+  context.mock.method(console, "info", () => undefined);
+  context.mock.method(console, "warn", (...args: unknown[]) => { logs.push(args); });
+  const harness = browserHarness({ failureAt: "press_sign_in", failure: new Error("private provider timeout"), emailMatchesExpected: false,
+    nativeValid: false, visibleDialog: true, beforeText: "Something went wrong private-account private-password" });
+  await assert.rejects(signInEmersonWithCredentials(input, harness.launch), SupplierAdapterError);
+  assert.equal(logs.length, 1);
+  const record = logs[0][1] as Record<string, unknown>;
+  assert.equal(record.emailMatchesExpected, false); assert.equal(record.passwordMatchesExpected, true);
+  assert.deepEqual(record.emailNativeValidity, { valid: false, requiredMissing: false, typeMismatch: true, patternMismatch: false, formValid: false });
+  assert.deepEqual(record.signInState, { focused: true, associatedWithForm: true, submitButton: true });
+  assert.equal(record.visibleDialog, true); assert.equal(record.pageErrorCategory, "generic_provider_error");
+  assert.doesNotMatch(JSON.stringify(logs), /private|Something went wrong|https:/);
+  for (const [text, category] of [["Invalid credentials private-password", "credentials_rejected"], ["Please enter a valid email address", "field_validation"],
+    ["Enter verification code", "two_factor_required"], ["Verify you are human", "verification_required"],
+    ["This page is protected by reCAPTCHA", "none"]]) assert.equal(emersonLoginPageErrorCategory(text), category);
 });
 
 test("original action failures retain exact controlled operation and category before error sanitization", async (context) => {

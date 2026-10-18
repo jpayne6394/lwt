@@ -119,12 +119,19 @@ export class EmersonCatalogSupplierAdapter implements SupplierAdapter {
   }
 
   async verifyAuthentication(): Promise<SupplierConnectionCheck> {
-    if (!this.#cookieHeader && !this.#canAuthenticate()) return this.#check("not_configured", "Emerson account session is not configured.", "session_not_configured");
+    const progress = emersonAuthProgress("authentication");
+    progress("start");
+    if (!this.#cookieHeader && !this.#canAuthenticate()) {
+      progress("failed");
+      return this.#check("not_configured", "Emerson account session is not configured.", "session_not_configured");
+    }
     try {
       // Unlike catalog parsing, the rendered reader requires the account-only marker.
       await this.#withSessionRenewal((cookie) => this.#renderCatalog(this.#catalogUrls[0], cookie, this.supplier.id));
+      progress("complete");
       return this.#check("connected", "Emerson account-only marker verified.");
     } catch (error) {
+      progress("failed");
       const authIssue = authenticationIssue(error, "existing_session_unverified");
       if (error instanceof SupplierAdapterError && error.kind === "two_factor_required") {
         return this.#check("two_factor_required", "Emerson account verification code is required.", authIssue);
@@ -344,6 +351,19 @@ type EmersonLoginOperation = "readiness" | "fill_email" | "fill_password" | "pre
 type EmersonLoginFailureCategory = "pointer_intercepted" | "timeout" | "element_detached" | "element_not_editable" | "page_closed" | "other";
 type EmersonLoginControls = { email: import("playwright").Locator; password: import("playwright").Locator; signIn: import("playwright").Locator };
 
+export const EMERSON_AUTH_PROGRESS_STAGES = ["start", "browser_launch", "browser_context", "page_navigation", "form_readiness",
+  "fill_email", "fill_password", "submit_readiness", "press_sign_in", "account_observation", "account_confirmation",
+  "session_readback", "catalog_readback", "failure_diagnostics", "browser_close", "complete", "failed"] as const;
+function emersonAuthProgress(flow: "authentication" | "session_probe" | "saved_login") {
+  const started = performance.now();
+  let last: string | undefined;
+  return (stage: typeof EMERSON_AUTH_PROGRESS_STAGES[number]) => {
+    if (stage === last) return;
+    last = stage;
+    console.info("[supplier-auth-progress]", JSON.stringify({ flow, stage, elapsedMs: Math.max(0, Math.round(performance.now() - started)) }));
+  };
+}
+
 function emersonLoginFailureCategory(error: unknown): EmersonLoginFailureCategory {
   if (!(error instanceof Error)) return "other";
   // Categorize without emitting provider text. An intercepted click often arrives as a TimeoutError.
@@ -357,13 +377,18 @@ function emersonLoginFailureCategory(error: unknown): EmersonLoginFailureCategor
 export async function signInEmersonWithCredentials(input: {
   username: string; password: string; supplierId: string;
 }, launchBrowser: typeof launchSupplierBrowser = launchSupplierBrowser): Promise<string> {
-  const browser = await launchEmersonBrowser(input.supplierId, launchBrowser);
+  const progress = emersonAuthProgress("saved_login");
+  progress("start");
+  progress("browser_launch");
+  const browser = await launchEmersonBrowser(input.supplierId, launchBrowser).catch(error => { progress("failed"); throw error; });
   let phase: SupplierAuthIssue = "browser_context_failed";
   let operation: EmersonLoginOperation = "readiness";
   let failureCategory: EmersonLoginFailureCategory = "other";
   let controls: EmersonLoginControls | undefined;
   let page: import("playwright").Page | undefined;
+  let failed = false;
   try {
+    progress("browser_context");
     const context = await browser.newContext();
     const accountPage = await context.newPage();
     page = accountPage;
@@ -372,11 +397,13 @@ export async function signInEmersonWithCredentials(input: {
     try {
       // These controls were observed on the supplier's actual current sign-in page.
       phase = "supplier_page_unavailable";
+      progress("page_navigation");
       await accountPage.goto("https://www.emersonecologics.com/login", { waitUntil: "domcontentloaded", timeout: 20_000 });
       assertAccountUrl();
       const initialChallenge = await challenge();
       if (initialChallenge) throw new SupplierAdapterError(input.supplierId, initialChallenge, "Emerson account verification is required");
       phase = "login_form_unavailable";
+      progress("form_readiness");
       const [email, password] = await Promise.all([
         visibleEmersonLoginField(accountPage, /^Email\s*\*?$/i, "#email"),
         visibleEmersonLoginField(accountPage, /^Password\s*\*?$/i, "#password"),
@@ -389,11 +416,14 @@ export async function signInEmersonWithCredentials(input: {
       if (formChallenge) throw new SupplierAdapterError(input.supplierId, formChallenge, "Emerson account verification is required");
       // Both observed fields and the sign-in control must be visible before entering either credential.
       operation = "fill_email";
+      progress("fill_email");
       await email.fill(input.username, { timeout: 10_000 });
       operation = "fill_password";
+      progress("fill_password");
       await password.fill(input.password, { timeout: 10_000 });
       assertAccountUrl();
       operation = "press_sign_in";
+      progress("submit_readiness");
       // React validation may briefly disable the button after either fill, especially on the small worker.
       // Observe positive readiness only; no credential refill, submission retry, or forced activation.
       const readinessDeadline = Date.now() + 15_000;
@@ -415,8 +445,10 @@ export async function signInEmersonWithCredentials(input: {
       assertAccountUrl();
       const submissionChallenge = await challenge();
       if (submissionChallenge) throw new SupplierAdapterError(input.supplierId, submissionChallenge, "Emerson account verification is required");
+      progress("press_sign_in");
       await signIn.press("Enter", { noWaitAfter: true, timeout: 10_000 });
       phase = "login_confirmation_missing";
+      progress("account_confirmation");
       const verifyAccount = createEmersonAccountVerifier(accountPage, input.supplierId);
       let accountVerified = false;
       // Bounded observation only. Never retry the credential submission.
@@ -440,12 +472,14 @@ export async function signInEmersonWithCredentials(input: {
         throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson did not verify the saved account", "login_confirmation_missing");
       }
       phase = "renewed_session_unverified";
+      progress("session_readback");
       const cookies = await context.cookies(["https://emersonecologics.com/", "https://www.emersonecologics.com/"]);
       const header = cookies.filter((cookie) => ["emersonecologics.com", "www.emersonecologics.com"].includes(cookie.domain.replace(/^\./, "").toLowerCase()))
         .map((cookie) => `${cookie.name}=${cookie.value}`).join("; ");
       if (!header) throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson did not provide an authenticated session", "renewed_session_unverified");
       return header;
     } catch (error) {
+      progress("failure_diagnostics");
       failureCategory = emersonLoginFailureCategory(error);
       if (error instanceof SupplierAdapterError) throw error;
       const activeChallenge = await challenge().catch(() => null);
@@ -453,13 +487,19 @@ export async function signInEmersonWithCredentials(input: {
         activeChallenge === "two_factor_required" ? "mfa_required" : activeChallenge ? "challenge_required" : phase);
     }
   } catch (error) {
+    failed = true;
+    progress("failure_diagnostics");
     if (!(error instanceof SupplierAdapterError)) failureCategory = emersonLoginFailureCategory(error);
-    await logEmersonLoginFailure(page, phase, error instanceof SupplierAdapterError ? error.kind : "login_failed", operation, failureCategory, controls).catch(() => undefined);
+    await logEmersonLoginFailure(page, phase, error instanceof SupplierAdapterError ? error.kind : "login_failed", operation, failureCategory, controls, input).catch(() => undefined);
     if (error instanceof SupplierAdapterError) throw error;
     const activeChallenge = page ? await activeEmersonChallenge(page).catch(() => null) : null;
     throw new SupplierAdapterError(input.supplierId, activeChallenge ?? "login_failed", "Emerson saved account sign-in could not be completed",
       activeChallenge === "two_factor_required" ? "mfa_required" : activeChallenge ? "challenge_required" : phase);
-  } finally { await browser.close().catch(() => undefined); }
+  } finally {
+    progress("browser_close");
+    await browser.close().catch(() => undefined);
+    progress(failed ? "failed" : "complete");
+  }
 }
 
 async function visibleEmersonLoginField(page: import("playwright").Page, label: RegExp, legacyId: string) {
@@ -472,7 +512,8 @@ async function visibleEmersonLoginField(page: import("playwright").Page, label: 
 
 /** Failure-only structure diagnostics. Never log page text, field values, URLs, account IDs or provider errors. */
 async function logEmersonLoginFailure(page: import("playwright").Page | undefined, phase: SupplierAuthIssue, errorKind: SupplierAdapterError["kind"],
-  operation: EmersonLoginOperation, failureCategory: EmersonLoginFailureCategory, controls?: EmersonLoginControls) {
+  operation: EmersonLoginOperation, failureCategory: EmersonLoginFailureCategory, controls?: EmersonLoginControls,
+  expected?: { username: string; password: string }) {
   const present = async (locator: () => import("playwright").Locator) => {
     try { return Boolean(page) && await locator().count() > 0; } catch { return false; }
   };
@@ -487,8 +528,26 @@ async function logEmersonLoginFailure(page: import("playwright").Page | undefine
     pageKind = /^\/(?:emerson\/)?login\/?$/i.test(path) ? "login" : /^\/shop\/?$/i.test(path) ? "shop"
       : /^\/products\/detail\//i.test(path) ? "product" : /^\/emerson\/?$/i.test(path) ? "emerson_entry" : "other";
   } catch { /* No untrusted URL is logged. */ }
-  const bodyLength = page ? await page.locator("body").innerText({ timeout: 2_000 }).then((text) => text.length).catch(() => null) : null;
+  const pageText = page ? await page.locator("body").innerText({ timeout: 2_000 }).catch(() => null) : null;
+  const inputMatches = async (field: import("playwright").Locator | undefined, value: string | undefined) => field && value !== undefined
+    ? field.inputValue({ timeout: 1_000 }).then(actual => actual === value).catch(() => null) : null;
+  const nativeValidity = async (field?: import("playwright").Locator) => field ? field.evaluate(element => {
+    if (!(element instanceof HTMLInputElement)) return null;
+    return { valid: element.validity.valid, requiredMissing: element.validity.valueMissing, typeMismatch: element.validity.typeMismatch,
+      patternMismatch: element.validity.patternMismatch, formValid: element.form ? !element.form.querySelector(":invalid") : null };
+  }, undefined, { timeout: 1_000 }).catch(() => null) : null;
+  const [emailMatchesExpected, passwordMatchesExpected, emailNativeValidity, passwordNativeValidity, signInState, visibleDialog] = await Promise.all([
+    inputMatches(controls?.email, expected?.username), inputMatches(controls?.password, expected?.password),
+    nativeValidity(controls?.email), nativeValidity(controls?.password),
+    controls?.signIn ? controls.signIn.evaluate(element => ({ focused: element === element.ownerDocument.activeElement,
+      associatedWithForm: element instanceof HTMLButtonElement && Boolean(element.form),
+      submitButton: element instanceof HTMLButtonElement && element.type === "submit" }), undefined, { timeout: 1_000 }).catch(() => null) : null,
+    page ? page.getByRole("dialog").first().isVisible().catch(() => null) : null,
+  ]);
+  const bodyLength = pageText?.length ?? null;
   console.warn("[supplier-auth] Emerson sign-in failed", { phase, errorKind, operation, failureCategory, pageKind, bodyLength,
+    emailMatchesExpected, passwordMatchesExpected, emailNativeValidity, passwordNativeValidity, signInState, visibleDialog,
+    pageErrorCategory: pageText === null ? "unavailable" : emersonLoginPageErrorCategory(pageText),
     bodyPresent: await present(() => page!.locator("body")),
     emailLabelPresent: await present(() => page!.getByLabel(/^Email\s*\*?$/i)),
     passwordLabelPresent: await present(() => page!.getByLabel(/^Password\s*\*?$/i)),
@@ -502,6 +561,16 @@ async function logEmersonLoginFailure(page: import("playwright").Page | undefine
     passwordEnabled: await enabled(controls?.password), passwordEditable: await editable(controls?.password),
     signInEnabled: await enabled(controls?.signIn),
   });
+}
+
+export function emersonLoginPageErrorCategory(text: string): "none" | "credentials_rejected" | "field_validation" | "generic_provider_error"
+  | "two_factor_required" | "verification_required" {
+  const challenge = emersonChallengeCode(text);
+  if (challenge) return challenge;
+  if (/invalid (?:email|username|password|credentials)|incorrect (?:email|username|password|credentials)|(?:email|username) and password (?:do not|don.t) match/i.test(text)) return "credentials_rejected";
+  if (/this field is required|please enter (?:a valid )?(?:email(?: address)?|password)|password must (?:contain|be|have)/i.test(text)) return "field_validation";
+  if (/something went wrong|unable to (?:sign|log) in|could not (?:sign|log) in|error (?:signing|logging) in|unexpected error|please try again/i.test(text)) return "generic_provider_error";
+  return "none";
 }
 
 export function emersonChallengeCode(text: string, visibleChallenge = false): "two_factor_required" | "verification_required" | null {
@@ -559,19 +628,26 @@ export async function readRenderedEmersonCatalog(
   supplierId: string,
   launchBrowser: typeof launchSupplierBrowser = launchSupplierBrowser,
 ): Promise<{ responseUrl: string; records: Record<string, unknown>[] }> {
+  const progress = emersonAuthProgress("session_probe");
+  progress("start");
   assertSafeEmersonUrl(catalogUrl, supplierId);
-  const browser = await launchEmersonBrowser(supplierId, launchBrowser);
+  progress("browser_launch");
+  const browser = await launchEmersonBrowser(supplierId, launchBrowser).catch(error => { progress("failed"); throw error; });
   let phase: SupplierAuthIssue = "browser_context_failed";
   let page: import("playwright").Page | undefined;
+  let failed = false;
   try {
+    progress("browser_context");
     const browserContext = await browser.newContext();
     await browserContext.addCookies(emersonSessionCookies(cookieHeader));
     const catalogPage = await browserContext.newPage();
     page = catalogPage;
     phase = "supplier_page_unavailable";
+    progress("page_navigation");
     await catalogPage.goto(catalogUrl, { waitUntil: "domcontentloaded", timeout: 20_000 });
     assertSafeEmersonUrl(catalogPage.url(), supplierId);
     phase = "existing_session_unverified";
+    progress("account_observation");
 
     const verifyAccount = createEmersonAccountVerifier(catalogPage, supplierId);
     await Promise.any([
@@ -595,16 +671,21 @@ export async function readRenderedEmersonCatalog(
     }
 
     const productLinks = catalogPage.locator('a[data-testid="go-to-pdp"]');
+    progress("catalog_readback");
     await productLinks.first().waitFor({ state: "visible", timeout: 20_000 }).catch(() => undefined);
     const records = await catalogPage.$$eval('a[data-testid="go-to-pdp"]', renderedEmersonRecords);
     return { responseUrl: catalogPage.url(), records };
   } catch (error) {
+    failed = true;
+    progress("failure_diagnostics");
     if (error instanceof SupplierAdapterError) throw error;
     const challenge = page ? await activeEmersonChallenge(page).catch(() => null) : null;
     throw new SupplierAdapterError(supplierId, challenge ?? "login_failed", "Emerson account session could not be checked",
       challenge === "two_factor_required" ? "mfa_required" : challenge ? "challenge_required" : phase);
   } finally {
+    progress("browser_close");
     await browser.close().catch(() => undefined);
+    progress(failed ? "failed" : "complete");
   }
 }
 
