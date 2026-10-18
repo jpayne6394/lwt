@@ -14,10 +14,12 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
   semanticLabels?: boolean; legacyFields?: boolean; emailMissing?: boolean; passwordMissing?: boolean; signInMissing?: boolean; profileText?: string;
   failureAt?: "fill_email" | "fill_password" | "press_sign_in"; emailEnabled?: boolean; emailEditable?: boolean;
   passwordEnabled?: boolean; passwordEditable?: boolean; signInEnabled?: boolean; beforeSubmitChallenge?: string;
-  signInEnabledAfter?: number; signInReadinessTimeouts?: number; emailMatchesExpected?: boolean; nativeValid?: boolean; visibleDialog?: boolean } = {}) {
+  signInEnabledAfter?: number; signInReadinessTimeouts?: number; emailMatchesExpected?: boolean; nativeValid?: boolean; visibleDialog?: boolean;
+  separateDialogText?: string; separateDialogButtons?: string[]; dialogAfterFormReady?: boolean } = {}) {
   const events: string[] = [];
   let submitted = Boolean(options.signedIn), menuOpened = false, passwordFilled = false;
   let readinessChecks = 0;
+  let separateDialogOpen = Boolean(options.separateDialogText) && !options.dialogAfterFormReady;
   let url = options.signedIn ? "https://www.emersonecologics.com/shop" : "about:blank";
   const visible = (selector: string) => {
     if (selector === "body") return true;
@@ -31,7 +33,9 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
     return false;
   };
   const locator = (selector: string) => ({
+    filter: () => locator(selector),
     fill: async (value: string) => {
+      assert.equal(separateDialogOpen, false, "no credential may be filled through an unresolved separate dialog");
       const email = selector === "#email" || selector === "label:Email";
       assert(email || selector === "#password" || selector === "label:Password");
       assert((visible("#email") || visible("label:Email")) && (visible("#password") || visible("label:Password")), "both fields must be ready before either fill");
@@ -48,7 +52,13 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
       if (!visible(selector)) throw new Error("missing observed field");
       return /email$/i.test(selector) ? options.emailMatchesExpected === false ? "private-edited-account" : input.username : input.password;
     },
-    evaluate: async () => {
+    evaluate: async (_callback: unknown, argument?: { patterns: Array<{ category: string; pattern: string }>; choices: Array<{ buttonClass: string; name: string }> }) => {
+      if (selector === "body" && argument) {
+        const category = separateDialogOpen ? argument.patterns.find(rule => new RegExp(rule.pattern, "i").test(options.separateDialogText!))?.category ?? "unknown"
+          : options.visibleDialog ? "login_form" : "none";
+        const choice = category === "cookie_privacy" ? argument.choices.find(choice => options.separateDialogButtons?.some(name => name.toLowerCase() === choice.name.toLowerCase())) : undefined;
+        return { category, buttonClass: choice?.buttonClass ?? "none", visibleDialog: separateDialogOpen || Boolean(options.visibleDialog) };
+      }
       if (!visible(selector)) throw new Error("missing observed field");
       return { valid: options.nativeValid !== false, requiredMissing: false, typeMismatch: options.nativeValid === false, patternMismatch: false, formValid: options.nativeValid !== false };
     },
@@ -71,7 +81,15 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
     },
     frameLocator: () => ({ getByRole: () => ({ isVisible: async () => Boolean(options.checkbox) }) }),
     getByRole: (role: string, settings: { name?: string | RegExp; exact?: boolean } = {}) => {
-      if (role === "dialog") return { first: () => ({ isVisible: async () => Boolean(options.visibleDialog) }) };
+      if (role === "dialog") return { filter: () => ({
+        getByRole: (buttonRole: string, button: { name: RegExp }) => ({ click: async () => {
+          assert.equal(buttonRole, "button"); assert(separateDialogOpen);
+          const matches = options.separateDialogButtons?.filter(name => button.name.test(name)) ?? [];
+          assert.equal(matches.length, 1); assert.notEqual(matches[0], "Accept all");
+          events.push("click:necessary-cookie-choice"); separateDialogOpen = false;
+        } }),
+        waitFor: async () => { assert.equal(separateDialogOpen, false); },
+      }) };
       if (settings.name === "Toggle profile account settings") return {
         isVisible: async () => submitted && Boolean(options.currentProfile),
         waitFor: async () => { if (!(submitted && options.currentProfile)) throw new Error("toggle absent"); },
@@ -89,7 +107,10 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
           }
           return options.signInEnabled !== false;
         },
-        waitFor: async () => { if (options.signInMissing) throw new Error("sign-in button missing"); },
+        waitFor: async () => {
+          if (options.signInMissing) throw new Error("sign-in button missing");
+          if (options.dialogAfterFormReady) { events.push("form-ready"); separateDialogOpen = true; }
+        },
         click: async () => { assert.fail("pointer submission must not be attempted"); },
         press: async (key: string, settings: unknown) => {
           assert.equal(key, "Enter"); assert.deepEqual(settings, { noWaitAfter: true, timeout: 10_000 });
@@ -126,6 +147,49 @@ test("semantic Email*/Password* labels work when the legacy field IDs are absent
   assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
   assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:label:Email", "fill:label:Password",
     "press:Enter:Sign in", "read-verified-session", "browser-closed"]);
+});
+
+test("one recognized necessary-only cookie choice precedes either credential fill, including ordinary ToS links", async (context) => {
+  const logs: unknown[][] = [];
+  context.mock.method(console, "info", (...args: unknown[]) => { logs.push(args); });
+  for (const button of ["Reject all", "Reject optional cookies", "Use necessary cookies only", "Accept necessary cookies"]) {
+    const harness = browserHarness({ separateDialogText: "We use cookies. Privacy Policy and Terms of Service. private-dialog-content",
+      separateDialogButtons: [button, "Accept all"], dialogAfterFormReady: true });
+    assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
+    const choice = harness.events.indexOf("click:necessary-cookie-choice");
+    assert(choice > harness.events.indexOf("form-ready") && choice < harness.events.indexOf("fill:#email"));
+    assert.equal(harness.events.filter(event => event === "click:necessary-cookie-choice").length, 1);
+    assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
+  }
+  const dialogLogs = logs.filter(args => args[0] === "[supplier-auth-dialog]").map(args => JSON.parse(args[1] as string));
+  assert.equal(dialogLogs.length, 4);
+  for (const record of dialogLogs) {
+    assert.deepEqual(Object.keys(record).sort(), ["buttonClass", "category"]);
+    assert.equal(record.category, "cookie_privacy");
+    assert(["reject_all", "reject_optional", "necessary_only", "accept_necessary"].includes(record.buttonClass));
+  }
+  assert.doesNotMatch(JSON.stringify(logs), /private|Privacy Policy|Terms of Service|Accept all|Reject all/);
+});
+
+test("unknown, challenge and explicit legal dialogs never get dismissed or receive credentials", async (context) => {
+  context.mock.method(console, "info", () => undefined); context.mock.method(console, "warn", () => undefined);
+  for (const text of ["Please confirm your account details", "Verify you are human", "Enter verification code",
+    "Cookies: I agree to the terms of service", "You must accept our reseller agreement"]) {
+    const harness = browserHarness({ separateDialogText: text, separateDialogButtons: ["Reject all"] });
+    await assert.rejects(signInEmersonWithCredentials(input, harness.launch), SupplierAdapterError);
+    assert.equal(harness.events.some(event => /^(?:click:|fill:|press:)/.test(event)), false);
+    assert.equal(harness.events.at(-1), "browser-closed");
+  }
+  const unsupportedChoice = browserHarness({ separateDialogText: "We use cookies", separateDialogButtons: ["Accept all"] });
+  await assert.rejects(signInEmersonWithCredentials(input, unsupportedChoice.launch), SupplierAdapterError);
+  assert.equal(unsupportedChoice.events.some(event => /^(?:click:|fill:|press:)/.test(event)), false);
+});
+
+test("the observed email/password login-form dialog is not mistaken for a separate overlay", async () => {
+  const harness = browserHarness({ visibleDialog: true });
+  assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
+  assert.equal(harness.events.includes("click:necessary-cookie-choice"), false);
+  assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
 });
 
 test("a disabled sign-in button cannot receive Enter even when visible and both fields filled", async (context) => {
@@ -182,7 +246,7 @@ test("failure-only form diagnostics log fixed structure and path classes, never 
     phase: "login_form_unavailable", errorKind: "login_failed", operation: "readiness", failureCategory: "other",
     pageKind: "login", bodyLength: "private-account private-password private-cookie".length, bodyPresent: true,
     emailMatchesExpected: null, passwordMatchesExpected: null, emailNativeValidity: null, passwordNativeValidity: null,
-    signInState: null, visibleDialog: false, pageErrorCategory: "none",
+    signInState: null, visibleDialog: false, dialogCategory: "none", dialogButtonClass: "none", pageErrorCategory: "none",
     emailLabelPresent: true, passwordLabelPresent: false, legacyEmailPresent: false, legacyPasswordPresent: false,
     signInButtonPresent: true, emailFieldVisible: true, passwordFieldVisible: false, signInButtonVisible: true,
     emailEnabled: false, emailEditable: false, passwordEnabled: false, passwordEditable: false, signInEnabled: false,
@@ -410,28 +474,55 @@ test("redirected login never types credentials into an unapproved host or purcha
   }
 });
 
-function publicCatalogHarness(options: { visibleSignIn: boolean; pageText?: string }) {
+function publicCatalogHarness(options: { visibleSignIn: boolean; pageText?: string; pendingMarkers?: boolean; loginUrl?: boolean }) {
   let closed = false;
+  const waits: string[] = [];
   const page = {
     goto: async () => undefined,
-    url: () => "https://www.emersonecologics.com/shop",
-    locator: (selector: string) => ({
-      first: () => ({ waitFor: async () => { throw new Error("marker absent"); }, isVisible: async () => false }),
+    url: () => `https://www.emersonecologics.com/${options.loginUrl ? "login" : "shop"}`,
+    locator: (selector: string) => {
+      const locator: any = {
+      filter: () => locator,
+      first: () => ({ waitFor: async () => {
+        waits.push(selector);
+        if (selector === 'a[href="/login"]:visible' && options.visibleSignIn) return;
+        if (options.pendingMarkers && selector === '[aria-label="Account Dropdown"]') return new Promise(() => undefined);
+        throw new Error("marker absent");
+      }, isVisible: async () => false }),
       innerText: async () => options.pageText ?? "This page is protected by reCAPTCHA.",
       all: async () => selector === 'a[href="/login"]'
         ? [{ isVisible: async () => options.visibleSignIn, innerText: async () => "Sign in" }] : [],
-    }),
+      }; return locator;
+    },
     frameLocator: () => ({ getByRole: () => ({ isVisible: async () => false }) }),
-    getByRole: () => ({ waitFor: async () => { throw new Error("current toggle absent"); }, isVisible: async () => false }),
+    getByRole: () => ({ waitFor: async () => {
+      waits.push("current-profile");
+      if (options.pendingMarkers) return new Promise(() => undefined);
+      throw new Error("current toggle absent");
+    }, isVisible: async () => false }),
   };
   const browser = { newContext: async () => ({ addCookies: async () => undefined, newPage: async () => page }),
     close: async () => { closed = true; } } as unknown as Browser;
-  return { launch: async () => browser, isClosed: () => closed };
+  return { launch: async () => browser, isClosed: () => closed, waits };
 }
 
 test("public /shop with a positive visible Sign in /login link proves session expiry", async () => {
   const harness = publicCatalogHarness({ visibleSignIn: true });
   await assert.rejects(readRenderedEmersonCatalog("https://www.emersonecologics.com/shop", "private-session", input.supplierId, harness.launch), EmersonSessionExpiredError);
+  assert.equal(harness.isClosed(), true);
+});
+
+test("positive signed-out evidence ends observation without waiting for absent account markers", async () => {
+  const harness = publicCatalogHarness({ visibleSignIn: true, pendingMarkers: true });
+  await assert.rejects(readRenderedEmersonCatalog("https://www.emersonecologics.com/shop", "private-session", input.supplierId, harness.launch), EmersonSessionExpiredError);
+  assert(harness.waits.includes('a[href="/login"]:visible'));
+  assert.equal(harness.isClosed(), true);
+});
+
+test("an explicit login redirect never waits for impossible authenticated markers", async () => {
+  const harness = publicCatalogHarness({ visibleSignIn: true, loginUrl: true });
+  await assert.rejects(readRenderedEmersonCatalog("https://www.emersonecologics.com/shop", "private-session", input.supplierId, harness.launch), EmersonSessionExpiredError);
+  assert.deepEqual(harness.waits, []);
   assert.equal(harness.isClosed(), true);
 });
 

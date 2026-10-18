@@ -351,7 +351,7 @@ type EmersonLoginOperation = "readiness" | "fill_email" | "fill_password" | "pre
 type EmersonLoginFailureCategory = "pointer_intercepted" | "timeout" | "element_detached" | "element_not_editable" | "page_closed" | "other";
 type EmersonLoginControls = { email: import("playwright").Locator; password: import("playwright").Locator; signIn: import("playwright").Locator };
 
-export const EMERSON_AUTH_PROGRESS_STAGES = ["start", "browser_launch", "browser_context", "page_navigation", "form_readiness",
+export const EMERSON_AUTH_PROGRESS_STAGES = ["start", "browser_launch", "browser_context", "page_navigation", "consent_dialog", "form_readiness",
   "fill_email", "fill_password", "submit_readiness", "press_sign_in", "account_observation", "account_confirmation",
   "session_readback", "catalog_readback", "failure_diagnostics", "browser_close", "complete", "failed"] as const;
 function emersonAuthProgress(flow: "authentication" | "session_probe" | "saved_login") {
@@ -414,6 +414,8 @@ export async function signInEmersonWithCredentials(input: {
       assertAccountUrl();
       const formChallenge = await challenge();
       if (formChallenge) throw new SupplierAdapterError(input.supplierId, formChallenge, "Emerson account verification is required");
+      progress("consent_dialog");
+      await resolveEmersonCookieDialog(accountPage, input.supplierId);
       // Both observed fields and the sign-in control must be visible before entering either credential.
       operation = "fill_email";
       progress("fill_email");
@@ -502,6 +504,68 @@ export async function signInEmersonWithCredentials(input: {
   }
 }
 
+type EmersonDialogCategory = "none" | "login_form" | "cookie_privacy" | "legal_terms" | "two_factor_required" | "verification_required" | "unknown" | "unavailable";
+type EmersonCookieButtonClass = "none" | "reject_all" | "reject_optional" | "necessary_only" | "accept_necessary";
+const EMERSON_COOKIE_CHOICES: Array<{ buttonClass: EmersonCookieButtonClass; name: string }> = [
+  { buttonClass: "reject_all", name: "Reject all" }, { buttonClass: "reject_optional", name: "Reject optional cookies" },
+  { buttonClass: "necessary_only", name: "Use necessary cookies only" }, { buttonClass: "accept_necessary", name: "Accept necessary cookies" },
+];
+const EMERSON_DIALOG_PATTERNS: Array<{ category: EmersonDialogCategory; pattern: string }> = [
+  { category: "two_factor_required", pattern: "\\b(two.factor|2fa|mfa|verification code|authenticator code|one.time (?:code|passcode))\\b" },
+  { category: "verification_required", pattern: "complete (?:the )?captcha|captcha (?:challenge|required)|verify (?:that )?you are human|i.m not a robot|unusual traffic" },
+  { category: "legal_terms", pattern: "\\b(?:i\\s+(?:agree|accept)|(?:must|required to)\\s+(?:agree|accept)|accept\\s+(?:the\\s+|our\\s+)?(?:terms|agreement)|agree to\\s+(?:the\\s+|our\\s+)?(?:terms|conditions)|(?:user|license|reseller|purchase) agreement)\\b" },
+  { category: "cookie_privacy", pattern: "\\bcookies?\\b|\\bprivacy (?:choices|preferences|settings|consent)\\b" },
+];
+export function emersonLoginDialogCategory(text: string): EmersonDialogCategory {
+  return EMERSON_DIALOG_PATTERNS.find(rule => new RegExp(rule.pattern, "i").test(text))?.category ?? "unknown";
+}
+async function inspectEmersonLoginDialog(page: import("playwright").Page): Promise<{
+  category: EmersonDialogCategory; buttonClass: EmersonCookieButtonClass; visibleDialog: boolean;
+  dialog?: import("playwright").Locator; button?: import("playwright").Locator;
+}> {
+  // One bounded DOM read; raw dialog text/button labels stay inside this browser callback.
+  const observation = await page.locator("body").evaluate((body, input) => {
+    const shown = (element: Element) => Boolean(element.getClientRects().length) && getComputedStyle(element).visibility !== "hidden"
+      && !element.closest('[hidden], [aria-hidden="true"], [inert]');
+    const dialogs = [...body.ownerDocument.querySelectorAll('[role="dialog"], dialog')].filter(shown);
+    const separate = dialogs.filter(dialog => !(dialog.querySelector("#email") && dialog.querySelector("#password")));
+    if (!separate.length) return { category: dialogs.length ? "login_form" as const : "none" as const, buttonClass: "none" as const, visibleDialog: dialogs.length > 0 };
+    if (separate.length !== 1) return { category: "unknown" as const, buttonClass: "none" as const, visibleDialog: true };
+    const dialog = separate[0], text = (dialog as HTMLElement).innerText;
+    const category = input.patterns.find(rule => new RegExp(rule.pattern, "i").test(text))?.category ?? "unknown";
+    let buttonClass: EmersonCookieButtonClass = "none";
+    if (category === "cookie_privacy") for (const choice of input.choices) {
+      const buttons = [...dialog.querySelectorAll('button, [role="button"]')].filter(element => shown(element)
+        && (element.getAttribute("aria-label") ?? element.textContent ?? "").trim().replace(/\s+/g, " ").toLowerCase() === choice.name.toLowerCase());
+      if (buttons.length === 1) { buttonClass = choice.buttonClass; break; }
+    }
+    return { category, buttonClass, visibleDialog: true };
+  }, { patterns: EMERSON_DIALOG_PATTERNS, choices: EMERSON_COOKIE_CHOICES }, { timeout: 2_000 });
+  const choice = EMERSON_COOKIE_CHOICES.find(value => value.buttonClass === observation.buttonClass);
+  if (!choice) return observation;
+  const dialog = page.getByRole("dialog").filter({ hasNot: page.locator("#email") });
+  return { ...observation, dialog, button: dialog.getByRole("button", { name: new RegExp(`^${choice.name}$`, "i") }) };
+}
+async function resolveEmersonCookieDialog(page: import("playwright").Page, supplierId: string): Promise<void> {
+  const state = await inspectEmersonLoginDialog(page);
+  if (state.category === "none" || state.category === "login_form") return;
+  // Only fixed categories are logged. Dialog text and accessible names never leave the browser.
+  console.info("[supplier-auth-dialog]", JSON.stringify({ category: state.category, buttonClass: state.buttonClass }));
+  if (state.category === "two_factor_required" || state.category === "verification_required") {
+    throw new SupplierAdapterError(supplierId, state.category, "Emerson account verification is required",
+      state.category === "two_factor_required" ? "mfa_required" : "challenge_required");
+  }
+  if (state.category !== "cookie_privacy" || !state.button || !state.dialog) {
+    throw new SupplierAdapterError(supplierId, "login_failed", "Emerson has an unresolved separate dialog", "login_form_unavailable");
+  }
+  assertSafeEmersonUrl(page.url(), supplierId);
+  const challenge = await activeEmersonChallenge(page);
+  if (challenge) throw new SupplierAdapterError(supplierId, challenge, "Emerson account verification is required");
+  await state.button.click({ timeout: 10_000, noWaitAfter: true });
+  await state.dialog.waitFor({ state: "hidden", timeout: 10_000 });
+  assertSafeEmersonUrl(page.url(), supplierId);
+}
+
 async function visibleEmersonLoginField(page: import("playwright").Page, label: RegExp, legacyId: string) {
   const semantic = page.getByLabel(label), legacy = page.locator(legacyId);
   await Promise.any([semantic.waitFor({ state: "visible", timeout: 10_000 }), legacy.waitFor({ state: "visible", timeout: 10_000 })]);
@@ -536,17 +600,18 @@ async function logEmersonLoginFailure(page: import("playwright").Page | undefine
     return { valid: element.validity.valid, requiredMissing: element.validity.valueMissing, typeMismatch: element.validity.typeMismatch,
       patternMismatch: element.validity.patternMismatch, formValid: element.form ? !element.form.querySelector(":invalid") : null };
   }, undefined, { timeout: 1_000 }).catch(() => null) : null;
-  const [emailMatchesExpected, passwordMatchesExpected, emailNativeValidity, passwordNativeValidity, signInState, visibleDialog] = await Promise.all([
+  const [emailMatchesExpected, passwordMatchesExpected, emailNativeValidity, passwordNativeValidity, signInState, dialogState] = await Promise.all([
     inputMatches(controls?.email, expected?.username), inputMatches(controls?.password, expected?.password),
     nativeValidity(controls?.email), nativeValidity(controls?.password),
     controls?.signIn ? controls.signIn.evaluate(element => ({ focused: element === element.ownerDocument.activeElement,
       associatedWithForm: element instanceof HTMLButtonElement && Boolean(element.form),
       submitButton: element instanceof HTMLButtonElement && element.type === "submit" }), undefined, { timeout: 1_000 }).catch(() => null) : null,
-    page ? page.getByRole("dialog").first().isVisible().catch(() => null) : null,
+    page ? inspectEmersonLoginDialog(page).catch(() => ({ category: "unavailable" as const, buttonClass: "none" as const, visibleDialog: null })) : null,
   ]);
   const bodyLength = pageText?.length ?? null;
   console.warn("[supplier-auth] Emerson sign-in failed", { phase, errorKind, operation, failureCategory, pageKind, bodyLength,
-    emailMatchesExpected, passwordMatchesExpected, emailNativeValidity, passwordNativeValidity, signInState, visibleDialog,
+    emailMatchesExpected, passwordMatchesExpected, emailNativeValidity, passwordNativeValidity, signInState, visibleDialog: dialogState?.visibleDialog ?? null,
+    dialogCategory: dialogState?.category ?? "unavailable", dialogButtonClass: dialogState?.buttonClass ?? "none",
     pageErrorCategory: pageText === null ? "unavailable" : emersonLoginPageErrorCategory(pageText),
     bodyPresent: await present(() => page!.locator("body")),
     emailLabelPresent: await present(() => page!.getByLabel(/^Email\s*\*?$/i)),
@@ -650,10 +715,14 @@ export async function readRenderedEmersonCatalog(
     progress("account_observation");
 
     const verifyAccount = createEmersonAccountVerifier(catalogPage, supplierId);
-    await Promise.any([
-      catalogPage.locator('[aria-label="Account Dropdown"]').first().waitFor({ state: "visible", timeout: 30_000 }),
-      catalogPage.getByRole("button", { name: "Toggle profile account settings", exact: true }).waitFor({ state: "visible", timeout: 30_000 }),
-    ]).catch(() => undefined);
+    if (!requiresSignIn("", catalogPage.url())) {
+      await Promise.any([
+        catalogPage.locator('[aria-label="Account Dropdown"]').first().waitFor({ state: "visible", timeout: 30_000 }),
+        catalogPage.getByRole("button", { name: "Toggle profile account settings", exact: true }).waitFor({ state: "visible", timeout: 30_000 }),
+        catalogPage.locator('a[href="/login"]:visible').filter({ hasText: /^\s*Sign in\s*$/i }).first().waitFor({ state: "visible", timeout: 30_000 }),
+        catalogPage.locator('input[type="password"]').first().waitFor({ state: "visible", timeout: 30_000 }),
+      ]).catch(() => undefined);
+    }
     if (!(await verifyAccount())) {
       const pageText = await catalogPage.locator("body").innerText({ timeout: 2_000 }).catch(() => "");
       const passwordVisible = await catalogPage.locator('input[type="password"]').first().isVisible().catch(() => false);
