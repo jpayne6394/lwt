@@ -15,19 +15,24 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
   failureAt?: "fill_email" | "fill_password" | "press_sign_in"; emailEnabled?: boolean; emailEditable?: boolean;
   passwordEnabled?: boolean; passwordEditable?: boolean; signInEnabled?: boolean; beforeSubmitChallenge?: string;
   signInEnabledAfter?: number; signInReadinessTimeouts?: number; emailMatchesExpected?: boolean; nativeValid?: boolean; visibleDialog?: boolean;
-  separateDialogText?: string; separateDialogButtons?: string[]; dialogAfterFormReady?: boolean } = {}) {
+  separateDialogText?: string; separateDialogButtons?: string[]; dialogAfterFormReady?: boolean;
+  replaceAfterEmail?: boolean; resetEmailFills?: number; replaceEmailWith?: string; resetAfterPassword?: boolean;
+  challengeAfterReset?: string; challengeOnFinalRead?: boolean; redirectOnFinalRead?: boolean;
+  readFailureAfterEmail?: boolean; readFailuresAfterEmail?: number; changeStateAfterFailure?: boolean; fieldsUneditable?: boolean } = {}) {
   const events: string[] = [];
   const dialogInspectionTimeouts: number[] = [];
   let submitted = Boolean(options.signedIn), menuOpened = false, passwordFilled = false;
+  let emailValue = "", passwordValue = "", emailFills = 0, reset = false, failedAction = false;
+  let valueReadsAfterEmail = 0;
   let readinessChecks = 0;
   let separateDialogOpen = Boolean(options.separateDialogText) && !options.dialogAfterFormReady;
   let url = options.signedIn ? "https://www.emersonecologics.com/shop" : "about:blank";
   const visible = (selector: string) => {
     if (selector === "body") return true;
-    if (selector === "#email") return options.legacyFields !== false && !options.emailMissing;
-    if (selector === "#password") return options.legacyFields !== false && !options.passwordMissing;
-    if (selector === "label:Email") return Boolean(options.semanticLabels) && !options.emailMissing;
-    if (selector === "label:Password") return Boolean(options.semanticLabels) && !options.passwordMissing;
+    if (selector === "#email") return options.legacyFields !== false && !(options.replaceAfterEmail && emailFills) && !options.emailMissing;
+    if (selector === "#password") return options.legacyFields !== false && !(options.replaceAfterEmail && emailFills) && !options.passwordMissing;
+    if (selector === "label:Email") return Boolean(options.semanticLabels || options.replaceAfterEmail && emailFills) && !options.emailMissing;
+    if (selector === "label:Password") return Boolean(options.semanticLabels || options.replaceAfterEmail && emailFills) && !options.passwordMissing;
     if (selector === '[aria-label="Account Dropdown"]') return submitted && !options.currentProfile && options.accountMarker !== false;
     if (selector === 'a[href="/account"]') return submitted && menuOpened && options.accountLink !== false;
     if (selector === 'a[href="/logout?scope=emerson-logout"]') return submitted && menuOpened && options.signOutLink !== false;
@@ -42,16 +47,28 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
       assert((visible("#email") || visible("label:Email")) && (visible("#password") || visible("label:Password")), "both fields must be ready before either fill");
       assert.equal(value, email ? input.username : input.password);
       events.push(`fill:${selector}`);
-      if (options.failure && (options.failureAt ?? "fill_email") === (email ? "fill_email" : "fill_password")) throw options.failure;
-      if (!email) passwordFilled = true;
+      if (options.failure && (options.failureAt ?? "fill_email") === (email ? "fill_email" : "fill_password")) { failedAction = true; throw options.failure; }
+      if (email) {
+        emailFills++; emailValue = value;
+        if (emailFills <= (options.resetEmailFills ?? 0)) { emailValue = ""; reset = true; }
+        if (options.replaceEmailWith) emailValue = options.replaceEmailWith;
+      } else {
+        passwordFilled = true; passwordValue = value;
+        if (options.resetAfterPassword && !reset) { emailValue = ""; passwordValue = ""; reset = true; }
+      }
     },
     count: async () => visible(selector) ? 1 : 0,
     isVisible: async () => visible(selector),
-    isEnabled: async () => /email$/i.test(selector) ? options.emailEnabled !== false : options.passwordEnabled !== false,
-    isEditable: async () => /email$/i.test(selector) ? options.emailEditable !== false : options.passwordEditable !== false,
+    isEnabled: async () => options.changeStateAfterFailure && !failedAction || (/email$/i.test(selector) ? options.emailEnabled !== false : options.passwordEnabled !== false),
+    isEditable: async () => !options.fieldsUneditable && (options.changeStateAfterFailure && !failedAction || (/email$/i.test(selector) ? options.emailEditable !== false : options.passwordEditable !== false)),
     inputValue: async () => {
       if (!visible(selector)) throw new Error("missing observed field");
-      return /email$/i.test(selector) ? options.emailMatchesExpected === false ? "private-edited-account" : input.username : input.password;
+      if (emailFills) {
+        valueReadsAfterEmail++;
+        if (options.redirectOnFinalRead && valueReadsAfterEmail >= 8) url = "https://unapproved.invalid/login";
+        if (options.readFailureAfterEmail || valueReadsAfterEmail <= (options.readFailuresAfterEmail ?? 0)) throw new Error("private read unavailable");
+      }
+      return /email$/i.test(selector) ? options.emailMatchesExpected === false && failedAction ? "private-edited-account" : emailValue : passwordValue;
     },
     evaluate: async (_callback: unknown, argument?: { patterns: Array<{ category: string; pattern: string }>; choices: Array<{ buttonClass: string; name: string }> }, settings?: { timeout: number }) => {
       if (selector === "body" && argument) {
@@ -65,7 +82,8 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
       return { valid: options.nativeValid !== false, requiredMissing: false, typeMismatch: options.nativeValid === false, patternMismatch: false, formValid: options.nativeValid !== false };
     },
     waitFor: async () => { if (!visible(selector)) throw new Error("observed field not visible"); },
-    innerText: async () => submitted ? options.afterText ?? "Account" : passwordFilled && options.beforeSubmitChallenge
+    innerText: async () => submitted ? options.afterText ?? "Account" : options.challengeOnFinalRead && valueReadsAfterEmail >= 8 ? "Verify you are human"
+      : reset && options.challengeAfterReset ? options.challengeAfterReset : passwordFilled && options.beforeSubmitChallenge
       ? options.beforeSubmitChallenge : options.beforeText ?? "This page is protected by reCAPTCHA, and subject to Google Privacy Policy and Terms of Service.",
     first: () => ({ isVisible: async () => visible(selector), waitFor: async () => { if (!visible(selector)) throw new Error("not visible"); } }),
     all: async () => options.challengeFrame ? [{ isVisible: async () => true }] : [],
@@ -116,7 +134,8 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
         click: async () => { assert.fail("pointer submission must not be attempted"); },
         press: async (key: string, settings: unknown) => {
           assert.equal(key, "Enter"); assert.deepEqual(settings, { noWaitAfter: true, timeout: 10_000 });
-          events.push("press:Enter:Sign in"); if (options.failure && options.failureAt === "press_sign_in") throw options.failure;
+          assert.equal(emailValue, input.username); assert.equal(passwordValue, input.password);
+          events.push("press:Enter:Sign in"); if (options.failure && options.failureAt === "press_sign_in") { failedAction = true; throw options.failure; }
           submitted = true; url = options.stayOnLogin ? "https://www.emersonecologics.com/login" : "https://www.emersonecologics.com/shop";
         } };
     },
@@ -149,6 +168,68 @@ test("semantic Email*/Password* labels work when the legacy field IDs are absent
   assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
   assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:label:Email", "fill:label:Password",
     "press:Enter:Sign in", "read-verified-session", "browser-closed"]);
+});
+
+test("a form replaced after email entry is reacquired by its visible semantic fields before password entry", async () => {
+  const harness = browserHarness({ replaceAfterEmail: true });
+  assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
+  assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:#email", "fill:label:Password",
+    "press:Enter:Sign in", "read-verified-session", "browser-closed"]);
+});
+
+test("one proven pre-submit empty-field reset is normally refilled, verified, and submitted exactly once", async () => {
+  for (const options of [{ resetEmailFills: 1 }, { resetAfterPassword: true }]) {
+    const harness = browserHarness(options);
+    assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
+    assert.equal(harness.events.filter(event => event === "fill:#email").length, 2);
+    assert.equal(harness.events.filter(event => event === "fill:#password").length, options.resetAfterPassword ? 2 : 1);
+    assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
+  }
+});
+
+test("a second reset or different nonempty email stops without another refill or any submission", async context => {
+  context.mock.method(console, "warn", () => undefined);
+  for (const options of [{ resetEmailFills: 2 }, { replaceEmailWith: "different-private-account" }]) {
+    const harness = browserHarness(options);
+    await assert.rejects(signInEmersonWithCredentials(input, harness.launch), SupplierAdapterError);
+    assert.equal(harness.events.filter(event => event === "fill:#email").length, options.resetEmailFills ? 2 : 1);
+    assert.equal(harness.events.some(event => event.startsWith("press:") || event === "fill:#password"), false);
+  }
+});
+
+test("a challenge appearing after a reset blocks recovery before any credential refill", async context => {
+  context.mock.method(console, "warn", () => undefined);
+  const harness = browserHarness({ resetEmailFills: 1, challengeAfterReset: "Enter verification code" });
+  await assert.rejects(signInEmersonWithCredentials(input, harness.launch), (error: unknown) => error instanceof SupplierAdapterError && error.kind === "two_factor_required");
+  assert.deepEqual(harness.events, ["goto:https://www.emersonecologics.com/login", "fill:#email", "browser-closed"]);
+});
+
+test("a transient field-read timeout is observed again without refilling or submitting twice", async () => {
+  const harness = browserHarness({ readFailuresAfterEmail: 2 });
+  assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
+  assert.equal(harness.events.filter(event => event.startsWith("fill:")).length, 2);
+  assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
+});
+
+test("a challenge or unapproved redirect during final readback blocks the sole submission", async context => {
+  context.mock.method(console, "warn", () => undefined);
+  for (const options of [{ challengeOnFinalRead: true }, { redirectOnFinalRead: true }]) {
+    const harness = browserHarness(options);
+    await assert.rejects(signInEmersonWithCredentials(input, harness.launch), SupplierAdapterError);
+    assert.equal(harness.events.filter(event => event.startsWith("fill:")).length, 2);
+    assert.equal(harness.events.some(event => event.startsWith("press:")), false);
+  }
+});
+
+test("unreadable or uneditable fields remain unknown and never trigger a refill or submission", async context => {
+  context.mock.method(console, "warn", () => undefined); context.mock.timers.enable({ apis: ["Date", "setTimeout"] });
+  for (const options of [{ readFailureAfterEmail: true }, { fieldsUneditable: true }]) {
+    const harness = browserHarness(options), pending = assert.rejects(signInEmersonWithCredentials(input, harness.launch), SupplierAdapterError);
+    for (let tick = 0; tick < 100; tick++) { await new Promise(resolve => setImmediate(resolve)); context.mock.timers.tick(250); }
+    await pending;
+    assert.equal(harness.events.filter(event => event === "fill:#email").length, options.fieldsUneditable ? 0 : 1);
+    assert.equal(harness.events.some(event => event.startsWith("press:") || event === "fill:#password"), false);
+  }
 });
 
 test("one recognized necessary-only cookie choice precedes either credential fill, including ordinary ToS links", async (context) => {
@@ -343,7 +424,7 @@ test("failed action diagnostics report enabled/editable state without reading cr
   context.mock.method(console, "warn", (...args: unknown[]) => { logs.push(args); });
   const failure = Object.assign(new Error("private-provider timeout"), { name: "TimeoutError" });
   const harness = browserHarness({ failure, failureAt: "press_sign_in", emailEnabled: true, emailEditable: false,
-    passwordEnabled: false, passwordEditable: false, signInEnabled: true });
+    passwordEnabled: false, passwordEditable: false, signInEnabled: true, changeStateAfterFailure: true });
   await assert.rejects(signInEmersonWithCredentials(input, harness.launch));
   const data = logs[0][1] as Record<string, unknown>;
   assert.equal(data.operation, "press_sign_in"); assert.equal(data.failureCategory, "timeout");

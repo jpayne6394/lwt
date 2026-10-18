@@ -404,7 +404,7 @@ export async function signInEmersonWithCredentials(input: {
       if (initialChallenge) throw new SupplierAdapterError(input.supplierId, initialChallenge, "Emerson account verification is required");
       phase = "login_form_unavailable";
       progress("form_readiness");
-      const [email, password] = await Promise.all([
+      let [email, password] = await Promise.all([
         visibleEmersonLoginField(accountPage, /^Email\s*\*?$/i, "#email"),
         visibleEmersonLoginField(accountPage, /^Password\s*\*?$/i, "#password"),
       ]);
@@ -416,18 +416,75 @@ export async function signInEmersonWithCredentials(input: {
       if (formChallenge) throw new SupplierAdapterError(input.supplierId, formChallenge, "Emerson account verification is required");
       progress("consent_dialog");
       await resolveEmersonCookieDialog(accountPage, input.supplierId);
-      // Both observed fields and the sign-in control must be visible before entering either credential.
-      operation = "fill_email";
-      progress("fill_email");
-      await email.fill(input.username, { timeout: 10_000 });
-      operation = "fill_password";
-      progress("fill_password");
-      await password.fill(input.password, { timeout: 10_000 });
+      const preparationDeadline = Date.now() + 20_000;
+      const preparationTimeout = (limit: number) => {
+        const remaining = preparationDeadline - Date.now();
+        if (remaining <= 0) throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in form did not stabilize", "login_form_unavailable");
+        return Math.min(limit, remaining);
+      };
+      const reacquireEditableFields = async () => {
+        for (let observation = 0; observation < 80 && Date.now() < preparationDeadline; observation += 1) {
+          assertAccountUrl();
+          [email, password] = await Promise.all([
+            visibleEmersonLoginField(accountPage, /^Email\s*\*?$/i, "#email", preparationTimeout(10_000)),
+            visibleEmersonLoginField(accountPage, /^Password\s*\*?$/i, "#password", preparationTimeout(10_000)),
+          ]);
+          controls = { email, password, signIn };
+          const editable = await Promise.all([email.isEditable({ timeout: preparationTimeout(1_000) }).catch(() => null), password.isEditable({ timeout: preparationTimeout(1_000) }).catch(() => null)]);
+          const pendingChallenge = await challenge();
+          if (pendingChallenge) throw new SupplierAdapterError(input.supplierId, pendingChallenge, "Emerson account verification is required");
+          assertAccountUrl();
+          if (editable.every(value => value === true)) return;
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in fields are not editable", "login_form_unavailable");
+      };
+      const readValues = async () => {
+        let values: Array<string | null> = [null, null];
+        for (let observation = 0; observation < 80 && Date.now() < preparationDeadline; observation += 1) {
+          assertAccountUrl();
+          values = await Promise.all([email.inputValue({ timeout: preparationTimeout(1_000) }).catch(() => null), password.inputValue({ timeout: preparationTimeout(1_000) }).catch(() => null)]);
+          if (values.every(value => value !== null)) return values;
+          await new Promise(resolve => setTimeout(resolve, 250));
+        }
+        return values; // Unknown is never treated as a proven empty/reset field.
+      };
+      let recoveryUsed = false, credentialsReady = false, refillEmail = true;
+      for (let preparation = 0; preparation < 2; preparation += 1) {
+        await reacquireEditableFields();
+        if (refillEmail) {
+          operation = "fill_email"; progress("fill_email");
+          await email.fill(input.username, { timeout: preparationTimeout(10_000) });
+        }
+        await reacquireEditableFields(); // Hydration can replace an ID-based field with its semantic equivalent.
+        let values = await readValues();
+        if (values[0] === input.username && (values[1] === "" || values[1] === input.password)) {
+          operation = "fill_password"; progress("fill_password");
+          await password.fill(input.password, { timeout: preparationTimeout(10_000) });
+          await reacquireEditableFields();
+          values = await readValues();
+          if (values[0] === input.username && values[1] === input.password) {
+            await new Promise(resolve => setTimeout(resolve, 250));
+            await reacquireEditableFields();
+            values = await readValues();
+            if (values[0] === input.username && values[1] === input.password) { credentialsReady = true; break; }
+          }
+        }
+        // Recover once only from a successfully observed empty field, never a timeout or different nonempty value.
+        const reset = values.some(value => value === "") && values.every((value, index) => value === "" || value === [input.username, input.password][index]);
+        if (recoveryUsed || !reset) break;
+        assertAccountUrl();
+        const recoveryChallenge = await challenge();
+        if (recoveryChallenge) throw new SupplierAdapterError(input.supplierId, recoveryChallenge, "Emerson account verification is required");
+        await resolveEmersonCookieDialog(accountPage, input.supplierId);
+        recoveryUsed = true; refillEmail = values[0] === "";
+      }
+      if (!credentialsReady) throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in fields did not retain the supplied account", "login_form_unavailable");
       assertAccountUrl();
       operation = "press_sign_in";
       progress("submit_readiness");
       // React validation may briefly disable the button after either fill, especially on the small worker.
-      // Observe positive readiness only; no credential refill, submission retry, or forced activation.
+      // Observe positive readiness only; no submission retry or forced activation.
       const readinessDeadline = Date.now() + 15_000;
       let submissionReady = false;
       for (let observation = 0; observation < 60 && Date.now() < readinessDeadline; observation += 1) {
@@ -444,9 +501,15 @@ export async function signInEmersonWithCredentials(input: {
         throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in button is not ready", "login_form_unavailable");
       }
       // Normal keyboard activation focuses this observed button. Submit once; never retry a prior pointer action.
+      await reacquireEditableFields();
+      const finalValues = await readValues();
+      if (finalValues[0] !== input.username || finalValues[1] !== input.password) {
+        throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in fields changed before submission", "login_form_unavailable");
+      }
       assertAccountUrl();
       const submissionChallenge = await challenge();
       if (submissionChallenge) throw new SupplierAdapterError(input.supplierId, submissionChallenge, "Emerson account verification is required");
+      assertAccountUrl();
       progress("press_sign_in");
       await signIn.press("Enter", { noWaitAfter: true, timeout: 10_000 });
       phase = "login_confirmation_missing";
@@ -566,11 +629,11 @@ async function resolveEmersonCookieDialog(page: import("playwright").Page, suppl
   assertSafeEmersonUrl(page.url(), supplierId);
 }
 
-async function visibleEmersonLoginField(page: import("playwright").Page, label: RegExp, legacyId: string) {
+async function visibleEmersonLoginField(page: import("playwright").Page, label: RegExp, legacyId: string, timeout = 10_000) {
   const semantic = page.getByLabel(label), legacy = page.locator(legacyId);
-  await Promise.any([semantic.waitFor({ state: "visible", timeout: 10_000 }), legacy.waitFor({ state: "visible", timeout: 10_000 })]);
-  if (await legacy.isVisible().catch(() => false)) return legacy;
-  if (await semantic.isVisible().catch(() => false)) return semantic;
+  await Promise.any([semantic.waitFor({ state: "visible", timeout }), legacy.waitFor({ state: "visible", timeout })]);
+  if (await legacy.count() === 1 && await legacy.isVisible().catch(() => false)) return legacy;
+  if (await semantic.count() === 1 && await semantic.isVisible().catch(() => false)) return semantic;
   throw new SupplierAdapterError("emerson-ecologics", "login_failed", "Emerson observed sign-in field is not visible", "login_form_unavailable");
 }
 
@@ -584,8 +647,8 @@ async function logEmersonLoginFailure(page: import("playwright").Page | undefine
   const visible = async (locator: () => import("playwright").Locator) => {
     try { return Boolean(page) && await locator().isVisible(); } catch { return false; }
   };
-  const enabled = async (control?: import("playwright").Locator) => control ? control.isEnabled({ timeout: 1_000 }).catch(() => false) : false;
-  const editable = async (control?: import("playwright").Locator) => control ? control.isEditable({ timeout: 1_000 }).catch(() => false) : false;
+  const enabled = async (control?: import("playwright").Locator) => control ? control.isEnabled({ timeout: 1_000 }).catch(() => null) : false;
+  const editable = async (control?: import("playwright").Locator) => control ? control.isEditable({ timeout: 1_000 }).catch(() => null) : false;
   let pageKind = "unavailable";
   try {
     const path = new URL(page!.url()).pathname;
