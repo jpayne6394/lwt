@@ -27,6 +27,8 @@ export type SupplierAdapter = {
    * inventory, carts, or Shopify. Feed adapters intentionally omit this.
    */
   verifyLogin?(): Promise<SupplierConnectionCheck>;
+  /** Proves an account-only marker, not merely a readable public catalog. */
+  verifyAuthentication?(): Promise<SupplierConnectionCheck>;
 };
 
 export type SupplierConnectionCheck = {

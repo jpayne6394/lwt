@@ -73,3 +73,8 @@ test("loadConfig keeps supplier read authorization separate from run authorizati
   assert.equal(config.supplierRunToken, "run-token");
   assert.equal(config.supplierReadToken, "read-token");
 });
+
+test("worker revision is public only when Render supplies an exact Git commit", () => {
+  assert.equal(loadConfig({ RENDER_GIT_COMMIT: "a".repeat(40) }).sourceRevision, "a".repeat(40));
+  assert.equal(loadConfig({ RENDER_GIT_COMMIT: "private-invalid-value" }).sourceRevision, undefined);
+});

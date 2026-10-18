@@ -11,6 +11,7 @@ import type { SupplierOpsRepository } from "../storage/repository.ts";
 import type { SupplierConfig } from "../suppliers/types.ts";
 import type { SupplierConnectionCheck } from "../suppliers/types.ts";
 import type { SupplierProduct } from "../domain/types.ts";
+import type { SupplierAuthConfiguration } from "../suppliers/auth-diagnostics.ts";
 import { renderAdminPage } from "./admin-ui.ts";
 
 export type ServerContext = {
@@ -27,6 +28,13 @@ export type ServerContext = {
   internalDashboardAuthRequired?: boolean;
   supplierRunToken?: string;
   supplierReadToken?: string;
+  sourceRevision?: string;
+  checkSupplierAuthentication?: (supplierKey: string) => Promise<{
+    configuration: SupplierAuthConfiguration;
+    status: SupplierConnectionCheck["status"];
+    accountAuthenticated: boolean;
+    checkedAt: string;
+  } | null>;
 };
 
 export type StartServerOptions = {
@@ -62,7 +70,10 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
   }
 
   if (request.method === "GET" && url.pathname === "/healthz") {
-    sendJson(response, 200, { ok: true });
+    sendJson(response, 200, {
+      ok: true,
+      sourceRevision: /^[a-f0-9]{40}$/i.test(context.sourceRevision ?? "") ? context.sourceRevision : null,
+    });
     return;
   }
 
@@ -106,6 +117,44 @@ async function handleRequest(context: ServerContext, request: IncomingMessage, r
       sendJson(response, 200, { checks: await context.checkConnections() });
     } catch {
       sendJson(response, 502, { error: "connection_check_failed" });
+    }
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/suppliers/auth-check") {
+    const authorization = supplierLookupAuthorization(request, context);
+    if (authorization !== "authorized") {
+      sendJson(response, authorization === "setup_required" ? 503 : 401, { error: "supplier_auth_check_unauthorized" });
+      return;
+    }
+    if (!context.checkSupplierAuthentication) {
+      sendJson(response, 503, { error: "supplier_auth_check_unavailable" });
+      return;
+    }
+    if (!/^application\/json(?:;.*)?$/i.test(String(request.headers["content-type"] ?? "").trim())) {
+      sendJson(response, 415, { error: "supplier_auth_check_content_type_required" });
+      return;
+    }
+    try {
+      const input = await readJsonBody(request, 1_024);
+      const supplierKey = input && typeof input === "object" && !Array.isArray(input)
+        && Object.keys(input).length === 1 && "supplierKey" in input && typeof input.supplierKey === "string"
+        ? input.supplierKey : null;
+      if (!supplierKey || !context.suppliers.some((supplier) => supplier.id === supplierKey)) {
+        sendJson(response, 400, { error: "supplier_auth_check_arguments_invalid" });
+        return;
+      }
+      const result = await context.checkSupplierAuthentication(supplierKey);
+      if (!result) {
+        sendJson(response, 503, { error: "supplier_auth_check_unavailable" });
+        return;
+      }
+      response.setHeader("Cache-Control", "no-store");
+      sendJson(response, 200, { ok: true, ...result, remoteCartPreparationSupported: false,
+        orderSubmissionSupported: false, paymentSupported: false });
+    } catch {
+      // Never return supplier messages or raw errors: they may contain account/session data.
+      sendJson(response, 502, { error: "supplier_auth_check_failed" });
     }
     return;
   }
