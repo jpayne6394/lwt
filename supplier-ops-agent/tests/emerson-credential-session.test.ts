@@ -18,12 +18,14 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
   separateDialogText?: string; separateDialogButtons?: string[]; dialogAfterFormReady?: boolean;
   replaceAfterEmail?: boolean; resetEmailFills?: number; replaceEmailWith?: string; resetAfterPassword?: boolean;
   challengeAfterReset?: string; challengeOnFinalRead?: boolean; redirectOnFinalRead?: boolean;
-  readFailureAfterEmail?: boolean; readFailuresAfterEmail?: number; changeStateAfterFailure?: boolean; fieldsUneditable?: boolean } = {}) {
+  readFailureAfterEmail?: boolean; readFailuresAfterEmail?: number; changeStateAfterFailure?: boolean; fieldsUneditable?: boolean;
+  initialReadinessDelayMs?: number; readinessDelayStarted?: () => void } = {}) {
   const events: string[] = [];
   const dialogInspectionTimeouts: number[] = [];
   let submitted = Boolean(options.signedIn), menuOpened = false, passwordFilled = false;
   let emailValue = "", passwordValue = "", emailFills = 0, reset = false, failedAction = false;
   let valueReadsAfterEmail = 0;
+  let readinessDelayed = false;
   let readinessChecks = 0;
   let separateDialogOpen = Boolean(options.separateDialogText) && !options.dialogAfterFormReady;
   let url = options.signedIn ? "https://www.emersonecologics.com/shop" : "about:blank";
@@ -60,7 +62,13 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
     count: async () => visible(selector) ? 1 : 0,
     isVisible: async () => visible(selector),
     isEnabled: async () => options.changeStateAfterFailure && !failedAction || (/email$/i.test(selector) ? options.emailEnabled !== false : options.passwordEnabled !== false),
-    isEditable: async () => !options.fieldsUneditable && (options.changeStateAfterFailure && !failedAction || (/email$/i.test(selector) ? options.emailEditable !== false : options.passwordEditable !== false)),
+    isEditable: async () => {
+      if (options.initialReadinessDelayMs && !readinessDelayed) {
+        readinessDelayed = true; options.readinessDelayStarted?.();
+        await new Promise(resolve => setTimeout(resolve, options.initialReadinessDelayMs));
+      }
+      return !options.fieldsUneditable && (options.changeStateAfterFailure && !failedAction || (/email$/i.test(selector) ? options.emailEditable !== false : options.passwordEditable !== false));
+    },
     inputValue: async () => {
       if (!visible(selector)) throw new Error("missing observed field");
       if (emailFills) {
@@ -211,6 +219,34 @@ test("a transient field-read timeout is observed again without refilling or subm
   assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
 });
 
+test("measured slow initial readiness shares one 45-second preparation budget and still submits once", async context => {
+  context.mock.method(console, "info", () => undefined); context.mock.timers.enable({ apis: ["Date", "setTimeout"] });
+  for (const delay of [23_000, 35_000]) {
+    let started!: () => void, settled = false;
+    const ready = new Promise<void>(resolve => { started = resolve; });
+    const harness = browserHarness({ initialReadinessDelayMs: delay, readinessDelayStarted: started });
+    const pending = signInEmersonWithCredentials(input, harness.launch).finally(() => { settled = true; });
+    await ready; context.mock.timers.tick(delay);
+    for (let tick = 0; tick < 20 && !settled; tick++) { await new Promise(resolve => setImmediate(resolve)); context.mock.timers.tick(250); }
+    assert.equal(await pending, "session=private-renewed-cookie");
+    assert.equal(harness.events.filter(event => event.startsWith("fill:")).length, 2);
+    assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
+  }
+});
+
+test("expired initial readiness stops before any fill stage, credential entry, or submission", async context => {
+  const stages: string[] = [];
+  context.mock.method(console, "info", (label: unknown, value: unknown) => { if (label === "[supplier-auth-progress]") stages.push(JSON.parse(value as string).stage); });
+  context.mock.method(console, "warn", () => undefined); context.mock.timers.enable({ apis: ["Date", "setTimeout"] });
+  let started!: () => void;
+  const ready = new Promise<void>(resolve => { started = resolve; });
+  const harness = browserHarness({ initialReadinessDelayMs: 45_000, readinessDelayStarted: started });
+  const pending = assert.rejects(signInEmersonWithCredentials(input, harness.launch), SupplierAdapterError);
+  await ready; context.mock.timers.tick(45_000); await pending;
+  assert.equal(harness.events.some(event => /^(?:fill:|press:)/.test(event)), false);
+  assert.equal(stages.some(stage => stage === "fill_email" || stage === "fill_password" || stage === "press_sign_in"), false);
+});
+
 test("a challenge or unapproved redirect during final readback blocks the sole submission", async context => {
   context.mock.method(console, "warn", () => undefined);
   for (const options of [{ challengeOnFinalRead: true }, { redirectOnFinalRead: true }]) {
@@ -225,7 +261,7 @@ test("unreadable or uneditable fields remain unknown and never trigger a refill 
   context.mock.method(console, "warn", () => undefined); context.mock.timers.enable({ apis: ["Date", "setTimeout"] });
   for (const options of [{ readFailureAfterEmail: true }, { fieldsUneditable: true }]) {
     const harness = browserHarness(options), pending = assert.rejects(signInEmersonWithCredentials(input, harness.launch), SupplierAdapterError);
-    for (let tick = 0; tick < 100; tick++) { await new Promise(resolve => setImmediate(resolve)); context.mock.timers.tick(250); }
+    for (let tick = 0; tick < 200; tick++) { await new Promise(resolve => setImmediate(resolve)); context.mock.timers.tick(250); }
     await pending;
     assert.equal(harness.events.filter(event => event === "fill:#email").length, options.fieldsUneditable ? 0 : 1);
     assert.equal(harness.events.some(event => event.startsWith("press:") || event === "fill:#password"), false);

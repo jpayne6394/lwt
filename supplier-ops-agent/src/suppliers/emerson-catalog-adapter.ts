@@ -416,14 +416,14 @@ export async function signInEmersonWithCredentials(input: {
       if (formChallenge) throw new SupplierAdapterError(input.supplierId, formChallenge, "Emerson account verification is required");
       progress("consent_dialog");
       await resolveEmersonCookieDialog(accountPage, input.supplierId);
-      const preparationDeadline = Date.now() + 20_000;
+      const preparationDeadline = Date.now() + 45_000;
       const preparationTimeout = (limit: number) => {
         const remaining = preparationDeadline - Date.now();
         if (remaining <= 0) throw new SupplierAdapterError(input.supplierId, "login_failed", "Emerson sign-in form did not stabilize", "login_form_unavailable");
         return Math.min(limit, remaining);
       };
       const reacquireEditableFields = async () => {
-        for (let observation = 0; observation < 80 && Date.now() < preparationDeadline; observation += 1) {
+        for (let observation = 0; observation < 180 && Date.now() < preparationDeadline; observation += 1) {
           assertAccountUrl();
           [email, password] = await Promise.all([
             visibleEmersonLoginField(accountPage, /^Email\s*\*?$/i, "#email", preparationTimeout(10_000)),
@@ -441,7 +441,7 @@ export async function signInEmersonWithCredentials(input: {
       };
       const readValues = async () => {
         let values: Array<string | null> = [null, null];
-        for (let observation = 0; observation < 80 && Date.now() < preparationDeadline; observation += 1) {
+        for (let observation = 0; observation < 180 && Date.now() < preparationDeadline; observation += 1) {
           assertAccountUrl();
           values = await Promise.all([email.inputValue({ timeout: preparationTimeout(1_000) }).catch(() => null), password.inputValue({ timeout: preparationTimeout(1_000) }).catch(() => null)]);
           if (values.every(value => value !== null)) return values;
@@ -453,14 +453,16 @@ export async function signInEmersonWithCredentials(input: {
       for (let preparation = 0; preparation < 2; preparation += 1) {
         await reacquireEditableFields();
         if (refillEmail) {
+          const timeout = preparationTimeout(10_000);
           operation = "fill_email"; progress("fill_email");
-          await email.fill(input.username, { timeout: preparationTimeout(10_000) });
+          await email.fill(input.username, { timeout });
         }
         await reacquireEditableFields(); // Hydration can replace an ID-based field with its semantic equivalent.
         let values = await readValues();
         if (values[0] === input.username && (values[1] === "" || values[1] === input.password)) {
+          const timeout = preparationTimeout(10_000);
           operation = "fill_password"; progress("fill_password");
-          await password.fill(input.password, { timeout: preparationTimeout(10_000) });
+          await password.fill(input.password, { timeout });
           await reacquireEditableFields();
           values = await readValues();
           if (values[0] === input.username && values[1] === input.password) {
