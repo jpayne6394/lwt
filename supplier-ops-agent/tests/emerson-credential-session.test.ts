@@ -19,7 +19,9 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
   replaceAfterEmail?: boolean; resetEmailFills?: number; replaceEmailWith?: string; resetAfterPassword?: boolean;
   challengeAfterReset?: string; challengeOnFinalRead?: boolean; redirectOnFinalRead?: boolean;
   readFailureAfterEmail?: boolean; readFailuresAfterEmail?: number; changeStateAfterFailure?: boolean; fieldsUneditable?: boolean;
-  initialReadinessDelayMs?: number; readinessDelayStarted?: () => void } = {}) {
+  initialReadinessDelayMs?: number; readinessDelayStarted?: () => void;
+  dialogAfterEditableChecks?: number; dialogAfterEmail?: boolean; dialogBeforeFinalSubmit?: boolean; cookieBlocksEditing?: boolean;
+  clearValuesOnCookieDismiss?: boolean } = {}) {
   const events: string[] = [];
   const dialogInspectionTimeouts: number[] = [];
   let submitted = Boolean(options.signedIn), menuOpened = false, passwordFilled = false;
@@ -27,7 +29,9 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
   let valueReadsAfterEmail = 0;
   let readinessDelayed = false;
   let readinessChecks = 0;
-  let separateDialogOpen = Boolean(options.separateDialogText) && !options.dialogAfterFormReady;
+  let editableChecks = 0, lateDialogShown = false;
+  let separateDialogOpen = Boolean(options.separateDialogText) && !options.dialogAfterFormReady
+    && !options.dialogAfterEditableChecks && !options.dialogAfterEmail && !options.dialogBeforeFinalSubmit;
   let url = options.signedIn ? "https://www.emersonecologics.com/shop" : "about:blank";
   const visible = (selector: string) => {
     if (selector === "body") return true;
@@ -54,6 +58,7 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
         emailFills++; emailValue = value;
         if (emailFills <= (options.resetEmailFills ?? 0)) { emailValue = ""; reset = true; }
         if (options.replaceEmailWith) emailValue = options.replaceEmailWith;
+        if (options.dialogAfterEmail && !lateDialogShown) { separateDialogOpen = true; lateDialogShown = true; }
       } else {
         passwordFilled = true; passwordValue = value;
         if (options.resetAfterPassword && !reset) { emailValue = ""; passwordValue = ""; reset = true; }
@@ -63,11 +68,15 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
     isVisible: async () => visible(selector),
     isEnabled: async () => options.changeStateAfterFailure && !failedAction || (/email$/i.test(selector) ? options.emailEnabled !== false : options.passwordEnabled !== false),
     isEditable: async () => {
+      editableChecks++;
+      if (options.dialogAfterEditableChecks && editableChecks >= options.dialogAfterEditableChecks && !lateDialogShown) {
+        separateDialogOpen = true; lateDialogShown = true;
+      }
       if (options.initialReadinessDelayMs && !readinessDelayed) {
         readinessDelayed = true; options.readinessDelayStarted?.();
         await new Promise(resolve => setTimeout(resolve, options.initialReadinessDelayMs));
       }
-      return !options.fieldsUneditable && (options.changeStateAfterFailure && !failedAction || (/email$/i.test(selector) ? options.emailEditable !== false : options.passwordEditable !== false));
+      return !(separateDialogOpen && options.cookieBlocksEditing) && !options.fieldsUneditable && (options.changeStateAfterFailure && !failedAction || (/email$/i.test(selector) ? options.emailEditable !== false : options.passwordEditable !== false));
     },
     inputValue: async () => {
       if (!visible(selector)) throw new Error("missing observed field");
@@ -113,8 +122,9 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
         getByRole: (buttonRole: string, button: { name: RegExp }) => ({ click: async () => {
           assert.equal(buttonRole, "button"); assert(separateDialogOpen);
           const matches = options.separateDialogButtons?.filter(name => button.name.test(name)) ?? [];
-          assert.equal(matches.length, 1); assert.notEqual(matches[0], "Accept all");
+          assert.equal(matches.length, 1); assert(!/^Accept all$/i.test(matches[0]));
           events.push("click:necessary-cookie-choice"); separateDialogOpen = false;
+          if (options.clearValuesOnCookieDismiss) { emailValue = ""; passwordValue = ""; }
         } }),
         waitFor: async () => { assert.equal(separateDialogOpen, false); },
       }) };
@@ -130,6 +140,7 @@ function browserHarness(options: { beforeText?: string; afterText?: string; redi
         isEnabled: async () => {
           if (passwordFilled) {
             readinessChecks++;
+            if (options.dialogBeforeFinalSubmit && !lateDialogShown) { separateDialogOpen = true; lateDialogShown = true; }
             if (readinessChecks <= (options.signInReadinessTimeouts ?? 0)) throw Object.assign(new Error("private transient locator lookup timed out"), { name: "TimeoutError" });
             if (readinessChecks < (options.signInEnabledAfter ?? 1)) return false;
           }
@@ -271,7 +282,7 @@ test("unreadable or uneditable fields remain unknown and never trigger a refill 
 test("one recognized necessary-only cookie choice precedes either credential fill, including ordinary ToS links", async (context) => {
   const logs: unknown[][] = [];
   context.mock.method(console, "info", (...args: unknown[]) => { logs.push(args); });
-  for (const button of ["Reject all", "Reject optional cookies", "Use necessary cookies only", "Accept necessary cookies"]) {
+  for (const button of ["Reject", "Reject all", "Reject optional cookies", "Use necessary cookies only", "Accept necessary cookies"]) {
     const harness = browserHarness({ separateDialogText: "We use cookies. Privacy Policy and Terms of Service. private-dialog-content",
       separateDialogButtons: [button, "Accept all"], dialogAfterFormReady: true });
     assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
@@ -281,13 +292,37 @@ test("one recognized necessary-only cookie choice precedes either credential fil
     assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
   }
   const dialogLogs = logs.filter(args => args[0] === "[supplier-auth-dialog]").map(args => JSON.parse(args[1] as string));
-  assert.equal(dialogLogs.length, 4);
+  assert.equal(dialogLogs.length, 5);
   for (const record of dialogLogs) {
     assert.deepEqual(Object.keys(record).sort(), ["buttonClass", "category"]);
     assert.equal(record.category, "cookie_privacy");
-    assert(["reject_all", "reject_optional", "necessary_only", "accept_necessary"].includes(record.buttonClass));
+    assert(["reject", "reject_all", "reject_optional", "necessary_only", "accept_necessary"].includes(record.buttonClass));
   }
   assert.doesNotMatch(JSON.stringify(logs), /private|Privacy Policy|Terms of Service|Accept all|Reject all/);
+});
+
+test("the observed late privacy popup uses exact Reject once before email/password or the sole submission", async context => {
+  context.mock.method(console, "info", () => undefined);
+  for (const timing of [{ dialogAfterEditableChecks: 2 }, { dialogAfterEmail: true }, { dialogBeforeFinalSubmit: true }]) {
+    const harness = browserHarness({ separateDialogText: "Why do we use cookies and other tracking technologies? Personalized marketing. Privacy Statement.",
+      separateDialogButtons: ["Preference Center, Opens the preference center dialog", "Reject", "Accept All"], ...timing });
+    assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
+    assert.equal(harness.events.filter(event => event === "click:necessary-cookie-choice").length, 1);
+    assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
+    assert(harness.events.indexOf("click:necessary-cookie-choice") < harness.events.indexOf("press:Enter:Sign in"));
+    if (timing.dialogAfterEditableChecks) assert(harness.events.indexOf("click:necessary-cookie-choice") < harness.events.indexOf("fill:#email"));
+    if (timing.dialogAfterEmail) assert(harness.events.indexOf("click:necessary-cookie-choice") < harness.events.indexOf("fill:#password"));
+  }
+});
+
+test("a positively blocking late cookie popup is rejected without waiting out editable readiness, then cleared email recovers once", async context => {
+  context.mock.method(console, "info", () => undefined);
+  const harness = browserHarness({ separateDialogText: "Why do we use cookies and other tracking technologies?",
+    separateDialogButtons: ["Reject", "Accept All"], dialogAfterEmail: true, cookieBlocksEditing: true, clearValuesOnCookieDismiss: true });
+  assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
+  assert.equal(harness.events.filter(event => event === "click:necessary-cookie-choice").length, 1);
+  assert.equal(harness.events.filter(event => event === "fill:#email").length, 2);
+  assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
 });
 
 test("unknown, challenge and explicit legal dialogs never get dismissed or receive credentials", async (context) => {
@@ -314,7 +349,8 @@ test("the observed email/password login-form dialog is not mistaken for a separa
 test("the consent inspection allows ten seconds for element resolution without adding a login attempt", async () => {
   const harness = browserHarness();
   assert.equal(await signInEmersonWithCredentials(input, harness.launch), "session=private-renewed-cookie");
-  assert.deepEqual(harness.dialogInspectionTimeouts, [10_000]);
+  assert(harness.dialogInspectionTimeouts.length >= 4);
+  assert(harness.dialogInspectionTimeouts.every(timeout => timeout > 0 && timeout <= 10_000));
   assert.equal(harness.events.filter(event => event === "press:Enter:Sign in").length, 1);
   assert.equal(harness.events.filter(event => event.startsWith("fill:")).length, 2);
 });
